@@ -1,6 +1,6 @@
-<img align="right" width="150" height="150" top="100" src="./assets/gr-logo.png">
-
 # Project Golden Ratio • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
+
+## About
 
 ## Development
 
@@ -42,15 +42,7 @@ So, simply execute:
 foundryup
 ```
 
-### Configure Foundry
-
-Using [foundry.toml](./foundry.toml), Foundry is easily configurable.
-
-For a full list of configuration options, see the Foundry [configuration documentation](https://github.com/foundry-rs/foundry/blob/master/config/README.md#all-options).
-
 ## License
-
-[AGPL-3.0-only](https://github.com/abigger87/femplate/blob/master/LICENSE)
 
 ## Acknowledgements
 
