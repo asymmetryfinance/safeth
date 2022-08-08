@@ -4,6 +4,13 @@
 
 ## Development
 
+Fundamentals:
+
+1. Deposit funds into contract
+2. programmitically deposit eth into crv lp
+3. programmitically deposit eth into: lido, rocket pool, swell, concentrator, stargate -> BPT
+4. programmitically lock up CVX as vlCVX
+
 **Setup**
 
 ```bash
