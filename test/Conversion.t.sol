@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Conversion.sol";
-import "./mocks/MockV3Aggregator.sol";
 
 contract ConversionTest is Test {
     Conversion public conversion;
@@ -12,7 +11,7 @@ contract ConversionTest is Test {
         conversion = new Conversion();
     }
 
-    function testConversionReturnsStartingValue() public {
+    function testConversionPair() public {
         int256 price = conversion.getLatestPrice();
         emit log_int(price);
     }
