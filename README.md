@@ -1,5 +1,11 @@
 # Project Golden Ratio • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
 
+## To Do
+
+• Vault - shares, withdrawal, helper functions
+• Depositors -
+•
+
 ## About
 
 ## Development
