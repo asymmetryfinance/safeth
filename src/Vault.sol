@@ -10,6 +10,7 @@ contract Vault {
     event Deposit(uint256 value);
 
     address[] private funders;
+    uint256 public assetsDeposited;
     mapping(address => uint256) private addressToAmountFunded;
 
     /// @notice Allows users to deposit `token`. Contracts can't call this function
@@ -19,8 +20,11 @@ contract Vault {
         require(amount == 48 ether, "INVALID_AMOUNT");
 
         addressToAmountFunded[msg.sender] += amount;
+        assetsDeposited += amount;
         funders.push(msg.sender);
 
         emit Deposit(amount);
     }
+
+    // withdraw
 }
