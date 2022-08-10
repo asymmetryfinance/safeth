@@ -9,10 +9,6 @@ pragma solidity ^0.8.13;
 contract Vault {
     event Deposit(uint256 value);
 
-    uint256 priceConversion;
-    uint256 public totalEthSupply;
-    uint256 public totalCvxSupply;
-
     address[] private funders;
     mapping(address => uint256) private addressToAmountFunded;
 
@@ -22,14 +18,8 @@ contract Vault {
         uint256 amount = _amount;
         require(amount == 48 ether, "INVALID_AMOUNT");
 
-        uint256 depositedEthAmount = 32 ether;
-        uint256 depositedCVXAmountInEth = 16 ether;
-
-        uint256 convertedCvx = depositedCVXAmountInEth * priceConversion;
-
         addressToAmountFunded[msg.sender] += amount;
         funders.push(msg.sender);
-        totalEthSupply += 32 ether;
 
         emit Deposit(amount);
     }
