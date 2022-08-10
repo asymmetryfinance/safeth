@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-/// @title PriceConsumerV3 Contract
+/// @title CVX/ETH Conversion Contract
 /// @notice Contract that returns the latest Chainlink price feed CVX/ETH pair
 contract Conversion {
     AggregatorV3Interface internal immutable priceFeed;
@@ -23,7 +23,8 @@ contract Conversion {
     // @return latest price
     function getLatestPrice() public view returns (int256) {
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        return price;
+        int256 newVal = 16000000000000000000 / price;
+        return newVal;
     }
 
     // @notice Returns the Price Feed address
