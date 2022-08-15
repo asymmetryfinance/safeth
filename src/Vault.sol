@@ -7,7 +7,7 @@ pragma solidity ^0.8.13;
 /// @title Golden Ratio vault
 /// @notice Allows users to deposit ETH/CVX into autocompounding strategy contracts (e.g. {CrvDepositor}).
 contract Vault {
-    event Deposit(uint256 value);
+    // event Deposit(uint256 value);
     // event Deposit(address indexed from, address indexed to, uint256 value);
     // event Withdrawal(address indexed withdrawer, address indexed to, uint256 wantAmount);
 
@@ -37,7 +37,7 @@ contract Vault {
         s = aT / B
         */
 
-        emit Deposit(amount);
+        // emit Deposit(amount);
         // emit Deposit(msg.sender, _to, amountAfterFee);
     }
 
