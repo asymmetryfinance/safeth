@@ -2,9 +2,10 @@
 
 ## To Do
 
-• Vault - shares, withdrawal, helper functions
-• Depositors -
-•
+1. Vault - shares + withdrawal
+2. Depositors - CvxLocker, CrvDepositor, IndexDepositor, BundleLocker
+3. create NFTs
+4. Lockup periods
 
 ## About
 
