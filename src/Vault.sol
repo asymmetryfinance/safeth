@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 // imports
 // import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 /// @title Golden Ratio vault
 /// @notice Allows users to deposit ETH/CVX into autocompounding strategy contracts (e.g. {CrvDepositor}).
