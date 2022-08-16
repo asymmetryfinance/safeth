@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 // imports
 // import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 /// @title Golden Ratio vault
 /// @notice Allows users to deposit ETH/CVX into autocompounding strategy contracts (e.g. {CrvDepositor}).
@@ -11,9 +12,16 @@ contract Vault {
     // event Deposit(address indexed from, address indexed to, uint256 value);
     // event Withdrawal(address indexed withdrawer, address indexed to, uint256 wantAmount);
 
+    struct Rate {
+        uint128 numberator;
+        uint128 denominator;
+    }
+
     address[] private funders;
     uint256 public assetsDeposited;
     mapping(address => uint256) private addressToAmountFunded;
+
+    function initialize() external initializer {}
 
     /// @notice Allows users to deposit `token`. Contracts can't call this function
     /// @param _amount The amount to deposit
