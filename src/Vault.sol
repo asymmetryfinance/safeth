@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-// imports
-// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 /// @title Golden Ratio vault
@@ -21,7 +20,7 @@ contract Vault {
     uint256 public assetsDeposited;
     mapping(address => uint256) private addressToAmountFunded;
 
-    function initialize() external initializer {}
+    // function initialize() external initializer {}
 
     /// @notice Allows users to deposit `token`. Contracts can't call this function
     /// @param _amount The amount to deposit
