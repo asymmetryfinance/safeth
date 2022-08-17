@@ -2,10 +2,13 @@
 
 ## To Do
 
-1. Vault - shares + withdrawal
-2. Depositors - CvxLocker, CrvDepositor, IndexDepositor, BundleLocker
-3. create NFTs
-4. Lockup periods
+Interfaces for deposits:
+
+1. Curve: I3CRVZap, ICurve, ISwapRouter
+2. Convex: IBooster (deposit contract for LP tokens), IBaseRewardPool (Main reward contract for all LP pools)
+3. Chainlink: AggregatorV3Interface
+4. Lido: ILido: submit(address) returns (uint256)
+5. RocketPool: RocketStorageInterface, RocketDepositPoolInterface, RocketETHTokenInterface
 
 ## About
 
@@ -13,10 +16,7 @@
 
 Fundamentals:
 
-1. Deposit funds into contract
-2. programmitically deposit eth into crv lp
-3. programmitically deposit eth into: lido, rocket pool, swell, concentrator, stargate -> BPT
-4. programmitically lock up CVX as vlCVX
+1. Deposit funds into contract: 48ETH -> 16 ETH to CVX; 16 ETH to Curve LP; 16 ETH to liquid staking to BPT Index
 
 **Setup**
 
