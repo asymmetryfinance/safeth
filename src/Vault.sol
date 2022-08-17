@@ -9,7 +9,6 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeab
 contract Vault {
     // event Deposit(uint256 value);
     // event Deposit(address indexed from, address indexed to, uint256 value);
-    // event Withdrawal(address indexed withdrawer, address indexed to, uint256 wantAmount);
 
     struct Rate {
         uint128 numberator;
@@ -17,7 +16,9 @@ contract Vault {
     }
 
     address[] private funders;
+    address public feeRecipient;
     uint256 public assetsDeposited;
+    Rate public depositFeeRate;
     mapping(address => uint256) private addressToAmountFunded;
 
     // function initialize() external initializer {}
@@ -32,22 +33,11 @@ contract Vault {
         assetsDeposited += amount;
         funders.push(msg.sender);
 
-        // managing shares of tokens: token maths
-        /*
-        a = amount
-        B = balance of token before deposit
-        T = total supply
-        s = shares to mint
-
-        (T + s) / T = (a + B) / B 
-
-        s = aT / B
-        */
-
         // emit Deposit(amount);
         // emit Deposit(msg.sender, _to, amountAfterFee);
     }
 
-    // withdraw
-    // emit Withdrawal(msg.sender, _to, backingTokens);
+    function totalAssets() public view returns (uint256) {
+        return assetsDeposited;
+    }
 }
