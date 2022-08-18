@@ -19,7 +19,7 @@ contract Conversion {
         );
     }
 
-    // @notice Returns the latest price
+    // @notice Returns the latest price of CVX for 16ETH (CVX/ETH pair)
     // @return latest price
     function getLatestPrice() public view returns (int256) {
         (, int256 price, , , ) = priceFeed.latestRoundData();
