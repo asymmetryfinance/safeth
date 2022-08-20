@@ -1,13 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./interfaces/RocketStorageInterface.sol";
-import "./interfaces/RocketDepositPoolInterface.sol";
-import "./interfaces/RocketETHTokenInterface.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title Golden Ratio Yield Strategy Contract
-/// @notice Will deposit funds into respective protocols: Curve, Convex, Lido, Rocketpool, Swell
-/// Concentrator, Stargate, Balancer
-contract GRStrategy {
+// import "./interfaces/RocketStorageInterface.sol";
+// import "./interfaces/RocketDepositPoolInterface.sol";
+// import "./interfaces/RocketETHTokenInterface.sol";
 
+import "./interfaces/IStrategy.sol";
+import "./interfaces/ICurve.sol";
+
+/// @title Golden Ratio grETH Curve autocompounding strategy
+/// @notice This strategy autocompounds Curve rewards from the ETH/grETH Curve pool.
+/// @dev The strategy deposits ETH into the Curve Pool
+/// The strategy will also deposit funds into the Balancer whitelisted index of liquid staked ETH tokens
+contract GRStrategy is IStrategy {
+    address public curveFi_Deposit;
+
+    function setup(address _depositContract, address _gaugeContract) external {}
+
+    function crvDeposit() external {}
 }
