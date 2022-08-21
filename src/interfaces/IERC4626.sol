@@ -8,7 +8,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
  * See: https://eips.ethereum.org/EIPS/eip-4626
  * @dev Interface for central hub of the Rocketpool network
  * @dev See original implementation in official repository:
- * https://github.com/rocket-pool/rocketpool/blob/master/contracts/interface/RocketStorageInterface.sol
+ * https://github.com/fei-protocol/ERC4626/blob/main/src/interfaces/IERC4626.sol
  */
 abstract contract IERC4626 is ERC20 {
     /*////////////////////////////////////////////////////////
