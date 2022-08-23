@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/curve/ICurve.sol";
+import {ISwapRouter} from "uniswap/interfaces/ISwapRouter.sol";
 
 /**
  * @title Golden Ratio Base ETH Strategy
