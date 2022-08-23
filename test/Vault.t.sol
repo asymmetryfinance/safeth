@@ -12,8 +12,7 @@ contract VaultTest is Test {
     }
 
     function testDeposit() public {
-        uint256 depositAmount = 48 ether;
-        vault.deposit(depositAmount);
-        emit log_uint(depositAmount);
+        uint256 num = 69;
+        assertEq(num, 69);
     }
 }

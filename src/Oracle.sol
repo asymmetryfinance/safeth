@@ -5,7 +5,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title CVX/ETH Conversion Contract
 /// @notice Contract that returns the latest Chainlink price feed CVX/ETH pair
-contract Conversion {
+contract Oracle {
     AggregatorV3Interface internal immutable priceFeed;
 
     // @notice Executes once when a contract is created to initialize state variables

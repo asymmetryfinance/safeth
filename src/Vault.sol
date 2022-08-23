@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IStrategy.sol";
+import {ERC4626} from "solmate/mixins/ERC4626.sol";
 
 /// @title Golden Ratio vault
 /// @notice Allows users to deposit ETH/CVX into autocompounding strategy contract (e.g. {GRStrategy}).
-contract Vault {
+contract Vault is ERC4626 {
     // event Deposit(address indexed from, address indexed to, uint256 value);
 
     struct Rate {
         uint128 numerator;
         uint128 denominator;
     }
-
-    IStrategy public strategy;
 
     address[] private funders;
 
@@ -31,21 +28,14 @@ contract Vault {
     function deposit(uint256 _amount) external {
         require(_amount == 48 ether, "INVALID_AMOUNT");
 
-        IStrategy _strategy = strategy;
-        require(address(_strategy) != address(0), "NO_STRATEGY");
+        //uint256 depositFee = (depositFeeRate.numerator * _amount) /
+        //depositFeeRate.denominator;
+        // uint256 amountAfterFee = _amount - depositFee;
 
-        uint256 depositFee = (depositFeeRate.numerator * _amount) /
-            depositFeeRate.denominator;
-        uint256 amountAfterFee = _amount - depositFee;
-
-        addressToAmountFunded[msg.sender] += amountAfterFee;
-        assetsDeposited += amountAfterFee;
+        addressToAmountFunded[msg.sender] += _amount;
+        assetsDeposited += _amount;
         funders.push(msg.sender);
 
         // emit Deposit(msg.sender, _to, amountAfterFee);
-    }
-
-    function totalAssets() public view returns (uint256) {
-        return assetsDeposited;
     }
 }
