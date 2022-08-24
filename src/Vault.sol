@@ -5,16 +5,14 @@ import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 /**
  * @title Golden Ratio Vault Contract
- * @dev Implementation of a vault to deposit funds for yield optimizing.
+ * @dev Implementation of a ERC4626 vault to deposit funds for yield optimizing.
  * This is the contract that receives funds and that users interface with.
  * The yield optimizing strategy itself is implemented in a separate 'GRStrategy.sol' contract.
  */
 contract Vault is ERC4626 {
-    using FixedPointMathLib for uint256;
     using SafeTransferLib for ERC20;
 
     uint256 REQUIRED_DEPOSIT = 48 ether;
@@ -38,15 +36,13 @@ contract Vault is ERC4626 {
         token = ERC20(_token);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        DEPOSIT/WITHDRAWAL LOGIC
-    //////////////////////////////////////////////////////////////*/
-
+    /// @notice Deposits assets into the vault and grants ownership of them to receiver.
     function deposit(uint256 assets, address receiver)
         public
         override
         returns (uint256 shares)
     {
+        require(assets == REQUIRED_DEPOSIT, "INVALID_AMOUNT");
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
@@ -60,6 +56,7 @@ contract Vault is ERC4626 {
         afterDeposit(assets, shares);
     }
 
+    /// @notice Mints LP tokens to receiver using ERC20 _mint() based on number of shares
     function mint(uint256 shares, address receiver)
         public
         override
@@ -77,6 +74,7 @@ contract Vault is ERC4626 {
         afterDeposit(assets, shares);
     }
 
+    /// @notice Withdraws assets from the vault and transfers them to receiver.
     function withdraw(
         uint256 assets,
         address receiver,
@@ -100,6 +98,7 @@ contract Vault is ERC4626 {
         asset.safeTransfer(receiver, assets);
     }
 
+    /// @notice Redeems a specific number of shares for underlying tokens and transfers them to the receiver.
     function redeem(
         uint256 shares,
         address receiver,
@@ -124,9 +123,7 @@ contract Vault is ERC4626 {
         asset.safeTransfer(receiver, assets);
     }
 
-    // no need with public total Assets
-    // /// @notice Total amount of the underlying asset that
-    // /// is "managed" by Vault.
+    /// @notice Total amount of the underlying asset that is "managed" by Vault.
     function totalAssets() public view override returns (uint256) {
         return IERC20(WETH9).balanceOf(address(this));
     }

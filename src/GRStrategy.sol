@@ -6,8 +6,7 @@ import {ISwapRouter} from "uniswap/interfaces/ISwapRouter.sol";
 
 /**
  * @title Golden Ratio Base ETH Strategy
- * @notice This strategy autocompounds Convex rewards from the PUSD/USDC/USDT/DAI Curve pool
- * @dev The strategy deposits 33.3% ETH in the ETH/grETH Curve pool, swaps 33.3% ETH for CVX and locks up CVX,
+ * @notice The strategy deposits 33.3% ETH in the ETH/grETH Curve pool, swaps 33.3% ETH for CVX and locks up CVX,
  * and deposits remaining 33.3% ETH into liquid staked ETH Balancer pool
  */
 contract GRStrategy {
@@ -22,9 +21,7 @@ contract GRStrategy {
     // Multi-step Deposit function to deposit funds into CRV pool, lock up CVX, deposit into BAL pool
     function deposit() public {}
 
-    function withdraw(uint256 _amount) external {
-        require(msg.sender == vault, "!vault");
-    }
+    function withdraw(uint256 _amount) external {}
 
     // Swap for an exact amount of CVX based on input
     function swapExactInputSingleSwap() internal {}
@@ -36,9 +33,7 @@ contract GRStrategy {
     function chargeFees() internal {}
 
     // Calculate the total underlaying 'want' held by the strategy.
-    function balanceOf() public view returns (uint256) {
-        return balanceOfWant().add(balanceOfPool());
-    }
+    function balanceOf() public view returns (uint256) {}
 
     // Calculate how much 'want' (WETH) this contract holds.
     function balanceOfWant() public view returns (uint256) {}
