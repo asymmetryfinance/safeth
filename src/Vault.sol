@@ -15,7 +15,8 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 contract Vault is ERC4626 {
     using SafeTransferLib for ERC20;
 
-    uint256 REQUIRED_DEPOSIT = 48 ether;
+    // testing w/ lower ETH deposits
+    uint256 REQUIRED_DEPOSIT = 3 ether;
 
     // WETH token address
     // https://docs.uniswap.org/protocol/reference/deployments
