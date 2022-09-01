@@ -20,7 +20,7 @@ contract Oracle {
     }
 
     // @notice Returns the latest price of CVX for 16ETH (CVX/ETH pair)
-    // @return latest price
+    // @return latest pric
     function getLatestPrice() public view returns (int256) {
         (, int256 price, , , ) = priceFeed.latestRoundData();
         int256 newVal = 16000000000000000000 / price;
