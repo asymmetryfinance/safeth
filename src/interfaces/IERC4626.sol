@@ -1,176 +1,178 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity 0.8.13;
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity ^0.8.12;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/**
- * @title ERC4626 interface
- * See: https://eips.ethereum.org/EIPS/eip-4626
- * @dev Interface for central hub of the Rocketpool network
- * @dev See original implementation in official repository:
- * https://github.com/fei-protocol/ERC4626/blob/main/src/interfaces/IERC4626.sol
- */
-abstract contract IERC4626 is ERC20 {
-    /*////////////////////////////////////////////////////////
-                      Events
-    ////////////////////////////////////////////////////////*/
+interface IERC4626 is IERC20 {
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
 
-    /// @notice `sender` has exchanged `assets` for `shares`,
-    /// and transferred those `shares` to `receiver`.
     event Deposit(
-        address indexed sender,
-        address indexed receiver,
+        address indexed caller,
+        address indexed owner,
         uint256 assets,
         uint256 shares
     );
 
-    /// @notice `sender` has exchanged `shares` for `assets`,
-    /// and transferred those `assets` to `receiver`.
     event Withdraw(
-        address indexed sender,
+        address indexed caller,
         address indexed receiver,
+        address indexed owner,
         uint256 assets,
         uint256 shares
     );
 
-    /*////////////////////////////////////////////////////////
-                      Vault properties
-    ////////////////////////////////////////////////////////*/
+    /*//////////////////////////////////////////////////////////////
+                               IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
 
-    /// @notice The address of the underlying ERC20 token used for
-    /// the Vault for accounting, depositing, and withdrawing.
-    function asset() external view virtual returns (address asset);
+    function asset() external view returns (address);
 
-    /// @notice Total amount of the underlying asset that
-    /// is "managed" by Vault.
-    function totalAssets() external view virtual returns (uint256 totalAssets);
+    /*//////////////////////////////////////////////////////////////
+                        DEPOSIT/WITHDRAWAL LOGIC
+    //////////////////////////////////////////////////////////////*/
 
-    /*////////////////////////////////////////////////////////
-                      Deposit/Withdrawal Logic
-    ////////////////////////////////////////////////////////*/
-
-    /// @notice Mints `shares` Vault shares to `receiver` by
-    /// depositing exactly `assets` of underlying tokens.
     function deposit(uint256 assets, address receiver)
         external
-        virtual
-        returns (uint256 shares);
+        returns (uint256 shares); /* {
+        // Check for rounding error since we round down in previewDeposit.
+        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
-    /// @notice Mints exactly `shares` Vault shares to `receiver`
-    /// by depositing `assets` of underlying tokens.
+        // Need to transfer before minting or ERC777s could reenter.
+        asset.safeTransferFrom(msg.sender, address(this), assets);
+
+        _mint(receiver, shares);
+
+        emit Deposit(msg.sender, receiver, assets, shares);
+
+        afterDeposit(assets, shares);
+    }*/
+
     function mint(uint256 shares, address receiver)
         external
-        virtual
-        returns (uint256 assets);
+        returns (uint256 assets); /* {
+        assets = previewMint(shares); // No need to check for rounding error, previewMint rounds up.
 
-    /// @notice Redeems `shares` from `owner` and sends `assets`
-    /// of underlying tokens to `receiver`.
+        // Need to transfer before minting or ERC777s could reenter.
+        asset.safeTransferFrom(msg.sender, address(this), assets);
+
+        _mint(receiver, shares);
+
+        emit Deposit(msg.sender, receiver, assets, shares);
+
+        afterDeposit(assets, shares);
+    }*/
+
     function withdraw(
         uint256 assets,
         address receiver,
         address owner
-    ) external virtual returns (uint256 shares);
+    ) external returns (uint256 shares); /* {
+        shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
 
-    /// @notice Redeems `shares` from `owner` and sends `assets`
-    /// of underlying tokens to `receiver`.
+        if (msg.sender != owner) {
+            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
+
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+        }
+
+        beforeWithdraw(assets, shares);
+
+        _burn(owner, shares);
+
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
+
+        asset.safeTransfer(receiver, assets);
+    }*/
+
     function redeem(
         uint256 shares,
         address receiver,
         address owner
-    ) external virtual returns (uint256 assets);
+    ) external returns (uint256 assets); /* {
+        if (msg.sender != owner) {
+            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
-    /*////////////////////////////////////////////////////////
-                      Vault Accounting Logic
-    ////////////////////////////////////////////////////////*/
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+        }
 
-    /// @notice The amount of shares that the vault would
-    /// exchange for the amount of assets provided, in an
-    /// ideal scenario where all the conditions are met.
-    function convertToShares(uint256 assets)
-        external
-        view
-        virtual
-        returns (uint256 shares);
+        // Check for rounding error since we round down in previewRedeem.
+        require((assets = previewRedeem(shares)) != 0, "ZERO_ASSETS");
 
-    /// @notice The amount of assets that the vault would
-    /// exchange for the amount of shares provided, in an
-    /// ideal scenario where all the conditions are met.
-    function convertToAssets(uint256 shares)
-        external
-        view
-        virtual
-        returns (uint256 assets);
+        beforeWithdraw(assets, shares);
 
-    /// @notice Total number of underlying assets that can
-    /// be deposited by `owner` into the Vault, where `owner`
-    /// corresponds to the input parameter `receiver` of a
-    /// `deposit` call.
-    function maxDeposit(address owner)
-        external
-        view
-        virtual
-        returns (uint256 maxAssets);
+        _burn(owner, shares);
 
-    /// @notice Allows an on-chain or off-chain user to simulate
-    /// the effects of their deposit at the current block, given
-    /// current on-chain conditions.
-    function previewDeposit(uint256 assets)
-        external
-        view
-        virtual
-        returns (uint256 shares);
+        emit Withdraw(msg.sender, receiver, owner, assets, shares);
 
-    /// @notice Total number of underlying shares that can be minted
-    /// for `owner`, where `owner` corresponds to the input
-    /// parameter `receiver` of a `mint` call.
-    function maxMint(address owner)
-        external
-        view
-        virtual
-        returns (uint256 maxShares);
+        asset.safeTransfer(receiver, assets);
+    }*/
 
-    /// @notice Allows an on-chain or off-chain user to simulate
-    /// the effects of their mint at the current block, given
-    /// current on-chain conditions.
-    function previewMint(uint256 shares)
-        external
-        view
-        virtual
-        returns (uint256 assets);
+    /*//////////////////////////////////////////////////////////////
+                            ACCOUNTING LOGIC
+    //////////////////////////////////////////////////////////////*/
 
-    /// @notice Total number of underlying assets that can be
-    /// withdrawn from the Vault by `owner`, where `owner`
-    /// corresponds to the input parameter of a `withdraw` call.
-    function maxWithdraw(address owner)
-        external
-        view
-        virtual
-        returns (uint256 maxAssets);
+    function totalAssets() external view returns (uint256);
 
-    /// @notice Allows an on-chain or off-chain user to simulate
-    /// the effects of their withdrawal at the current block,
-    /// given current on-chain conditions.
-    function previewWithdraw(uint256 assets)
-        external
-        view
-        virtual
-        returns (uint256 shares);
+    function convertToShares(uint256 assets) external view returns (uint256); /* {
+        uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
 
-    /// @notice Total number of underlying shares that can be
-    /// redeemed from the Vault by `owner`, where `owner` corresponds
-    /// to the input parameter of a `redeem` call.
-    function maxRedeem(address owner)
-        external
-        view
-        virtual
-        returns (uint256 maxShares);
+        return supply == 0 ? assets : assets.mulDivDown(supply, totalAssets());
+    }*/
 
-    /// @notice Allows an on-chain or off-chain user to simulate
-    /// the effects of their redeemption at the current block,
-    /// given current on-chain conditions.
-    function previewRedeem(uint256 shares)
-        external
-        view
-        virtual
-        returns (uint256 assets);
+    function convertToAssets(uint256 shares) external view returns (uint256); /* {
+        uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
+
+        return supply == 0 ? shares : shares.mulDivDown(totalAssets(), supply);
+    }*/
+
+    function previewDeposit(uint256 assets) external view returns (uint256); /* {
+        return convertToShares(assets);
+    }*/
+
+    function previewMint(uint256 shares) external view returns (uint256); /* {
+        uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
+
+        return supply == 0 ? shares : shares.mulDivUp(totalAssets(), supply);
+    }*/
+
+    function previewWithdraw(uint256 assets) external view returns (uint256); /* {
+        uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
+
+        return supply == 0 ? assets : assets.mulDivUp(supply, totalAssets());
+    }*/
+
+    function previewRedeem(uint256 shares) external view returns (uint256); /* {
+        return convertToAssets(shares);
+    }*/
+
+    /*//////////////////////////////////////////////////////////////
+                     DEPOSIT/WITHDRAWAL LIMIT LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function maxDeposit(address) external view returns (uint256); /* {
+        return type(uint256).max;
+    }*/
+
+    function maxMint(address) external view returns (uint256); /* {
+        return type(uint256).max;
+    }*/
+
+    function maxWithdraw(address owner) external view returns (uint256); /* {
+        return convertToAssets(balanceOf[owner]);
+    }*/
+
+    function maxRedeem(address owner) external view returns (uint256); /* {
+        return balanceOf[owner];
+    }*/
+
+    /*//////////////////////////////////////////////////////////////
+                          INTERNAL HOOKS LOGIC
+    //////////////////////////////////////////////////////////////*/
+    /*
+    function beforeWithdraw(uint256 assets, uint256 shares) internal {}
+
+    function afterDeposit(uint256 assets, uint256 shares) internal {}
+    */
 }
