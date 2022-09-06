@@ -19,7 +19,7 @@ contract Vault is ERC20, IERC4626 {
     uint256 public constant maxFloat = 10000;
 
     address public controller;
-    address public governance;
+    address public owner;
 
     ERC20 public immutable asset;
 
@@ -27,12 +27,11 @@ contract Vault is ERC20, IERC4626 {
         ERC20 _underlying,
         string memory _name,
         string memory _symbol,
-        address _governance,
         address _controller
     ) ERC20(_name, _symbol, _underlying.decimals()) {
         asset = _underlying;
         controller = _controller;
-        governance = _governance;
+        owner = msg.sender;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -229,22 +228,8 @@ contract Vault is ERC20, IERC4626 {
                 : shares.mulDivDown(totalAssets(), totalSupply);
     }
 
-    /*///////////////////////////////////////////////////////////////
-                            YEARN V2 FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function setMin(uint256 _min) external {
-        require(msg.sender == governance, "!governance");
-        minFloat = _min;
-    }
-
-    function setGovernance(address _governance) public {
-        require(msg.sender == governance, "!governance");
-        governance = _governance;
-    }
-
     function setController(address _controller) public {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == owner, "!owner");
         controller = _controller;
     }
 

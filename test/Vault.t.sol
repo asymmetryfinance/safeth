@@ -12,8 +12,6 @@ contract VaultTest is Test {
 
     //Controller public controller;
 
-    // Vault public vault;
-
     function setUp() public {
         //vault = new Vault();
         //controller = new Controller();
