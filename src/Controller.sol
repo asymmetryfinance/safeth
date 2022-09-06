@@ -1,95 +1,99 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import "./interfaces/IStrategy.sol";
 
-contract StratManager is Ownable, Pausable {
-    /**
-     * @dev GR Contracts:
-     * {keeper} - Address to manage a few lower risk features of the strat
-     * {strategist} - Address of the strategy author/deployer where strategist fee will go.
-     * {vault} - Address of the vault that controls the strategy's funds.
-     * {unirouter} - Address of exchange to execute swaps.
-     */
-    address public keeper;
+contract Controller {
     address public strategist;
-    address public unirouter;
-    address public vault;
-    address public grFeeRecipient;
+    address owner;
 
-    /**
-     * @dev Initializes the base strategy.
-     * @param _keeper address to use as alternative owner.
-     * @param _strategist address where strategist fees go.
-     * @param _unirouter router to use for swaps
-     * @param _vault address of parent vault.
-     * @param _grFeeRecipient address where to send GR's fees.
-     */
-    constructor(
-        address _keeper,
-        address _strategist,
-        address _unirouter,
-        address _vault,
-        address _grFeeRecipient
-    ) public {
-        keeper = _keeper;
-        strategist = _strategist;
-        unirouter = _unirouter;
-        vault = _vault;
-        grFeeRecipient = _grFeeRecipient;
+    address public rewards;
+    mapping(address => address) public vaults;
+    mapping(address => address) public strategies;
+
+    mapping(address => mapping(address => bool)) public approvedStrategies;
+
+    uint256 public constant max = 10000;
+
+    constructor(address _rewards) {
+        owner = msg.sender;
+        strategist = msg.sender;
+        rewards = _rewards;
     }
 
-    // checks that caller is either owner or keeper.
-    modifier onlyManager() {
-        require(msg.sender == owner() || msg.sender == keeper, "!manager");
-        _;
+    function setRewards(address _rewards) public {
+        require(msg.sender == owner, "!owner");
+        rewards = _rewards;
     }
 
-    /**
-     * @dev Updates address of the strat keeper.
-     * @param _keeper new keeper address.
-     */
-    function setKeeper(address _keeper) external onlyManager {
-        keeper = _keeper;
-    }
-
-    /**
-     * @dev Updates address where strategist fee earnings will go.
-     * @param _strategist new strategist address.
-     */
-    function setStrategist(address _strategist) external {
-        require(msg.sender == strategist, "!strategist");
+    function setStrategist(address _strategist) public {
+        require(msg.sender == owner, "!owner");
         strategist = _strategist;
     }
 
-    /**
-     * @dev Updates router that will be used for swaps.
-     * @param _unirouter new unirouter address.
-     */
-    function setUnirouter(address _unirouter) external onlyOwner {
-        unirouter = _unirouter;
+    function setVault(address _token, address _vault) public {
+        require(msg.sender == strategist || msg.sender == owner, "!strategist");
+        require(vaults[_token] == address(0), "vault");
+        vaults[_token] = _vault;
     }
 
-    /**
-     * @dev Updates parent vault.
-     * @param _vault new vault address.
-     */
-    function setVault(address _vault) external onlyOwner {
-        vault = _vault;
+    function approveStrategy(address _token, address _strategy) public {
+        require(msg.sender == owner, "!owner");
+        approvedStrategies[_token][_strategy] = true;
     }
 
-    /**
-     * @dev Updates beefy fee recipient.
-     * @param _grFeeRecipient new beefy fee recipient address.
-     */
-    function setGrFeeRecipient(address _grFeeRecipient) external onlyOwner {
-        grFeeRecipient = _grFeeRecipient;
+    function revokeStrategy(address _token, address _strategy) public {
+        require(msg.sender == owner, "!owner");
+        approvedStrategies[_token][_strategy] = false;
     }
 
-    /**
-     * @dev Function to synchronize balances before new user deposit.
-     * Can be overridden in the strategy.
-     */
-    function beforeDeposit() external virtual {}
+    function setStrategy(address _token, address _strategy) public {
+        require(msg.sender == strategist || msg.sender == owner, "!strategist");
+        require(approvedStrategies[_token][_strategy] == true, "!approved");
+
+        address _current = strategies[_token];
+        if (_current != address(0)) {
+            IStrategy(_current).withdrawAll();
+        }
+        strategies[_token] = _strategy;
+    }
+
+    function earn(address _token, uint256 _amount) public {
+        address _strategy = strategies[_token];
+        address _want = IStrategy(_strategy).want();
+        if (_want != _token) {
+            IERC20(_want).transfer(_strategy, _amount);
+        } else {
+            IERC20(_token).transfer(_strategy, _amount);
+            IStrategy(_strategy).deposit();
+        }
+    }
+
+    function balanceOf(address _token) external view returns (uint256) {
+        return IStrategy(strategies[_token]).balanceOf();
+    }
+
+    function withdrawAll(address _token) public {
+        require(msg.sender == strategist || msg.sender == owner, "!strategist");
+        IStrategy(strategies[_token]).withdrawAll();
+    }
+
+    function inCaseTokensGetStuck(address _token, uint256 _amount) public {
+        require(msg.sender == strategist || msg.sender == owner, "!owner");
+        IERC20(_token).transfer(msg.sender, _amount);
+    }
+
+    function inCaseStrategyTokenGetStuck(address _strategy, address _token)
+        public
+    {
+        require(msg.sender == strategist || msg.sender == owner, "!owner");
+        IStrategy(_strategy).withdraw(_token);
+    }
+
+    function withdraw(address _token, uint256 _amount) public {
+        require(msg.sender == vaults[_token], "!vault");
+        IStrategy(strategies[_token]).withdraw(_amount);
+    }
 }
