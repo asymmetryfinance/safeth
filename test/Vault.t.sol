@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Vault.sol";
 import "../src/Controller.sol";
+import {console2} from "forge-std/console2.sol";
 
 //import "../src/StrategyGoldenRatio.sol";
 
