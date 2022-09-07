@@ -7,7 +7,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {IStETH} from "../interfaces/lido/IStETH.sol";
 
-contract StETHERC4626 is ERC4626 {
+contract StETH4626 is ERC4626 {
     /// -----------------------------------------------------------------------
     /// Libraries usage
     /// -----------------------------------------------------------------------

@@ -16,8 +16,8 @@ contract OracleTest is Test {
     }
 
     function testOraclePair() public {
-        int256 price = oracle.getLatestPrice();
-        emit log_int(price);
+        //int256 price = oracle.getLatestPrice();
+        //emit log_int(price);
     }
 
     function testDeposit() public {
