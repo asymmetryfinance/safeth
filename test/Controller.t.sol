@@ -2,8 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
-
+import "forge-std/console.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 import {ERC20Mock2} from "./mocks/ERC20Mock2.sol";
@@ -26,7 +25,31 @@ contract ControllerTest is Test {
             address(testToken),
             address(testToken2)
         );
+        vault = new Vault(testToken, "MockERC20", "MOCK", address(controller));
     }
 
-    function testSetVault() public {}
+    function testSetVault() public {
+        controller.setVault(address(testToken), address(vault));
+        address vaultAddy = controller.vaults(address(testToken));
+        console.log("goal vault to set: ", address(vault));
+        console.log(
+            "vault that actually got set: ",
+            controller.vaults(address(testToken))
+        );
+        assertEq(vaultAddy, address(vault));
+    }
+
+    function testApproveAndSetStrategy() public {
+        controller.approveStrategy(address(testToken), address(testStrategy));
+        controller.setStrategy(address(testToken), address(testStrategy));
+        console.log("goal strategy to set: ", address(testStrategy));
+        console.log(
+            "strategy that actually got set: ",
+            controller.strategies(address(testToken))
+        );
+        assertEq(
+            controller.strategies(address(testToken)),
+            address(testStrategy)
+        );
+    }
 }
