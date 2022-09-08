@@ -62,7 +62,7 @@ contract Controller {
         );
         require(approvedStrategies[_token][_strategy] == true, "!approved");
 
-        address _current = strategies[_token];
+        //address _current = strategies[_token];
         strategies[_token] = _strategy;
     }
 }

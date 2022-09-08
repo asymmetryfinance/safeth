@@ -11,4 +11,6 @@ abstract contract IWStETH is ERC20 {
         view
         virtual
         returns (uint256);
+
+    receive() external payable virtual;
 }

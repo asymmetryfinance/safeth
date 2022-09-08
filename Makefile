@@ -17,6 +17,6 @@ trace-fork   :; forge test -vvv --fork-url ${FORK_URL} --etherscan-api-key ${ETH
 test-contract :; forge test -vv --fork-url ${FORK_URL} --match-contract $(contract) --etherscan-api-key ${ETHERSCAN_API_KEY}
 trace-contract :; forge test -vvv --fork-url ${FORK_URL} --match-contract $(contract) --etherscan-api-key ${ETHERSCAN_API_KEY}
 test-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract StETH4626.*Test -vv
-
+test-vault-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract Vault -vv
 clean  :; forge clean
 snapshot :; forge snapshot

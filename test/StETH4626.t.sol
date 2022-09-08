@@ -15,12 +15,11 @@ contract StETH4626Test is Test {
     ERC20 constant underlying = stETH;
     IStETH constant stETH = IStETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWStETH constant wstETH =
-        IWStETH(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+        IWStETH(payable(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0));
 
     StETH4626 public vault;
 
     function setUp() public {
-        console.log("test log");
         vault = new StETH4626(underlying);
         vm.label(address(stETH), "stETH");
         vm.label(address(wstETH), "wstETH");
@@ -39,13 +38,13 @@ contract StETH4626Test is Test {
         return stETHAmount;
     }
 
-    function testSingleDepositWithdraw(uint64 amount) public {
+    function testSingleDepositWithdraw() public {
+        uint64 amount = 1e18;
         if (amount < 1e9) {
             amount = 1e9;
         }
 
         uint256 aliceUnderlyingAmount = amount;
-
         address alice = address(0xABCD);
 
         aliceUnderlyingAmount = mintUnderlying(alice, aliceUnderlyingAmount);
@@ -55,12 +54,12 @@ contract StETH4626Test is Test {
             underlying.allowance(alice, address(vault)),
             aliceUnderlyingAmount
         );
-
         uint256 alicePreDepositBal = underlying.balanceOf(alice);
-
+        console.log("alice pre dep bal: ", alicePreDepositBal);
         vm.prank(alice);
+        //console.log("alice prev share amt: ", aliceShareAmount);
         uint256 aliceShareAmount = vault.deposit(aliceUnderlyingAmount, alice);
-
+        console.log("alice share amt: ", aliceShareAmount);
         assertGe(
             vault.previewWithdraw(aliceUnderlyingAmount),
             aliceShareAmount,
@@ -71,6 +70,7 @@ contract StETH4626Test is Test {
             aliceShareAmount,
             "previewDeposit"
         );
+        console.log("vault total supply:", vault.totalSupply());
         assertEq(vault.totalSupply(), aliceShareAmount, "totalSupply");
         assertGe(vault.totalAssets(), aliceUnderlyingAmount - 2, "totalAssets");
         assertLe(
