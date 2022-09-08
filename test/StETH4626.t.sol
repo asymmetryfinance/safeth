@@ -21,7 +21,6 @@ contract StETH4626Test is Test {
 
     function setUp() public {
         vault = new StETH4626(underlying);
-
         vm.label(address(stETH), "stETH");
         vm.label(address(wstETH), "wstETH");
         vm.label(address(0xABCD), "Alice");
@@ -257,11 +256,9 @@ contract StETH4626Test is Test {
         // alice deposits 1e18 for bob
         vm.prank(alice);
         vault.deposit(underlyingAmount, bob);
-        console.log("alice vault balance of: ", vault.balanceOf(alice));
         assertEq(vault.balanceOf(alice), 0);
         assertEq(vault.balanceOf(bob), shareAmount);
         assertEq(underlying.balanceOf(alice), 1); // assertEq 0
-        //console.log("alice underlying balance of", underlying.balanceOf(alice));
 
         // bob mint 1e18 for alice
         vm.prank(bob);
@@ -269,7 +266,6 @@ contract StETH4626Test is Test {
         assertEq(vault.balanceOf(alice), shareAmount);
         assertEq(vault.balanceOf(bob), shareAmount);
         assertEq(underlying.balanceOf(bob), 1); // assertEq 0
-        //console.log("bob underlying balance of", underlying.balanceOf(bob));
 
         // alice redeem 1e18 for bob
         vm.prank(alice);
