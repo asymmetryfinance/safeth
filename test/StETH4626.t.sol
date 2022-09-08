@@ -20,6 +20,7 @@ contract StETH4626Test is Test {
     StETH4626 public vault;
 
     function setUp() public {
+        console.log("test log");
         vault = new StETH4626(underlying);
         vm.label(address(stETH), "stETH");
         vm.label(address(wstETH), "wstETH");
