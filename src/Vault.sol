@@ -63,11 +63,11 @@ contract Vault is ERC20, IERC4626 {
         returns (uint256 shares)
     {
         uint256 amount = msg.value;
-        console.log("alice starting shares: ", shares);
+        //console.log("alice starting shares: ", shares);
         require((shares = previewDeposit(amount)) != 0, "ZERO_SHARES");
         require(msg.value == 32 ether, "NOT_1_ETHER");
         _mint(to, shares);
-        console.log("alice shares after deposit: ", shares);
+        //console.log("alice shares after deposit: ", shares);
     }
 
     function mint(uint256 shares, address to)
