@@ -7,8 +7,7 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC4626} from "./interfaces/IERC4626.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./interfaces/IController.sol";
-
-//import "hardhat/console.sol";
+import "forge-std/console.sol";
 
 contract Vault is ERC20, IERC4626 {
     using SafeTransferLib for ERC20;
@@ -17,6 +16,7 @@ contract Vault is ERC20, IERC4626 {
     uint256 public totalFloat;
     uint256 public minFloat = 9500;
     uint256 public constant maxFloat = 10000;
+    uint256 balance;
 
     address public controller;
     address public owner;
@@ -54,6 +54,20 @@ contract Vault is ERC20, IERC4626 {
         asset.safeTransferFrom(msg.sender, address(this), amount);
 
         afterDeposit(amount);
+    }
+
+    // send ether into vault
+    function depositEthIntoVault(address to)
+        public
+        payable
+        returns (uint256 shares)
+    {
+        uint256 amount = msg.value;
+        console.log("alice starting shares: ", shares);
+        require((shares = previewDeposit(amount)) != 0, "ZERO_SHARES");
+        require(msg.value == 32 ether, "NOT_1_ETHER");
+        _mint(to, shares);
+        console.log("alice shares after deposit: ", shares);
     }
 
     function mint(uint256 shares, address to)
