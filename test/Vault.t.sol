@@ -120,10 +120,10 @@ contract VaultTest is Test {
         payable(alice).transfer(32 ether);
         vm.prank(alice);
         console.log("wstETH address", address(wstETH));
-        console.log("balance before deposit", address(wstETH).balance);
+        //console.log("balance before deposit", address(wstETH).balance);
         (bool sent, ) = address(wstETH).call{value: 1 ether}("");
         require(sent, "Failed to send Ether");
-        console.log("balance after deposit", address(wstETH).balance);
-        console.log(sent);
+        //console.log("balance after deposit", address(wstETH).balance);
+        console.log("is eth sent", sent);
     }
 }
