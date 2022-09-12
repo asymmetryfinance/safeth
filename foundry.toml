@@ -2,6 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
+gas_reports = ["SwapCvx"]
 
 # Remappings in remappings.txt
 
