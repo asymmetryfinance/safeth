@@ -2,7 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-gas_reports = ["SwapCvx"]
+gas_reports = ["WeightedPoolFactory"]
 
 # Remappings in remappings.txt
 
