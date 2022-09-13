@@ -1,129 +1,109 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./interfaces/IERC20.sol";
+import "forge-std/console.sol";
+import "uniswap/interfaces/ISwapRouter.sol";
+import {TransferHelper} from "uniswap/libraries/TransferHelper.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import "./interfaces/IWETH.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "./interfaces/convex/ILockedCvx.sol";
+import "./interfaces/convex/ICvxLockerV2.sol";
+import "./tokens/grCVX1155.sol";
+import "./interfaces/curve/I3CRVZap.sol";
+import "./interfaces/curve/ICurve.sol";
 
-contract StrategyGoldenRatio {
-    IERC20 public immutable stakingToken;
-    IERC20 public immutable rewardsToken;
+contract StrategyGoldenRatio is ERC1155Holder {
+    // Contract Addresses
+    address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
 
+    // Init
+    IWETH private weth = IWETH(WETH9);
+    IERC20 private cvx = IERC20(CVX);
+    ICvxLockerV2 constant locker = ICvxLockerV2(CvxLockerV2);
+    ILockedCvx constant lockedCvx = ILockedCvx(CvxLockerV2);
+    grCVX1155 private cvxNft = new grCVX1155();
+
+    ISwapRouter constant router =
+        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
     address public owner;
 
-    // Duration of rewards to be paid out (in seconds)
-    uint public duration;
-    // Timestamp of when the rewards finish
-    uint public finishAt;
-    // Minimum of last updated time and reward finish time
-    uint public updatedAt;
-    // Reward to be paid out per second
-    uint public rewardRate;
-    // Sum of (reward rate * dt * 1e18 / total supply)
-    uint public rewardPerTokenStored;
-    // User address => rewardPerTokenStored
-    mapping(address => uint) public userRewardPerTokenPaid;
-    // User address => rewards to be claimed
-    mapping(address => uint) public rewards;
-
-    // Total staked
-    uint public totalSupply;
-    // User address => staked amount
-    mapping(address => uint) public balanceOf;
-
-    constructor(address _stakingToken, address _rewardToken) {
+    constructor() {
         owner = msg.sender;
-        stakingToken = IERC20(_stakingToken);
-        rewardsToken = IERC20(_rewardToken);
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not authorized");
-        _;
-    }
+    function swapExactInputSingleHop(
+        address tokenIn,
+        address tokenOut,
+        uint24 poolFee,
+        uint amountIn
+    ) public returns (uint amountOut) {
+        //TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
+        TransferHelper.safeApprove(tokenIn, address(router), amountIn);
 
-    modifier updateReward(address _account) {
-        rewardPerTokenStored = rewardPerToken();
-        updatedAt = lastTimeRewardApplicable();
-
-        if (_account != address(0)) {
-            rewards[_account] = earned(_account);
-            userRewardPerTokenPaid[_account] = rewardPerTokenStored;
-        }
-
-        _;
-    }
-
-    function lastTimeRewardApplicable() public view returns (uint) {
-        return _min(finishAt, block.timestamp);
-    }
-
-    function rewardPerToken() public view returns (uint) {
-        if (totalSupply == 0) {
-            return rewardPerTokenStored;
-        }
-
-        return
-            rewardPerTokenStored +
-            (rewardRate * (lastTimeRewardApplicable() - updatedAt) * 1e18) /
-            totalSupply;
-    }
-
-    function stake(uint _amount) external updateReward(msg.sender) {
-        require(_amount > 0, "amount = 0");
-        stakingToken.transferFrom(msg.sender, address(this), _amount);
-        balanceOf[msg.sender] += _amount;
-        totalSupply += _amount;
-    }
-
-    function withdraw(uint _amount) external updateReward(msg.sender) {
-        require(_amount > 0, "amount = 0");
-        balanceOf[msg.sender] -= _amount;
-        totalSupply -= _amount;
-        stakingToken.transfer(msg.sender, _amount);
-    }
-
-    function earned(address _account) public view returns (uint) {
-        return
-            ((balanceOf[_account] *
-                (rewardPerToken() - userRewardPerTokenPaid[_account])) / 1e18) +
-            rewards[_account];
-    }
-
-    function getReward() external updateReward(msg.sender) {
-        uint reward = rewards[msg.sender];
-        if (reward > 0) {
-            rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
-        }
-    }
-
-    function setRewardsDuration(uint _duration) external onlyOwner {
-        require(finishAt < block.timestamp, "reward duration not finished");
-        duration = _duration;
-    }
-
-    function notifyRewardAmount(uint _amount)
-        external
-        onlyOwner
-        updateReward(address(0))
-    {
-        if (block.timestamp >= finishAt) {
-            rewardRate = _amount / duration;
-        } else {
-            uint remainingRewards = (finishAt - block.timestamp) * rewardRate;
-            rewardRate = (_amount + remainingRewards) / duration;
-        }
-
-        require(rewardRate > 0, "reward rate = 0");
-        require(
-            rewardRate * duration <= rewardsToken.balanceOf(address(this)),
-            "reward amount > balance"
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: poolFee,
+                recipient: msg.sender,
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 1,
+                sqrtPriceLimitX96: 0
+            });
+        amountOut = router.exactInputSingle(params);
+        console.log(
+            "Balance of CVX in sender contract:",
+            cvx.balanceOf(msg.sender)
         );
-
-        finishAt = block.timestamp + duration;
-        updatedAt = block.timestamp;
     }
 
-    function _min(uint x, uint y) private pure returns (uint) {
-        return x <= y ? x : y;
+    function swapCvx() public returns (uint amountOut) {
+        weth.deposit{value: 1e18}();
+        weth.approve(address(this), 1e18);
+        uint amountSwapped = swapExactInputSingleHop(WETH9, CVX, 10000, 1e18);
+        return amountSwapped;
     }
+
+    function lockCvx(uint _amountOut) public returns (uint256 amount) {
+        uint amountOut = _amountOut;
+        cvx.approve(CvxLockerV2, amountOut);
+        console.log(
+            "Balance of CVX in sender contract prior to lock:",
+            cvx.balanceOf(msg.sender)
+        );
+        console.log(
+            "Balance of CVX in strat contract prior to lock:",
+            cvx.balanceOf(address(this))
+        );
+        locker.lock(address(this), amountOut, 0);
+        uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
+        return lockedCvxAmount;
+    }
+
+    function mintCvxNft(uint _amountOut) public returns (uint256 balance) {
+        uint amountOut = _amountOut;
+        cvxNft.mint(1, amountOut, address(this));
+        uint256 minted1155 = cvxNft.balanceOf(address(this), 1);
+        console.log("sender contract minted:", cvxNft.balanceOf(msg.sender, 1));
+        return minted1155;
+    }
+
+    function depositCvx() public returns (uint256 balance) {}
+
+    function depositBalTokens() public {}
+
+    function mintBundleNft() public {}
+
+    function mintGrEth() public {}
+
+    function depositToCrvPool() public {}
+
+    // put it all together
+    function deposit() public {}
+
+    receive() external payable {}
 }
