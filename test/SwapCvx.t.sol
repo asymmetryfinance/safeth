@@ -35,10 +35,10 @@ contract SwapCvxTest is ERC1155("grCVXNFT"), Test {
     }
 
     function testSwapAndLock() public {
-        weth.deposit{value: 1e18}();
-        weth.approve(address(swap), 1e18);
+        weth.deposit{value: 16e18}();
+        weth.approve(address(swap), 16e18);
 
-        uint amountOut = swap.swapExactInputSingleHop(WETH9, CVX, 10000, 1e18);
+        uint amountOut = swap.swapExactInputSingleHop(WETH9, CVX, 10000, 16e18);
 
         //uint256 amountInCVX = amountOut / 1e18;
         console.log("CVX Swapped:", amountOut);
