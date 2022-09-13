@@ -21,10 +21,7 @@ contract ControllerTest is Test {
         controller = new Controller(address(0xABCD));
         testToken = new ERC20Mock();
         testToken2 = new ERC20Mock2();
-        testStrategy = new StrategyGoldenRatio(
-            address(testToken),
-            address(testToken2)
-        );
+        testStrategy = new StrategyGoldenRatio();
         vault = new Vault(testToken, "MockERC20", "MOCK", address(controller));
     }
 
