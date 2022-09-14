@@ -13,6 +13,8 @@ contract StrategyTest is ERC1155Holder, Test {
 
     function setUp() public {}
 
+    // function testVaultDeposit() public {}
+
     function testSwapAndLock() public {
         (bool sent, ) = address(strat).call{value: 1e18}("");
         require(sent, "Failed to send Ether");
@@ -36,4 +38,18 @@ contract StrategyTest is ERC1155Holder, Test {
         require(sent, "Failed to send Ether");
         strat.addCrvLiquidity();
     }
+
+    function testDepositREth() public {
+        (bool sent, ) = address(strat).call{value: 1e18}("");
+        require(sent, "Failed to send Ether");
+        strat.depositREth();
+    }
+
+    function testDepositWstEth() public {
+        (bool sent, ) = address(strat).call{value: 1e18}("");
+        require(sent, "Failed to send Ether");
+        strat.depositWstEth();
+    }
+
+    // testDepositVaultBeginStrat() public {}
 }
