@@ -9,7 +9,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IWStETH} from "../src/interfaces/lido/IWStETH.sol";
 import {IStETH} from "../src/interfaces/lido/IStETH.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
-import {StETH4626} from "../src/Vaults/StETH4626.sol";
+import {StETH4626} from "../src/vaults/StETH4626.sol";
 
 contract StETH4626Test is Test {
     ERC20 constant underlying = stETH;

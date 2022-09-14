@@ -18,7 +18,8 @@ test-contract :; forge test -vv --fork-url ${FORK_URL} --match-contract $(contra
 trace-contract :; forge test -vvv --fork-url ${FORK_URL} --match-contract $(contract) --etherscan-api-key ${ETHERSCAN_API_KEY}
 test-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract StETH4626.*Test -vv
 test-vault-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract Vault -vv
-test-swap-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract SwapCvx -vvv
+test-strat-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract Strategy -vvv
+test-crv-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract DepositCrv -vvv
 clean  :; forge clean
 snapshot :; forge snapshot
 

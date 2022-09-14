@@ -10,14 +10,20 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
 import "./tokens/grCVX1155.sol";
-import "./interfaces/curve/I3CRVZap.sol";
-import "./interfaces/curve/ICurve.sol";
+import "./interfaces/curve/ICrvEthPool.sol";
+import {ICurve} from "./interfaces/curve/ICurve.sol";
 
 contract StrategyGoldenRatio is ERC1155Holder {
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    // address for ETH/stETH crv pool
+    address private constant stEthCrvPool =
+        0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    // address for ETH/stETH crv LP token
+    address private constant lpToken =
+        0x06325440D014e39736583c165C2963BA99fAf14E;
 
     // Init
     IWETH private weth = IWETH(WETH9);
@@ -100,7 +106,18 @@ contract StrategyGoldenRatio is ERC1155Holder {
 
     function mintGrEth() public {}
 
-    function depositToCrvPool() public {}
+    function addCrvLiquidity() public {
+        console.log("sender bal:", msg.sender.balance);
+        console.log("this add bal:", address(this).balance);
+        uint256[2] memory _amounts;
+        _amounts = [uint256(1e18), 0];
+        uint256 mintAmt = ICrvEthPool(stEthCrvPool).add_liquidity{
+            value: _amounts[0]
+        }(_amounts, 0);
+        console.log("LP tokens minted:", mintAmt);
+        uint256 lpMinted = IERC20(lpToken).balanceOf(address(this));
+        console.log(lpMinted);
+    }
 
     // put it all together
     function deposit() public {}

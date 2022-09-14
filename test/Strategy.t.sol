@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../src/StrategyGoldenRatio.sol";
 
-contract SwapCvxTest is ERC1155Holder, Test {
+contract StrategyTest is ERC1155Holder, Test {
     StrategyGoldenRatio private strat = new StrategyGoldenRatio();
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     IERC20 private cvx = IERC20(CVX);
@@ -28,5 +28,12 @@ contract SwapCvxTest is ERC1155Holder, Test {
         console.log("Locked balance:", amountLocked);
         uint256 amountMinted = strat.mintCvxNft(amountOut);
         console.log("Amount of CVX minted in 1155:", amountMinted);
+    }
+
+    function testDepositCrvPool() public {
+        // send eth to contract depositing in crv pool
+        (bool sent, ) = address(strat).call{value: 16e18}("");
+        require(sent, "Failed to send Ether");
+        strat.addCrvLiquidity();
     }
 }

@@ -9,7 +9,7 @@ import {Vault} from "../src/Vault.sol";
 import {Controller} from "../src/Controller.sol";
 import {StrategyGoldenRatio} from "../src/StrategyGoldenRatio.sol";
 import {IWStETH} from "../src/interfaces/lido/IWStETH.sol";
-import {StETH4626} from "../src/Vaults/StETH4626.sol";
+import {StETH4626} from "../src/vaults/StETH4626.sol";
 import {IStETH} from "../src/interfaces/lido/IStETH.sol";
 
 contract VaultTest is Test {
