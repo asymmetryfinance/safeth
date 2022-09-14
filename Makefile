@@ -19,7 +19,6 @@ trace-contract :; forge test -vvv --fork-url ${FORK_URL} --match-contract $(cont
 test-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract StETH4626.*Test -vv
 test-vault-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract Vault -vv
 test-strat-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract Strategy -vvv
-test-crv-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract DepositCrv -vvv
 clean  :; forge clean
 snapshot :; forge snapshot
 
