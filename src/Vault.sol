@@ -1,270 +1,121 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.0;
+pragma solidity ^0.8;
 
+import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
-import {IERC4626} from "./interfaces/IERC4626.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import "./interfaces/IController.sol";
-import "forge-std/console.sol";
+import "./interfaces/IWETH.sol";
 
-contract Vault is ERC20, IERC4626 {
+contract Vault is ERC4626 {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
-    uint256 public totalFloat;
-    uint256 public minFloat = 9500;
-    uint256 public constant maxFloat = 10000;
-    uint256 balance;
+    ERC20 public immutable token;
 
-    address public controller;
-    address public owner;
+    uint256 sharesMinted;
 
-    ERC20 public immutable asset;
+    // WETH token address
+    // https://docs.uniswap.org/protocol/reference/deployments
+    address public constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    IWETH private weth = IWETH(WETH9);
 
     constructor(
-        ERC20 _underlying,
+        address _token,
         string memory _name,
-        string memory _symbol,
-        address _controller
-    ) ERC20(_name, _symbol, _underlying.decimals()) {
-        asset = _underlying;
-        controller = _controller;
-        owner = msg.sender;
+        string memory _symbol
+    ) ERC4626(ERC20(_token), _name, _symbol) {
+        token = ERC20(_token);
     }
 
-    /*///////////////////////////////////////////////////////////////
-                        DEPOSIT/WITHDRAWAL LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function deposit(uint256 amount, address to)
+    function deposit(uint256 assets, address receiver)
         public
         override
         returns (uint256 shares)
     {
-        require((shares = previewDeposit(amount)) != 0, "ZERO_SHARES");
+        // Check for rounding error since we round down in previewDeposit.
+        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
-        _mint(to, shares);
+        // Need to transfer before minting or ERC777s could reenter.
+        // no need to transfer as contract already holds ETH, wraps WETH internally
+        // asset.safeTransferFrom(msg.sender, address(this), assets);
 
-        totalFloat += amount;
+        _mint(receiver, shares);
 
-        emit Deposit(msg.sender, to, amount, shares);
+        emit Deposit(msg.sender, receiver, assets, shares);
 
-        asset.safeTransferFrom(msg.sender, address(this), amount);
-
-        afterDeposit(amount);
+        afterDeposit(assets, shares);
     }
 
-    // send ether into vault
-    function depositEthIntoVault(address to)
-        public
-        payable
-        returns (uint256 shares)
-    {
-        uint256 amount = msg.value;
-        //console.log("alice starting shares: ", shares);
-        require((shares = previewDeposit(amount)) != 0, "ZERO_SHARES");
-        require(msg.value == 32 ether, "NOT_1_ETHER");
-        _mint(to, shares);
-        //console.log("alice shares after deposit: ", shares);
+    /**
+     * @notice calculate ETH to withdraw from strategy given a ownership proportion
+     * @param _shares shares
+     * @param _strategyCollateralAmount amount of collateral in strategy
+     * @return amount of ETH allowed to withdraw
+     */
+    function _calcEthToWithdraw(
+        uint256 _shares,
+        uint256 _strategyCollateralAmount
+    ) internal view returns (uint256) {
+        return _strategyCollateralAmount * (_shares / (totalAssets()));
     }
 
-    function mint(uint256 shares, address to)
-        public
-        override
-        returns (uint256 amount)
-    {
-        _mint(to, amount = previewMint(shares));
+    // ACCOUNTING LOGIC
 
-        totalFloat += amount;
-
-        emit Deposit(msg.sender, to, amount, shares);
-
-        asset.safeTransferFrom(msg.sender, address(this), amount);
-
-        afterDeposit(amount);
-    }
-
-    function withdraw(
-        uint256 amount,
-        address to,
-        address from
-    ) public override returns (uint256 shares) {
-        uint256 allowed = allowance[from][msg.sender];
-        if (msg.sender != from && allowed != type(uint256).max)
-            allowance[from][msg.sender] = allowed - shares;
-
-        if (amount > idleFloat()) {
-            beforeWithdraw(amount);
-        }
-
-        _burn(from, shares = previewWithdraw(amount));
-        totalFloat -= amount;
-
-        emit Withdraw(from, to, amount, shares);
-
-        asset.safeTransfer(to, amount);
-    }
-
-    function redeem(
-        uint256 shares,
-        address to,
-        address from
-    ) public override returns (uint256 amount) {
-        uint256 allowed = allowance[from][msg.sender];
-
-        if (msg.sender != from && allowed != type(uint256).max)
-            allowance[from][msg.sender] = allowed - shares;
-        require((amount = previewRedeem(shares)) != 0, "ZERO_ASSETS");
-
-        if (shares > idleFloat()) {
-            beforeWithdraw(shares);
-        }
-
-        amount = previewRedeem(shares);
-        _burn(from, shares);
-        totalFloat -= amount;
-
-        emit Withdraw(from, to, amount, shares);
-
-        asset.safeTransfer(to, amount);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                         INTERNAL HOOKS LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Example usage of hook. Pull funds from strategy to Vault if needed.
-    /// Withdraw at least requested amount to the Vault. Covers withdraw/performance fees of strat. Leaves dust tokens.
-    function beforeWithdraw(uint256 amount) internal {
-        uint256 _withdraw = (amount + ((amount * 50) / 10000)) - idleFloat();
-        IController(controller).withdraw(address(asset), _withdraw);
-    }
-
-    function afterDeposit(uint256 amount) internal {}
-
-    /*///////////////////////////////////////////////////////////////
-                        ACCOUNTING LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Sum of idle funds and funds deployed to Strategy.
+    /// @notice Total amount of the underlying asset that
+    /// is "managed" by Vault.
     function totalAssets() public view override returns (uint256) {
-        return idleFloat() + IController(controller).balanceOf(address(asset));
+        return IERC20(WETH9).balanceOf(address(this));
     }
 
-    function assetsOf(address user) public view override returns (uint256) {
-        return previewRedeem(balanceOf[user]);
-    }
+    // DEPOSIT/WITHDRAWAL LIMIT LOGIC
 
-    function assetsPerShare() public view override returns (uint256) {
-        return previewRedeem(10**decimals);
-    }
-
-    /// @notice Idle funds in Vault, i.e deposits before earn()
-    function idleFloat() public view returns (uint256) {
-        return asset.balanceOf(address(this));
-    }
-
-    /// @notice Available to move to strategy. Leave some tokens idle.
-    /// @dev Remember, totalFloat returns ALL shares supply, even if underlying is locked outside of Vault.
-    function freeFloat() public view returns (uint256) {
-        return (totalFloat * minFloat) / maxFloat;
-    }
-
-    /// @notice Optional. Left empty here. (No limit)
-    function maxDeposit(address) public pure override returns (uint256) {
+    /// @notice maximum amount of assets that can be deposited.
+    function maxDeposit(address) public view override returns (uint256) {
         return type(uint256).max;
     }
 
-    /// @notice Optional. Left empty here. (No limit)
-    function maxMint(address) public pure override returns (uint256) {
+    /// @notice maximum amount of shares that can be minted.
+    function maxMint(address) public view override returns (uint256) {
         return type(uint256).max;
     }
 
-    function maxWithdraw(address user) public view override returns (uint256) {
-        return assetsOf(user);
+    /// @notice Maximum amount of assets that can be withdrawn.
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        return convertToAssets(balanceOf[owner]);
     }
 
-    function maxRedeem(address user) public view override returns (uint256) {
-        return balanceOf[user];
+    /// @notice Maximum amount of shares that can be redeemed.
+    function maxRedeem(address owner) public view override returns (uint256) {
+        return balanceOf[owner];
     }
 
-    function previewDeposit(uint256 amount)
-        public
-        view
-        override
-        returns (uint256 shares)
-    {
-        uint256 supply = totalSupply;
+    // INTERNAL HOOKS LOGIC
 
-        return
-            supply == 0
-                ? amount
-                : amount.mulDivDown(totalSupply, totalAssets());
+    // Vault has WETH
+    // Reverse strat logic to repay initial deposit
+    function beforeWithdraw(uint256 assets, uint256 shares) internal override {}
+
+    // Vault has WETH
+    // Trigger strategy
+    function afterDeposit(uint256 assets, uint256 shares) internal override {}
+
+    // deal with received ether and call deposit function
+    function depositWeth() public returns (uint256 shares) {
+        weth.deposit{value: 1e18}();
+        //weth.approve(address(this), 1e18);
+        //wethToken.approve(address(vault), 1e18);
+        sharesMinted = deposit(1e18, msg.sender);
+        return sharesMinted;
     }
 
-    function previewMint(uint256 shares)
-        public
-        view
-        override
-        returns (uint256 amount)
-    {
-        uint256 supply = totalSupply;
-
-        return
-            supply == 0 ? shares : shares.mulDivUp(totalAssets(), totalSupply);
+    // vault can receive ether and wrap as underlying token (WETH)
+    receive() external payable {
+        depositWeth();
     }
 
-    function previewWithdraw(uint256 amount)
-        public
-        view
-        override
-        returns (uint256 shares)
-    {
-        uint256 supply = totalSupply;
-
-        return
-            supply == 0 ? amount : amount.mulDivUp(totalSupply, totalAssets());
-    }
-
-    function previewRedeem(uint256 shares)
-        public
-        view
-        override
-        returns (uint256 amount)
-    {
-        uint256 supply = totalSupply;
-
-        return
-            supply == 0
-                ? shares
-                : shares.mulDivDown(totalAssets(), totalSupply);
-    }
-
-    function setController(address _controller) public {
-        require(msg.sender == owner, "!owner");
-        controller = _controller;
-    }
-
-    /// @notice Transfer any available and not limited by cap funds to Controller (=>Strategy).
-    function earn() public {
-        uint256 _bal = freeFloat();
-        asset.transfer(controller, _bal);
-        IController(controller).earn(address(asset), _bal);
-    }
-
-    function harvest(address reserve, uint256 amount) external {
-        require(msg.sender == controller, "!controller");
-        require(reserve != address(asset), "token");
-        IERC20(reserve).transfer(controller, amount);
-    }
-
-    function depositAll() external {
-        deposit(asset.balanceOf(msg.sender), msg.sender);
-    }
-
-    function withdrawAll() external {
-        withdraw(assetsOf(msg.sender), msg.sender, msg.sender);
+    // get shares minted
+    function getShares() public view returns (uint256 shares) {
+        return sharesMinted;
     }
 }

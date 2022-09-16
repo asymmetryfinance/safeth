@@ -6,25 +6,25 @@ import "forge-std/console.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 import {ERC20Mock2} from "./mocks/ERC20Mock2.sol";
-import {Vault} from "../src/Vault.sol";
+//import {Vault} from "../src/Vault.sol";
 import {Controller} from "../src/Controller.sol";
 import {StrategyGoldenRatio} from "../src/StrategyGoldenRatio.sol";
 
 contract ControllerTest is Test {
-    Controller public controller;
-    ERC20Mock public testToken;
-    ERC20Mock2 public testToken2;
-    Vault public vault;
-    StrategyGoldenRatio public testStrategy;
+    //Controller public controller;
+    //ERC20Mock public testToken;
+    //ERC20Mock2 public testToken2;
+    //Vault public vault;
+    //StrategyGoldenRatio public testStrategy;
 
     function setUp() public {
-        controller = new Controller(address(0xABCD));
-        testToken = new ERC20Mock();
-        testToken2 = new ERC20Mock2();
-        testStrategy = new StrategyGoldenRatio();
-        vault = new Vault(testToken, "MockERC20", "MOCK", address(controller));
+        //controller = new Controller(address(0xABCD));
+        //testToken = new ERC20Mock();
+        //testToken2 = new ERC20Mock2();
+        //testStrategy = new StrategyGoldenRatio();
+        //vault = new Vault(testToken, "MockERC20", "MOCK", address(controller));
     }
-
+    /*
     function testSetVault() public {
         controller.setVault(address(testToken), address(vault));
         address vaultAddy = controller.vaults(address(testToken));
@@ -49,4 +49,5 @@ contract ControllerTest is Test {
             address(testStrategy)
         );
     }
+*/
 }

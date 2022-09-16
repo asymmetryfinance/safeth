@@ -5,16 +5,32 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../src/StrategyGoldenRatio.sol";
+import "../src/Vault.sol";
+import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 
 contract StrategyTest is ERC1155Holder, Test {
-    StrategyGoldenRatio private strat = new StrategyGoldenRatio();
-    address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    IERC20 private cvx = IERC20(CVX);
+    // rocketpoolstorage contract address: 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46
+    StrategyGoldenRatio private strat =
+        new StrategyGoldenRatio(0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46);
 
-    function setUp() public {}
+    //Vault public vault;
+    //ERC20Mock public grETH;
+    //address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    //IERC20 private cvx = IERC20(CVX);
+
+    function setUp() public {
+        //grETH = new ERC20Mock();
+        //vault = new Vault(
+        //    grETH,
+        //    "Golden Ratio ETH",
+        //    "grETH",
+        //    msg.sender,
+        //    msg.sender
+        //);
+    }
 
     // function testVaultDeposit() public {}
-
+    /*
     function testSwapAndLock() public {
         (bool sent, ) = address(strat).call{value: 1e18}("");
         require(sent, "Failed to send Ether");
@@ -38,18 +54,20 @@ contract StrategyTest is ERC1155Holder, Test {
         require(sent, "Failed to send Ether");
         strat.addCrvLiquidity();
     }
-
+*/
     function testDepositREth() public {
-        (bool sent, ) = address(strat).call{value: 1e18}("");
-        require(sent, "Failed to send Ether");
-        strat.depositREth();
+        strat.depositREth{value: 1e18}();
     }
-
+    /*
     function testDepositWstEth() public {
         (bool sent, ) = address(strat).call{value: 1e18}("");
         require(sent, "Failed to send Ether");
         strat.depositWstEth();
     }
-
-    // testDepositVaultBeginStrat() public {}
+    */
+    //function testVault() public {
+    //vault.deposit{value: 1e18}(1e18, address(this));
+    //    (bool sent, ) = address(vault).call{value: 1e18}("");
+    //    require(sent, "Failed to send Ether");
+    // }
 }
