@@ -13,6 +13,8 @@ import "./tokens/grCVX1155.sol";
 import "./interfaces/curve/ICrvEthPool.sol";
 import {ICurve} from "./interfaces/curve/ICurve.sol";
 import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "./interfaces/rocketpool/RocketStorageInterface.sol";
+import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "./interfaces/lido/IWStETH.sol";
 
 contract StrategyGoldenRatio is ERC1155Holder {
@@ -27,9 +29,8 @@ contract StrategyGoldenRatio is ERC1155Holder {
     // address for ETH/stETH crv LP token
     address private constant lpToken =
         0x06325440D014e39736583c165C2963BA99fAf14E;
-    address constant rocketDepositPool =
-        0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
     // Init
     IWETH private weth = IWETH(WETH9);
@@ -38,15 +39,17 @@ contract StrategyGoldenRatio is ERC1155Holder {
     ICvxLockerV2 constant locker = ICvxLockerV2(CvxLockerV2);
     ILockedCvx constant lockedCvx = ILockedCvx(CvxLockerV2);
     grCVX1155 private cvxNft = new grCVX1155();
-    RocketDepositPoolInterface private rethPool =
-        RocketDepositPoolInterface(rocketDepositPool);
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
 
     ISwapRouter constant router =
         ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
     address public owner;
 
-    constructor() {
+    // mapping of rETH balances to user deposits
+    mapping(address => uint256) balances;
+
+    constructor(address _rocketStorageAddress) {
+        rocketStorage = RocketStorageInterface(_rocketStorageAddress);
         owner = msg.sender;
     }
 
@@ -113,16 +116,36 @@ contract StrategyGoldenRatio is ERC1155Holder {
         return minted1155;
     }
 
+    // utilize Lido's wstETH shortcut w/ sending ETH to its fallback function
+    // send ETH and bypass stETH, recieve wstETH for BAL pool
     function depositWstEth() public {
         (bool sent, ) = address(wstEth).call{value: 1e18}("");
         require(sent, "Failed to send Ether");
         console.log("wsteth bal of this add:", wstEth.balanceOf(address(this)));
     }
 
-    function depositREth() public {
-        rethPool.deposit{value: 1e18}();
-        console.log("reth balance this add", reth.balanceOf(address(this)));
-        console.log("reth balance msg.sender", reth.balanceOf(msg.sender));
+    function depositREth() public payable {
+        require(msg.value > 0, "Not enough ETH deposited");
+        // Per RocketPool Docs query deposit pool address each time it is used
+        address rocketDepositPoolAddress = rocketStorage.getAddress(
+            keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
+        );
+        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                rocketDepositPoolAddress
+            );
+        address rocketTokenRETHAddress = rocketStorage.getAddress(
+            keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
+        );
+        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
+            rocketTokenRETHAddress
+        );
+        uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+        rocketDepositPool.deposit{value: msg.value}();
+        uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+        console.log("REth balance of this strat", rethBalance2);
+        require(rethBalance2 > rethBalance1, "No rETH was minted");
+        uint256 rethMinted = rethBalance2 - rethBalance1;
+        balances[msg.sender] += rethMinted;
     }
 
     //function depositCvx() public returns (uint256 balance) {}
