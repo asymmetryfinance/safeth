@@ -6,14 +6,21 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./interfaces/IWETH.sol";
+import "./interfaces/IController.sol";
+import "forge-std/console.sol";
 
 contract Vault is ERC4626 {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
+    address public controller;
+    address public governance;
+
     ERC20 public immutable token;
 
     uint256 sharesMinted;
+
+    address depositor;
 
     // WETH token address
     // https://docs.uniswap.org/protocol/reference/deployments
@@ -23,9 +30,13 @@ contract Vault is ERC4626 {
     constructor(
         address _token,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _governance,
+        address _controller
     ) ERC4626(ERC20(_token), _name, _symbol) {
         token = ERC20(_token);
+        governance = _governance;
+        controller = _controller;
     }
 
     function deposit(uint256 assets, address receiver)
@@ -36,15 +47,11 @@ contract Vault is ERC4626 {
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
-        // Need to transfer before minting or ERC777s could reenter.
-        // no need to transfer as contract already holds ETH, wraps WETH internally
-        // asset.safeTransferFrom(msg.sender, address(this), assets);
-
         _mint(receiver, shares);
 
         emit Deposit(msg.sender, receiver, assets, shares);
 
-        afterDeposit(assets, shares);
+        afterDeposit(assets);
     }
 
     /**
@@ -98,20 +105,27 @@ contract Vault is ERC4626 {
 
     // Vault has WETH
     // Trigger strategy
-    function afterDeposit(uint256 assets, uint256 shares) internal override {}
-
-    // deal with received ether and call deposit function
-    function depositWeth() public returns (uint256 shares) {
-        weth.deposit{value: 1e18}();
-        //weth.approve(address(this), 1e18);
-        //wethToken.approve(address(vault), 1e18);
-        sharesMinted = deposit(1e18, msg.sender);
-        return sharesMinted;
+    function afterDeposit(uint256 assets) internal {
+        // deposit weth in strategy
+        token.safeTransferFrom(
+            address(this),
+            IController(controller).getStrategy(address(WETH9)),
+            assets
+        );
+        // begin strategy deposit sequence w/ new weth deposit
+        IController(controller).deposit(address(token), depositor, assets);
     }
 
+    // Primary entrance into Golden Ratio Vault
     // vault can receive ether and wrap as underlying token (WETH)
-    receive() external payable {
-        depositWeth();
+    function _deposit() public payable returns (uint256 shares) {
+        require(msg.value == 48e18, "Invalid Deposit");
+        weth.deposit{value: msg.value}();
+        //weth.approve(address(this), 1e18);
+        //wethToken.approve(address(vault), 1e18);
+        depositor = msg.sender;
+        sharesMinted = deposit(msg.value, depositor);
+        return sharesMinted;
     }
 
     // get shares minted

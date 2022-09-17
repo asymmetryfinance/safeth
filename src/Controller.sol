@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {IERC20} from "./interfaces/IERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import "./StrategyGoldenRatio.sol";
+import "./interfaces/IStrategy.sol";
 
 contract Controller {
     address public governance;
@@ -62,7 +63,23 @@ contract Controller {
         );
         require(approvedStrategies[_token][_strategy] == true, "!approved");
 
-        //address _current = strategies[_token];
+        address _current = strategies[_token];
+        if (_current != address(0)) {
+            IStrategy(_current).withdrawAll();
+        }
         strategies[_token] = _strategy;
+    }
+
+    function deposit(
+        address _token,
+        address currentDepositor,
+        uint256 amount
+    ) public {
+        require(msg.sender == vaults[_token], "!vault");
+        IStrategy(strategies[_token]).deposit(currentDepositor, amount);
+    }
+
+    function getStrategy(address _token) public view returns (address strat) {
+        return (strategies[_token]);
     }
 }

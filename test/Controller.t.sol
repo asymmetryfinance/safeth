@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
-import {ERC20Mock2} from "./mocks/ERC20Mock2.sol";
 //import {Vault} from "../src/Vault.sol";
 import {Controller} from "../src/Controller.sol";
 import {StrategyGoldenRatio} from "../src/StrategyGoldenRatio.sol";
