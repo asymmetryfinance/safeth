@@ -35,7 +35,7 @@ contract BalancerTest is Test {
     uint256[] public weights = [50e16, 50e16];
 
     function setUp() public {}
-
+    /*
     function testDeployPool() public {
         address owner = msg.sender;
 
@@ -56,4 +56,5 @@ contract BalancerTest is Test {
         address testPoolAddress = vault.getPool(poolID);
         emit log_named_address("Test Pool Address:", testPoolAddress);
     }
+*/
 }

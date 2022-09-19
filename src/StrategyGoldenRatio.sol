@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
 import "./tokens/grCVX1155.sol";
+import "./tokens/grBundle1155.sol";
+//import "./tokens/grETH.sol";
 import "./interfaces/curve/ICrvEthPool.sol";
 import {ICurve} from "./interfaces/curve/ICurve.sol";
 import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
@@ -17,6 +19,10 @@ import "./interfaces/rocketpool/RocketStorageInterface.sol";
 import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "./interfaces/lido/IWStETH.sol";
 import "./interfaces/IController.sol";
+// balancer Vault interface: https://github.com/balancer-labs/balancer-v2-monorepo/blob/weighted-deployment/contracts/vault/interfaces/IVault.sol
+import "./interfaces/balancer/IVault.sol";
+import "./interfaces/IgrETH.sol";
+import "./interfaces/IgrVault.sol";
 
 contract StrategyGoldenRatio is ERC1155Holder {
     // Contract Addresses
@@ -32,6 +38,8 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address private constant lpToken =
         0x06325440D014e39736583c165C2963BA99fAf14E;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    address constant balPoolEthAddress =
+        0x0000000000000000000000000000000000000000;
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
     address public governance;
@@ -45,6 +53,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     ICvxLockerV2 constant locker = ICvxLockerV2(CvxLockerV2);
     ILockedCvx constant lockedCvx = ILockedCvx(CvxLockerV2);
     grCVX1155 private cvxNft = new grCVX1155();
+    grBundle1155 private bundleNft = new grBundle1155();
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
 
     ISwapRouter constant router =
@@ -53,6 +62,16 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address currentDepositor;
 
     uint256 currentCvxNftId;
+    // 1155 IDs can't have same ID
+    uint256 currentBundleNftId = 10;
+
+    uint256 totalGrEthBalance;
+
+    // balancer pool things
+    address private wstEthBalPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
+    IVault balancer = IVault(wstEthBalPool);
+    bytes32 balPoolId =
+        0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
 
     // Mapping of rETH balance to sender
     mapping(address => uint256) rocketBalances;
@@ -72,6 +91,10 @@ contract StrategyGoldenRatio is ERC1155Holder {
     mapping(address => uint256) cvxNfts;
 
     mapping(uint256 => uint256) cvxNftLockedBalances;
+    // user address to Bundle NFT ID
+    mapping(address => uint256) bundleNfts;
+    // bundle NFT ID to BAL LP token balance
+    mapping(uint256 => uint256) bundleNFtBalances;
 
     constructor(address _controller, address _rocketStorageAddress) {
         governance = msg.sender;
@@ -146,8 +169,32 @@ contract StrategyGoldenRatio is ERC1155Holder {
         cvxNft.mint(newCvxNftId, amountLocked, address(this));
         cvxNfts[currentDepositor] = newCvxNftId;
         cvxNftLockedBalances[newCvxNftId] = amountLocked;
-        uint256 minted1155 = cvxNft.balanceOf(address(this), newCvxNftId);
-        return minted1155;
+        uint256 mintedCvx1155 = cvxNft.balanceOf(address(this), newCvxNftId);
+        return mintedCvx1155;
+    }
+
+    // mint params: uint256 cvxId, uint256 cvxAmount, uint256 balId, uint256 balAmount, address recipient
+
+    function mintBundleNft(
+        uint256 cvxNftId,
+        uint256 cvxAmount,
+        uint256 balPoolTokens
+    ) public returns (uint256 balance) {
+        uint256 newBundleNftId = ++currentBundleNftId;
+        bundleNft.mint(
+            cvxNftId,
+            cvxAmount,
+            newBundleNftId,
+            balPoolTokens,
+            address(this)
+        );
+        bundleNfts[currentDepositor] = newBundleNftId;
+        bundleNFtBalances[newBundleNftId] = balPoolTokens;
+        uint256 mintedBundle1155 = bundleNft.balanceOf(
+            address(this),
+            newBundleNftId
+        );
+        return mintedBundle1155;
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
@@ -155,7 +202,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     function depositWstEth(uint256 amount)
         public
         payable
-        returns (uint256 wstEthAmount)
+        returns (uint256 wstEthMintAmount)
     {
         require(amount == 8e18, "Invalid Deposit");
         uint256 wstEthBalance1 = wstEth.balanceOf(address(this));
@@ -194,13 +241,53 @@ contract StrategyGoldenRatio is ERC1155Holder {
         rocketBalances[currentDepositor] += rethMinted;
     }
 
-    //function depositCvx() public returns (uint256 balance) {}
+    function depositBalTokens(uint256 amount)
+        public
+        returns (uint256 lpAmount)
+    {
+        address[] memory _assets = new address[](2);
+        uint256[] memory _amounts = new uint256[](2);
+        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+        _assets[1] = 0x0000000000000000000000000000000000000000;
+        _amounts[0] = amount;
+        _amounts[1] = 0;
+        //_assets = [wStEthToken, balPoolEthAddress];
+        //uint256[] memory _amounts;
+        //_amounts = [uint256(amount), 0];
+        uint256 joinKind = 1;
+        bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
+        // update joinpool struct
+        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
+            _assets,
+            _amounts,
+            userDataEncoded,
+            false
+        );
+        wstEth.approve(wstEthBalPool, amount);
+        // join pool params: bytes32 poolId, address sender, address recipient, JoinPoolRequest memory request
+        balancer.joinPool(balPoolId, address(this), address(this), request);
+        return (
+            ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230).balanceOf(
+                address(this)
+            )
+        );
+    }
 
-    function depositBalTokens() public {}
-
-    function mintBundleNft() public {}
-
-    function mintGrEth() public {}
+    function mintGrEth(address grEth, uint256 amount) public {
+        IgrETH grEthToken = IgrETH(grEth);
+        address _vault = IController(controller).vaults(address(want));
+        IgrVault grVault = IgrVault(_vault);
+        uint256 totalEthAmount = grVault.getTotalEthAmount();
+        console.log("total eth amount:", totalEthAmount);
+        // require crv deposit
+        // require cvx nft
+        // require bal nft
+        // mint initial deposit amount to strategy
+        //uint256 amount2mint = amount.mul(totalGrEthBalance).div(totalEthAmount);
+        grEthToken.mint(address(this), amount);
+        //totalGrEthBalance += amount2mint;
+        // deposit in crv pool
+    }
 
     // put it all together
     function deposit(address sender, uint256 assets) public payable {
@@ -214,11 +301,17 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 amountCvxLocked = lockCvx(cvxAmountOut);
         //console.log("this address locked cvx:", amountCvxLocked);
         uint256 cvxNftBalance = mintCvxNft(amountCvxLocked);
-        // stake 8ETH in rETH and 8ETH in stETH
+        // stake 8ETH in rETH and 8ETH in wstETH
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
         uint256 rEthMinted = depositREth(assets - 40e18);
-        // deposit liquid staked ether derivatives in BAL pool
+        // deposit wstETH and rETH derivatives in BAL pool
+        uint256 lpAmount = depositBalTokens(wstEthMinted);
         // mint bundle NFT w/ BAL LP token + CVX NFT
+        uint256 bundleNftBalance = mintBundleNft(
+            currentCvxNftId,
+            amountCvxLocked,
+            lpAmount
+        );
         // mint grETH from bundle NFT
         // deposit grETH in CRV pool
     }
