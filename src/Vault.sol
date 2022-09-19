@@ -20,6 +20,8 @@ contract Vault is ERC4626 {
 
     uint256 sharesMinted;
 
+    uint256 totalEthAmount;
+
     address depositor;
 
     // WETH token address
@@ -120,6 +122,9 @@ contract Vault is ERC4626 {
     // vault can receive ether and wrap as underlying token (WETH)
     function _deposit() public payable returns (uint256 shares) {
         require(msg.value == 48e18, "Invalid Deposit");
+        // update count of deposited ETH
+        totalEthAmount += msg.value;
+        // update count of funds in vault
         weth.deposit{value: msg.value}();
         //weth.approve(address(this), 1e18);
         //wethToken.approve(address(vault), 1e18);
@@ -131,5 +136,9 @@ contract Vault is ERC4626 {
     // get shares minted
     function getShares() public view returns (uint256 shares) {
         return sharesMinted;
+    }
+
+    function getTotalEthAmount() public returns (uint256) {
+        return (totalEthAmount);
     }
 }
