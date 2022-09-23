@@ -20,18 +20,16 @@ contract VaultTest is Test {
     address constant alice = 0xD9f7F0b351A1e9EaF411fA8BEAa35E75355acaD6;
 */
     //StrategyGoldenRatio private strategy =
-    //   new StrategyGoldenRatio(0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46);
+    //    new StrategyGoldenRatio(0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46);
 
     function setUp() public {
         // underlying is WETH
         //console.log("Deploying new vault with underlying WETH...");
-        //vault = new Vault(WETH9, "Wrapped Ether", "WETH");
+        //vault = new Vault(WETH9, "Golden Ratio Vault", "grVault");
         //console.log("Vault Deployed");
     }
     /*
-    function testETHDeposit() public {
-        uint256 number = 43;
-        assertEq(number, 43);
+    function testDepositWithdraw() public {
         // send alice ether
         (bool sent, ) = address(alice).call{value: 48e18}("");
         require(sent, "Failed to send Ether");

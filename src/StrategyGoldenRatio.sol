@@ -13,7 +13,7 @@ import "./tokens/grCVX1155.sol";
 import "./tokens/grBundle1155.sol";
 //import "./tokens/grETH.sol";
 import "./interfaces/curve/ICrvEthPool.sol";
-import {ICurve} from "./interfaces/curve/ICurve.sol";
+import "./interfaces/curve/ICurvePool.sol";
 import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "./interfaces/rocketpool/RocketStorageInterface.sol";
 import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
@@ -22,7 +22,6 @@ import "./interfaces/IController.sol";
 // balancer Vault interface: https://github.com/balancer-labs/balancer-v2-monorepo/blob/weighted-deployment/contracts/vault/interfaces/IVault.sol
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/IgrETH.sol";
-import "./interfaces/IgrVault.sol";
 
 contract StrategyGoldenRatio is ERC1155Holder {
     // Contract Addresses
@@ -31,16 +30,12 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
-    // address for ETH/stETH crv pool
-    address private constant stEthCrvPool =
-        0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    // address for ETH/stETH crv LP token
-    address private constant lpToken =
-        0x06325440D014e39736583c165C2963BA99fAf14E;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant balPoolEthAddress =
         0x0000000000000000000000000000000000000000;
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
+    address constant deployCurvePool =
+        0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     address public governance;
     address public controller;
@@ -55,11 +50,15 @@ contract StrategyGoldenRatio is ERC1155Holder {
     grCVX1155 private cvxNft = new grCVX1155();
     grBundle1155 private bundleNft = new grBundle1155();
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
+    ICurvePool private curve = ICurvePool(deployCurvePool);
 
     ISwapRouter constant router =
         ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     address currentDepositor;
+
+    address grETH;
+    address pool;
 
     uint256 currentCvxNftId;
     // 1155 IDs can't have same ID
@@ -72,6 +71,9 @@ contract StrategyGoldenRatio is ERC1155Holder {
     IVault balancer = IVault(wstEthBalPool);
     bytes32 balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
+
+    // Internal Storage of balances across strategy protocols
+    // Includes CRV, CVX, rETH, wstETH, BAL BPT, NFTs
 
     // Mapping of rETH balance to sender
     mapping(address => uint256) rocketBalances;
@@ -91,16 +93,23 @@ contract StrategyGoldenRatio is ERC1155Holder {
     mapping(address => uint256) cvxNfts;
 
     mapping(uint256 => uint256) cvxNftLockedBalances;
+
     // user address to Bundle NFT ID
     mapping(address => uint256) bundleNfts;
+
     // bundle NFT ID to BAL LP token balance
     mapping(uint256 => uint256) bundleNFtBalances;
 
-    constructor(address _controller, address _rocketStorageAddress) {
+    constructor(
+        address token,
+        address _controller,
+        address _rocketStorageAddress
+    ) {
         governance = msg.sender;
         strategist = msg.sender;
         controller = _controller;
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
+        grETH = token;
     }
 
     function getName() external pure returns (string memory) {
@@ -129,18 +138,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
                 sqrtPriceLimitX96: 0
             });
         amountOut = router.exactInputSingle(params);
-    }
-
-    // strat has WETH, withdraw to ETH and deposit in pool
-    function addCrvLiquidity(uint256 amount) public returns (uint256 mint) {
-        uint256[2] memory _amounts;
-        _amounts = [uint256(amount), 0];
-        require(_amounts[0] == 16e18, "Invalid Deposit");
-        uint256 mintAmt = ICrvEthPool(stEthCrvPool).add_liquidity{
-            value: _amounts[0]
-        }(_amounts, 0);
-        uint256 lpMinted = IERC20(lpToken).balanceOf(address(this));
-        return (lpMinted);
     }
 
     function swapCvx(uint256 amount) public returns (uint256 amountOut) {
@@ -235,10 +232,10 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
         rocketDepositPool.deposit{value: amount}();
         uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
-        console.log("REth balance of this strat", rethBalance2);
         require(rethBalance2 > rethBalance1, "No rETH was minted");
         uint256 rethMinted = rethBalance2 - rethBalance1;
         rocketBalances[currentDepositor] += rethMinted;
+        return (rethMinted);
     }
 
     function depositBalTokens(uint256 amount)
@@ -273,33 +270,69 @@ contract StrategyGoldenRatio is ERC1155Holder {
         );
     }
 
-    function mintGrEth(address grEth, uint256 amount) public {
-        IgrETH grEthToken = IgrETH(grEth);
-        address _vault = IController(controller).vaults(address(want));
-        IgrVault grVault = IgrVault(_vault);
-        uint256 totalEthAmount = grVault.getTotalEthAmount();
-        console.log("total eth amount:", totalEthAmount);
-        // require crv deposit
-        // require cvx nft
-        // require bal nft
-        // mint initial deposit amount to strategy
-        //uint256 amount2mint = amount.mul(totalGrEthBalance).div(totalEthAmount);
+    function mintGrEth(uint256 amount) public {
+        IgrETH grEthToken = IgrETH(grETH);
         grEthToken.mint(address(this), amount);
-        //totalGrEthBalance += amount2mint;
-        // deposit in crv pool
     }
 
-    // put it all together
+    function burn(uint256 amount) public {
+        IgrETH grEthToken = IgrETH(grETH);
+        grEthToken.burn(address(this), amount);
+    }
+
+    function deployGrPool(address grEth) public returns (address) {
+        string memory name = "Golden Ratio ETH";
+        string memory symbol = "grETH";
+        address[4] memory coins;
+        coins = [
+            grEth,
+            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+            0x0000000000000000000000000000000000000000,
+            0x0000000000000000000000000000000000000000
+        ];
+        uint256 _A = 1000;
+        uint256 fee = 4000000;
+        uint256 asset_type = 1;
+        uint256 implementation_idx = 1;
+        address deployedPool = curve.deploy_plain_pool(
+            name,
+            symbol,
+            coins,
+            _A,
+            fee,
+            asset_type,
+            implementation_idx
+        );
+        pool = deployedPool;
+        return (deployedPool);
+    }
+
+    // deploy new curve pool, add liquidity
+    // strat has grETH, deposit in CRV pool
+    function addGrEthCrvLiquidity(address pool, uint256 amount)
+        public
+        returns (uint256 mint)
+    {
+        address grETHPool = pool;
+        uint256[2] memory _amounts;
+        weth.deposit{value: amount}();
+        weth.approve(grETHPool, amount);
+        _amounts = [uint256(amount), amount];
+        require(_amounts[0] == 16e18, "Invalid Deposit");
+        IgrETH grEthToken = IgrETH(grETH);
+        grEthToken.approve(grETHPool, amount);
+        uint256 mintAmt = ICrvEthPool(grETHPool).add_liquidity(_amounts, 0);
+        return (mintAmt);
+    }
+
     function deposit(address sender, uint256 assets) public payable {
+        address pool = deployGrPool(grETH);
         currentDepositor = sender;
         // unwrap WETH to ETH in strategy
         weth.withdraw(assets);
-        // deposit in 16 ETH in CRV pool
-        uint256 crvDeposit = addCrvLiquidity(assets - 32e18);
         // swap 16WETH for CVX, lock, and mint CVX NFT
         uint256 cvxAmountOut = swapCvx(assets - 32e18);
         uint256 amountCvxLocked = lockCvx(cvxAmountOut);
-        //console.log("this address locked cvx:", amountCvxLocked);
         uint256 cvxNftBalance = mintCvxNft(amountCvxLocked);
         // stake 8ETH in rETH and 8ETH in wstETH
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
@@ -312,28 +345,32 @@ contract StrategyGoldenRatio is ERC1155Holder {
             amountCvxLocked,
             lpAmount
         );
+        mintGrEth(16e18);
+        addGrEthCrvLiquidity(pool, 16e18);
         // mint grETH from bundle NFT
         // deposit grETH in CRV pool
     }
 
+    // Need method to withdraw funds and burn CVX NFT
+    // OR withdraw funds and maintain NFT, transfer to user's wallet
     function withdraw() public {
-        // deposit() in reverse
+        withdrawCRVPool(pool, 32e18);
+        burn(16e18);
     }
 
-    // Withdraw all funds, normally used when migrating strategies
-    function withdrawAll() external returns (uint256 balance) {
-        require(msg.sender == controller, "!controller");
-        _withdrawAll();
-
-        balance = IERC20(want).balanceOf(address(this));
-
-        address _vault = IController(controller).vaults(address(want));
-        require(_vault != address(0), "!vault"); // additional protection so we don't burn the funds
-        IERC20(want).transfer(_vault, balance);
+    function withdrawCRVPool(address pool, uint256 _amount) public {
+        address grETHPool = pool;
+        uint256[2] memory min_amounts;
+        min_amounts[0] = 0;
+        min_amounts[1] = 0;
+        uint256[2] memory returnAmt = ICrvEthPool(grETHPool).remove_liquidity(
+            _amount,
+            min_amounts
+        );
     }
 
-    function _withdrawAll() internal {
-        uint256 amount;
+    function getPool() public view returns (address) {
+        return (pool);
     }
 
     receive() external payable {}

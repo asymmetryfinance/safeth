@@ -18,8 +18,6 @@ contract Vault is ERC4626 {
 
     ERC20 public immutable token;
 
-    uint256 sharesMinted;
-
     uint256 totalEthAmount;
 
     address depositor;
@@ -49,6 +47,9 @@ contract Vault is ERC4626 {
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
+        // No need to transfer 'want' token as ETH has already been sent
+        // asset.safeTransferFrom(msg.sender, address(this), assets);
+
         _mint(receiver, shares);
 
         emit Deposit(msg.sender, receiver, assets, shares);
@@ -56,54 +57,61 @@ contract Vault is ERC4626 {
         afterDeposit(assets);
     }
 
-    /**
-     * @notice calculate ETH to withdraw from strategy given a ownership proportion
-     * @param _shares shares
-     * @param _strategyCollateralAmount amount of collateral in strategy
-     * @return amount of ETH allowed to withdraw
-     */
-    function _calcEthToWithdraw(
-        uint256 _shares,
-        uint256 _strategyCollateralAmount
-    ) internal view returns (uint256) {
-        return _strategyCollateralAmount * (_shares / (totalAssets()));
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override returns (uint256 shares) {
+        shares = previewWithdraw(assets);
+
+        beforeWithdraw(assets);
+
+        //_burn(owner, shares);
+
+        //emit Withdraw(msg.sender, receiver, owner, assets, shares);
+
+        // Send deposited ETH back to user
+        //(bool sent, ) = receiver.call{value: assets}("");
+        //require(sent, "Failed to send Ether");
     }
 
-    // ACCOUNTING LOGIC
+    // Primary entrance into Golden Ratio Vault
+    // vault can receive ether and wrap as underlying token (WETH)
+    function _deposit() public payable returns (uint256 shares) {
+        // Require 48 ETH sent to contract to deposit in Vault
+        require(msg.value == 48e18, "Invalid Deposit");
+        // update balance of ETH deposited in GR Vault
+        totalEthAmount += msg.value;
+        // update count of funds in vault
+        weth.deposit{value: msg.value}();
+        //weth.approve(address(this), 1e18);
+        //wethToken.approve(address(vault), 1e18);
+        depositor = msg.sender;
+        uint256 sharesMinted = deposit(msg.value, depositor);
+        return sharesMinted;
+    }
 
     /// @notice Total amount of the underlying asset that
     /// is "managed" by Vault.
     function totalAssets() public view override returns (uint256) {
-        return IERC20(WETH9).balanceOf(address(this));
+        return totalEthAmount;
     }
 
-    // DEPOSIT/WITHDRAWAL LIMIT LOGIC
-
-    /// @notice maximum amount of assets that can be deposited.
-    function maxDeposit(address) public view override returns (uint256) {
-        return type(uint256).max;
+    // Withdraw any tokens that might airdropped or mistakenly be send to this address
+    function saveTokens(address _token, uint _amount) external {
+        ERC20(_token).transfer(msg.sender, _amount);
     }
 
-    /// @notice maximum amount of shares that can be minted.
-    function maxMint(address) public view override returns (uint256) {
-        return type(uint256).max;
-    }
-
-    /// @notice Maximum amount of assets that can be withdrawn.
-    function maxWithdraw(address owner) public view override returns (uint256) {
-        return convertToAssets(balanceOf[owner]);
-    }
-
-    /// @notice Maximum amount of shares that can be redeemed.
-    function maxRedeem(address owner) public view override returns (uint256) {
-        return balanceOf[owner];
-    }
-
-    // INTERNAL HOOKS LOGIC
+    /*//////////////////////////////////////////////////////////////
+                          INTERNAL HOOKS LOGIC
+    //////////////////////////////////////////////////////////////*/
 
     // Vault has WETH
     // Reverse strat logic to repay initial deposit
-    function beforeWithdraw(uint256 assets, uint256 shares) internal override {}
+    function beforeWithdraw(uint256 assets) internal {
+        //weth.withdraw(assets);
+        IController(controller).withdraw(address(token), msg.sender, assets);
+    }
 
     // Vault has WETH
     // Trigger strategy
@@ -114,31 +122,10 @@ contract Vault is ERC4626 {
             IController(controller).getStrategy(address(WETH9)),
             assets
         );
-        // begin strategy deposit sequence w/ new weth deposit
+        // Begin strategy deposit sequence
         IController(controller).deposit(address(token), depositor, assets);
     }
 
-    // Primary entrance into Golden Ratio Vault
-    // vault can receive ether and wrap as underlying token (WETH)
-    function _deposit() public payable returns (uint256 shares) {
-        require(msg.value == 48e18, "Invalid Deposit");
-        // update count of deposited ETH
-        totalEthAmount += msg.value;
-        // update count of funds in vault
-        weth.deposit{value: msg.value}();
-        //weth.approve(address(this), 1e18);
-        //wethToken.approve(address(vault), 1e18);
-        depositor = msg.sender;
-        sharesMinted = deposit(msg.value, depositor);
-        return sharesMinted;
-    }
-
-    // get shares minted
-    function getShares() public view returns (uint256 shares) {
-        return sharesMinted;
-    }
-
-    function getTotalEthAmount() public returns (uint256) {
-        return (totalEthAmount);
-    }
+    // Payable function to receive ETH after unwrapping WETH
+    receive() external payable {}
 }

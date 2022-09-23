@@ -4,6 +4,9 @@ out = 'out'
 libs = ['lib']
 # gas_reports = ["WeightedPoolFactory"]
 
+# [rpc_endpoints]
+# mainnet = "${MAINNET_RPC_URL}"
+
 # Remappings in remappings.txt
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

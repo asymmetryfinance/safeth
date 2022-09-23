@@ -10,21 +10,14 @@ contract Controller {
     address public governance;
     address public strategist;
 
-    address public rewards;
     mapping(address => address) public vaults;
     mapping(address => address) public strategies;
 
     mapping(address => mapping(address => bool)) public approvedStrategies;
 
-    constructor(address _rewards) {
+    constructor() {
         governance = msg.sender;
         strategist = msg.sender;
-        rewards = _rewards;
-    }
-
-    function setRewards(address _rewards) public {
-        require(msg.sender == governance, "!governance");
-        rewards = _rewards;
     }
 
     function setStrategist(address _strategist) public {
@@ -65,9 +58,13 @@ contract Controller {
 
         address _current = strategies[_token];
         if (_current != address(0)) {
-            IStrategy(_current).withdrawAll();
+            IStrategy(_current).withdraw();
         }
         strategies[_token] = _strategy;
+    }
+
+    function getStrategy(address _token) public view returns (address strat) {
+        return (strategies[_token]);
     }
 
     function deposit(
@@ -79,7 +76,12 @@ contract Controller {
         IStrategy(strategies[_token]).deposit(currentDepositor, amount);
     }
 
-    function getStrategy(address _token) public view returns (address strat) {
-        return (strategies[_token]);
+    function withdraw(
+        address _token,
+        address _user,
+        uint256 _amount
+    ) public {
+        require(msg.sender == vaults[_token], "!vault");
+        IStrategy(strategies[_token]).withdraw();
     }
 }
