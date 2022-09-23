@@ -24,7 +24,7 @@ contract GoldenRatioTest is Test {
     address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
     IERC20 private reth = IERC20(RETH);
-    ERC20 wethToken = ERC20Mock(WETH9);
+    //ERC20 wethToken = ERC20Mock(WETH9);
     IWETH public weth = IWETH(WETH9);
     Controller public controller;
     Vault public vault;
@@ -34,20 +34,21 @@ contract GoldenRatioTest is Test {
     grETH grETHToken;
 
     function setUp() public {
+        grETHToken = new grETH("Golden Ratio ETH", "grETH", 18);
         // init new controller, vault, strategy
-        controller = new Controller(msg.sender);
+        controller = new Controller();
         vault = new Vault(
             WETH9,
-            "Wrapped Ether",
-            "WETH",
+            "Golden Ratio Vault",
+            "grVault",
             msg.sender,
             address(controller)
         );
         strategy = new StrategyGoldenRatio(
+            address(grETHToken),
             address(controller),
             0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46
         );
-        grETHToken = new grETH("Golden Ratio ETH", "grETH", 18);
         // setup connections between controller, vault, and strategy
         controller.setVault(address(WETH9), address(vault));
         controller.approveStrategy(address(WETH9), address(strategy));
@@ -64,36 +65,22 @@ contract GoldenRatioTest is Test {
         assertEq(currentVault, address(vault));
     }
 
-    // send required ETH to vault
-    // check that CRV and CVX deposits work
-    // check that CVX NFT is minted
-    // check that stETH and rETH stakes work
     function testDeposit() public {
-        // send alice ether to deposit
         console.log("Current Strategy:", strategy.getName());
         (bool sent, ) = address(alice).call{value: 48e18}("");
         require(sent, "Failed to send Ether");
-        // alice sends ether to vault
         console.log("Alice depositing 48ETH into vault...");
         vm.prank(alice);
         vault._deposit{value: 48e18}();
         uint256 aliceMaxRedeem = vault.maxRedeem(address(alice));
-        // check alice minted 48e18 worth of shares in vault
         assertEq(aliceMaxRedeem, 48e18);
-        console.log("alice shares minted:", aliceMaxRedeem);
-        console.log("WETH moving to strategy...");
-        console.log("Depositing ETH into CRV Pool and Locking CVX...");
-        console.log("Staking ETH for wstETH and rETH...");
-        uint256 wstETHBal = wstEth.balanceOf(address(strategy));
-        uint256 rETHBal = reth.balanceOf(address(strategy));
-        console.log("strategy balance of wstETH:", wstETHBal);
-        console.log("strategy balance of rETH:", rETHBal);
-        //IERC20 grEthToken = IERC20(address(grETHToken));
-        //grEthToken.mint(address(strategy), 48e18);
-        strategy.mintGrEth(address(grETHToken), 48e18);
-        console.log(
-            "Strategy grETH balance:",
-            grETH(grETHToken).balanceOf(address(strategy))
-        );
+        address pool = strategy.getPool();
+        // assertEq lp token balance after deposit and 32e18
+        assertEq(IERC20(pool).balanceOf(address(strategy)), 32e18);
+        console.log("Alice withdrawing 48ETH from vault...");
+        vm.prank(alice);
+        vault.withdraw(48e18, msg.sender, msg.sender);
+        assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(address(grETHToken)).balanceOf(address(strategy)), 0);
     }
 }

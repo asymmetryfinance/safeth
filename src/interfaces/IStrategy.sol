@@ -6,15 +6,9 @@ interface IStrategy {
 
     function deposit(address currentDepositor, uint256 assets) external;
 
-    // NOTE: must exclude any tokens used in the yield
-    // Controller role - withdraw should return to Controller
-    //function withdraw(address) external;
-
-    // Controller | Vault role - withdraw should always return to Vault
-    //function withdraw(uint256) external;
-
-    // Controller | Vault role - withdraw should always return to Vault
-    function withdrawAll() external returns (uint256);
+    function withdraw() external;
 
     function balanceOf() external view returns (uint256);
+
+    function getPool() external view returns (address);
 }
