@@ -1,4 +1,5 @@
-pragma solidity ^0.8;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
 
 import {ERC4626} from "solmate/mixins/ERC4626.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
@@ -19,8 +20,6 @@ contract Vault is ERC4626 {
     ERC20 public immutable token;
 
     uint256 totalEthAmount;
-
-    address depositor;
 
     // WETH token address
     // https://docs.uniswap.org/protocol/reference/deployments
@@ -49,7 +48,6 @@ contract Vault is ERC4626 {
 
         // No need to transfer 'want' token as ETH has already been sent
         // asset.safeTransferFrom(msg.sender, address(this), assets);
-
         _mint(receiver, shares);
 
         emit Deposit(msg.sender, receiver, assets, shares);
@@ -63,7 +61,6 @@ contract Vault is ERC4626 {
         address owner
     ) public override returns (uint256 shares) {
         shares = previewWithdraw(assets);
-
         beforeWithdraw(assets);
 
         //_burn(owner, shares);
@@ -86,8 +83,7 @@ contract Vault is ERC4626 {
         weth.deposit{value: msg.value}();
         //weth.approve(address(this), 1e18);
         //wethToken.approve(address(vault), 1e18);
-        depositor = msg.sender;
-        uint256 sharesMinted = deposit(msg.value, depositor);
+        uint256 sharesMinted = deposit(msg.value, msg.sender);
         return sharesMinted;
     }
 
@@ -109,6 +105,9 @@ contract Vault is ERC4626 {
     // Vault has WETH
     // Reverse strat logic to repay initial deposit
     function beforeWithdraw(uint256 assets) internal {
+        // unwrap amount of weth left that's sent back to vault
+        // eth + weth sent back
+        // could also unwrap all and send back only eth to vault
         //weth.withdraw(assets);
         IController(controller).withdraw(address(token), msg.sender, assets);
     }
@@ -123,7 +122,7 @@ contract Vault is ERC4626 {
             assets
         );
         // Begin strategy deposit sequence
-        IController(controller).deposit(address(token), depositor, assets);
+        IController(controller).deposit(address(token), msg.sender, assets);
     }
 
     // Payable function to receive ETH after unwrapping WETH

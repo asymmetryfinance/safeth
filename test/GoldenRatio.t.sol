@@ -30,11 +30,14 @@ contract GoldenRatioTest is Test {
     Vault public vault;
     StrategyGoldenRatio public strategy;
     // test user account
-    address constant alice = 0xD9f7F0b351A1e9EaF411fA8BEAa35E75355acaD6;
+    address constant alice = address(0xABCD);
     grETH grETHToken;
 
     function setUp() public {
+        // deploy tokens
         grETHToken = new grETH("Golden Ratio ETH", "grETH", 18);
+        grCVX1155 cvxNft = new grCVX1155();
+        grBundle1155 bundleNft = new grBundle1155();
         // init new controller, vault, strategy
         controller = new Controller();
         vault = new Vault(
@@ -47,7 +50,9 @@ contract GoldenRatioTest is Test {
         strategy = new StrategyGoldenRatio(
             address(grETHToken),
             address(controller),
-            0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46
+            0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46,
+            address(cvxNft),
+            address(bundleNft)
         );
         // setup connections between controller, vault, and strategy
         controller.setVault(address(WETH9), address(vault));
@@ -70,7 +75,7 @@ contract GoldenRatioTest is Test {
         (bool sent, ) = address(alice).call{value: 48e18}("");
         require(sent, "Failed to send Ether");
         console.log("Alice depositing 48ETH into vault...");
-        vm.prank(alice);
+        vm.prank(address(alice));
         vault._deposit{value: 48e18}();
         uint256 aliceMaxRedeem = vault.maxRedeem(address(alice));
         assertEq(aliceMaxRedeem, 48e18);
@@ -78,6 +83,7 @@ contract GoldenRatioTest is Test {
         // assertEq lp token balance after deposit and 32e18
         assertEq(IERC20(pool).balanceOf(address(strategy)), 32e18);
         console.log("Alice withdrawing 48ETH from vault...");
+        vm.warp(block.timestamp + 1000000);
         vm.prank(alice);
         vault.withdraw(48e18, msg.sender, msg.sender);
         assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
