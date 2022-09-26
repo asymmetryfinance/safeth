@@ -11,4 +11,12 @@ contract grCVX1155 is ERC1155("grCVXNFT") {
     ) public {
         _mint(recipient, id, amount, "");
     }
+
+    function burn(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) public {
+        _burn(from, id, amount);
+    }
 }

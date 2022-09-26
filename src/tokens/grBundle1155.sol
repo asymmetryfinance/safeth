@@ -14,4 +14,16 @@ contract grBundle1155 is ERC1155("grBundleNFT") {
         _mint(recipient, cvxId, cvxAmount, "");
         _mint(recipient, balId, balAmount, "");
     }
+
+    //function burn() public {}
+    function burnBatch(
+        address from,
+        uint256[2] memory ids,
+        uint256[2] memory amounts
+    ) public {
+        // burn bundle BPT balance
+        _burn(from, ids[0], amounts[0]);
+        // burn CVX NFT balance
+        _burn(from, ids[1], amounts[1]);
+    }
 }

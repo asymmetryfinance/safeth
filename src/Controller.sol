@@ -58,7 +58,8 @@ contract Controller {
 
         address _current = strategies[_token];
         if (_current != address(0)) {
-            IStrategy(_current).withdraw();
+            // withdraw all funds from current strategy
+            //IStrategy(_current).withdraw();
         }
         strategies[_token] = _strategy;
     }
@@ -69,11 +70,11 @@ contract Controller {
 
     function deposit(
         address _token,
-        address currentDepositor,
+        address _user,
         uint256 amount
     ) public {
         require(msg.sender == vaults[_token], "!vault");
-        IStrategy(strategies[_token]).deposit(currentDepositor, amount);
+        IStrategy(strategies[_token]).deposit(_user, amount);
     }
 
     function withdraw(
@@ -82,6 +83,6 @@ contract Controller {
         uint256 _amount
     ) public {
         require(msg.sender == vaults[_token], "!vault");
-        IStrategy(strategies[_token]).withdraw();
+        IStrategy(strategies[_token]).withdraw(_user);
     }
 }

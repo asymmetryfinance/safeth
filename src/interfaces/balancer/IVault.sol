@@ -12,6 +12,7 @@ interface IVault {
         view
         returns (address tokens);
     */
+
     function joinPool(
         bytes32 poolId,
         address sender,
@@ -24,5 +25,19 @@ interface IVault {
         uint256[] maxAmountsIn;
         bytes userData;
         bool fromInternalBalance;
+    }
+
+    function exitPool(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        ExitPoolRequest memory request
+    ) external;
+
+    struct ExitPoolRequest {
+        address[] assets;
+        uint256[] minAmountsOut;
+        bytes userData;
+        bool toInternalBalance;
     }
 }
