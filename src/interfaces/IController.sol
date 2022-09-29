@@ -9,14 +9,16 @@ interface IController {
     ) external;
 
     function withdraw(
-        address _token,
-        address user,
-        uint256 amount
+        address,
+        address,
+        uint256
     ) external;
 
     function balanceOf(address) external view returns (uint256);
 
-    function vaults(address) external view returns (address);
+    //function vaults(address) external view returns (address);
 
-    function getStrategy(address _token) external view returns (address strat);
+    function getStrategy(address) external view returns (address);
+
+    function getVault(address) external view returns (address);
 }

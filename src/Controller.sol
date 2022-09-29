@@ -68,6 +68,10 @@ contract Controller {
         return (strategies[_token]);
     }
 
+    function getVault(address _token) public view returns (address vault) {
+        return (vaults[_token]);
+    }
+
     function deposit(
         address _token,
         address _user,

@@ -80,10 +80,9 @@ contract GoldenRatioTest is Test {
         uint256 aliceMaxRedeem = vault.maxRedeem(address(alice));
         assertEq(aliceMaxRedeem, 48e18);
         address pool = strategy.getPool();
-        // assertEq lp token balance after deposit and 32e18
         assertEq(IERC20(pool).balanceOf(address(strategy)), 32e18);
         console.log("Alice withdrawing 48ETH from vault...");
-        vm.warp(block.timestamp + 1000000);
+        vm.warp(block.timestamp + 100000);
         vm.prank(alice);
         vault.withdraw(48e18, msg.sender, msg.sender);
         assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
