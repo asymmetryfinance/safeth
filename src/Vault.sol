@@ -110,6 +110,8 @@ contract Vault is ERC4626 {
         // could also unwrap all and send back only eth to vault
         //weth.withdraw(assets);
         IController(controller).withdraw(address(token), msg.sender, assets);
+        (bool sent, ) = msg.sender.call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     // Vault has WETH
@@ -125,6 +127,11 @@ contract Vault is ERC4626 {
         IController(controller).deposit(address(token), msg.sender, assets);
     }
 
+    function getName() external pure returns (string memory) {
+        return "Golden Ratio Vault";
+    }
+
     // Payable function to receive ETH after unwrapping WETH
+    // and receive ETH from strategy
     receive() external payable {}
 }
