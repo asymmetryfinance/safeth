@@ -33,6 +33,24 @@ import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
 contract StrategyGoldenRatio is ERC1155Holder {
+    struct Position {
+        uint256 positionID;
+        address userAddress;
+        uint256 rocketBalances; // rETH
+        uint256 lidoBalances; // wstETH
+        uint256 curveBalances; // crv Pool LP amount
+        uint256 convexBalances; // CVX locked amount amount
+        uint256 balancerBalances; // bal LP amount
+        uint256 cvxNFTID;
+        uint256 bundleNFTID;
+        uint256 grETH; // amount grETH minted to user
+        uint256 createdAt; // block.timestamp
+    }
+
+    // map user address to Position struct
+    mapping(address => Position) public positions;
+    uint256 currentPositionId;
+
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant want = address(WETH9);
@@ -52,7 +70,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address public controller;
     address public strategist;
 
-    // Init
     IWETH private weth = IWETH(WETH9);
     IERC20 private cvx = IERC20(CVX);
     IERC20 private reth = IERC20(RETH);
@@ -72,10 +89,10 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address pool;
     address CVXNFT;
     address bundleNFT;
-
+    // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
-    // 1155 IDs can't have same ID
-    uint256 currentBundleNftId = 10;
+    // Bundle NFT ID starts at 100
+    uint256 currentBundleNftId = 100;
 
     uint256 totalGrEthBalance;
 
@@ -87,36 +104,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address private balancerHelpers =
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
     IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
-
-    // Internal Storage of balances across strategy protocols
-    // Includes CRV, CVX, rETH, wstETH, BAL BPT, NFTs
-
-    // Mapping of rETH balance to sender
-    mapping(address => uint256) rocketBalances;
-
-    // Mapping of stETH balance to sender
-    mapping(address => uint256) lidoBalances;
-
-    // Mapping of CRV balance to sender
-    mapping(address => uint256) curveBalances;
-
-    // Mapping of CVX balance to sender
-    mapping(address => uint256) convexBalances;
-
-    // Mapping of BAL balance to sender
-    mapping(address => uint256) balancerBalances;
-
-    // Mapping of CVXNFT ID to sender
-    mapping(address => uint256) cvxNfts;
-
-    // Mapping of CVX Locked Balance to NFT ID
-    mapping(uint256 => uint256) cvxNftLockedBalances;
-
-    // user address to Bundle NFT ID
-    mapping(address => uint256) bundleNfts;
-
-    // bundle NFT ID to BAL LP token balance
-    mapping(uint256 => uint256) bundleNFtBalances;
 
     constructor(
         address token,
@@ -135,53 +122,124 @@ contract StrategyGoldenRatio is ERC1155Holder {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        DEPOSIT/WITHDRAWAL LOGIC
+                        OPEN/CLOSE POSITION LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function deposit(address sender, uint256 assets) public payable {
+    function openPosition(address sender, uint256 assets) public payable {
         address pool = deployGrPool(grETH);
-        // may put us at risk for exploits. need a way to internally track values by msg.sender to the vault
-        // however msg.sender for strat functions is vault, msg.sender to vault is user address
-        // same issue in withdraw(...) setting currentWithdrawer = sender;
         currentDepositor = sender;
-        // unwrap WETH to ETH in strategy
         weth.withdraw(assets);
-        // swap 16WETH for CVX, lock, and mint CVX NFT
         uint256 cvxAmountOut = swapCvx(assets - 32e18);
         uint256 amountCvxLocked = lockCvx(cvxAmountOut);
-        uint256 cvxNftBalance = mintCvxNft(sender, amountCvxLocked);
-        // stake 8ETH in rETH and 8ETH in wstETH
+        (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
+            sender,
+            amountCvxLocked
+        );
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
         uint256 rEthMinted = depositREth(assets - 40e18);
-        // deposit wstETH and rETH derivatives in BAL pool
-        uint256 lpAmount = depositBalTokens(wstEthMinted);
-        // mint bundle NFT w/ BAL LP token + CVX NFT
-        uint256 bundleNftBalance = mintBundleNft(
+        uint256 balLpAmount = depositBalTokens(wstEthMinted);
+        uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,
             amountCvxLocked,
-            lpAmount
+            balLpAmount
         );
         mintGrEth(16e18);
-        addGrEthCrvLiquidity(pool, 16e18);
-        // mint grETH from bundle NFT
-        // deposit grETH in CRV pool
+        uint256 crvLpAmount = addGrEthCrvLiquidity(pool, 16e18);
+        require(
+            positions[currentDepositor].userAddress != currentDepositor,
+            "User already has position."
+        );
+        uint256 newPositionID = ++currentPositionId;
+
+        // storage of individual balances associated w/ user deposit
+        positions[currentDepositor] = Position({
+            positionID: newPositionID,
+            userAddress: currentDepositor,
+            rocketBalances: rEthMinted,
+            lidoBalances: wstEthMinted,
+            curveBalances: crvLpAmount,
+            convexBalances: amountCvxLocked,
+            balancerBalances: balLpAmount,
+            cvxNFTID: _cvxNFTID,
+            bundleNFTID: bundleNftId,
+            grETH: 16e18,
+            createdAt: block.timestamp
+        });
+
+        console.log("positions.id", positions[currentDepositor].positionID);
+        console.log(
+            "positions.userAddress",
+            positions[currentDepositor].userAddress
+        );
+        console.log(
+            "positions.rocketBalances",
+            positions[currentDepositor].rocketBalances
+        );
+        console.log(
+            "positions.lidoBalances",
+            positions[currentDepositor].lidoBalances
+        );
+        console.log(
+            "positions.curveBalances",
+            positions[currentDepositor].curveBalances
+        );
+        console.log(
+            "positions.convexBalances",
+            positions[currentDepositor].convexBalances
+        );
+        console.log(
+            "positions.balancerBalances",
+            positions[currentDepositor].balancerBalances
+        );
+        console.log("positions.cvxNFTID", positions[currentDepositor].cvxNFTID);
+        console.log(
+            "positions.bundleNFTID",
+            positions[currentDepositor].bundleNFTID
+        );
+        console.log("positions.grETH", positions[currentDepositor].grETH);
+        console.log(
+            "positions.createdAt",
+            positions[currentDepositor].createdAt
+        );
     }
 
     // add support for CVX burn or keep and transfer NFT to user
-    function withdraw(address sender) public {
+    // must transfer amount out tokens to vault
+    function closePosition(address sender) public {
         currentWithdrawer = sender;
         withdrawCRVPool(pool, 32e18);
         burn(16e18);
         burnBundleNFT(sender);
-        withdrawBalTokens();
+        uint256 wstETH2Unwrap = withdrawBalTokens();
         withdrawREth();
-        withdrawWstEth();
+        withdrawWstEth(wstETH2Unwrap);
         weth.withdraw(weth.balanceOf(address(this)));
         //uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
         //console.log("CVX lp after withdraw:", lockedCvxAmount);
         address vault = IController(controller).getVault(WETH9);
         (bool sent, ) = address(vault).call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
+        console.log("-----------");
+        console.log("positions.id", positions[sender].positionID);
+        console.log("positions.userAddress", positions[sender].userAddress);
+        console.log(
+            "positions.rocketBalances",
+            positions[sender].rocketBalances
+        );
+        console.log("positions.lidoBalances", positions[sender].lidoBalances);
+        console.log("positions.curveBalances", positions[sender].curveBalances);
+        console.log(
+            "positions.convexBalances",
+            positions[sender].convexBalances
+        );
+        console.log(
+            "positions.balancerBalances",
+            positions[sender].balancerBalances
+        );
+        console.log("positions.cvxNFTID", positions[sender].cvxNFTID);
+        console.log("positions.bundleNFTID", positions[sender].bundleNFTID);
+        console.log("positions.grETH", positions[sender].grETH);
+        console.log("positions.createdAt", positions[sender].createdAt);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -194,8 +252,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint24 poolFee,
         uint amountIn
     ) public returns (uint amountOut) {
-        // no need to transfer weth; weth already in contract
-        //TransferHelper.safeTransferFrom(tokenIn,msg.sender,address(this),amountIn);
         TransferHelper.safeApprove(tokenIn, address(router), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -212,7 +268,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         amountOut = router.exactInputSingle(params);
     }
 
-    function swapCvx(uint256 amount) public returns (uint256 amountOut) {
+    function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
         weth.deposit{value: amount}();
         weth.approve(address(controller), amount);
         uint256 amountSwapped = swapExactInputSingleHop(
@@ -245,6 +301,9 @@ contract StrategyGoldenRatio is ERC1155Holder {
         require(sent, "Failed to send Ether");
         uint256 wstEthBalance2 = wstEth.balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalance2 - wstEthBalance1;
+        console.log("-----------");
+        console.log("wstETH amount before bal pool:", wstEthAmount);
+        console.log("-----------");
         return (wstEthAmount);
     }
 
@@ -272,7 +331,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
         require(rethBalance2 > rethBalance1, "No rETH was minted");
         uint256 rethMinted = rethBalance2 - rethBalance1;
-        rocketBalances[currentDepositor] += rethMinted;
+        //rocketBalances[currentDepositor] += rethMinted;
         return (rethMinted);
     }
 
@@ -303,14 +362,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
         );
     }
 
-    function withdrawWstEth() public {
-        uint256 amount = wstEth.balanceOf(address(this));
-        wstEth.unwrap(amount);
-        uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
-        IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
-        lidoPool.exchange(1, 0, stEthBal, 0);
-    }
-
     function withdrawREth() public {
         address rocketTokenRETHAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
@@ -319,12 +370,21 @@ contract StrategyGoldenRatio is ERC1155Holder {
             rocketTokenRETHAddress
         );
         uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-        uint256 amount = rocketBalances[currentWithdrawer];
+        uint256 amount = positions[currentWithdrawer].rocketBalances;
+        positions[currentWithdrawer].rocketBalances = 0;
         rocketTokenRETH.burn(amount);
         uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
-        //require(rethBalance1 > rethBalance2, "No rETH was burned");
+        require(rethBalance1 > rethBalance2, "No rETH was burned");
         uint256 rethBurned = rethBalance1 - rethBalance2;
-        rocketBalances[currentWithdrawer] -= rethBurned;
+    }
+
+    function withdrawWstEth(uint256 _amount) public {
+        positions[currentWithdrawer].lidoBalances = 0;
+        wstEth.unwrap(_amount);
+        uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
+        IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
+        // convert stETH to ETH
+        lidoPool.exchange(1, 0, stEthBal, 0);
     }
 
     // deploy new curve pool, add liquidity
@@ -345,14 +405,15 @@ contract StrategyGoldenRatio is ERC1155Holder {
         return (mintAmt);
     }
 
-    function withdrawBalTokens() public {
-        uint256 amount = ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230)
-            .balanceOf(address(this));
+    function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
+        // bal lp amount
+        uint256 amount = positions[currentWithdrawer].balancerBalances;
         address[] memory _assets = new address[](2);
         uint256[] memory _amounts = new uint256[](2);
         _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         _assets[1] = 0x0000000000000000000000000000000000000000;
-        _amounts[0] = 7056977990962131012;
+        // account for slippage from Balancer withdrawal
+        _amounts[0] = (positions[currentWithdrawer].lidoBalances * 99) / 100;
         _amounts[1] = 0;
         uint256 exitKind = 0;
         uint256 exitTokenIndex = 0;
@@ -367,13 +428,13 @@ contract StrategyGoldenRatio is ERC1155Holder {
             userDataEncoded,
             false
         );
-        (uint256 balIn, uint256[] memory amountsOut) = helper.queryExit(
-            balPoolId,
-            address(this),
-            address(this),
-            request
-        );
+        // (uint256 balIn, uint256[] memory amountsOut) = helper.queryExit(balPoolId,address(this),address(this),request);
+        uint256 wBalance1 = wstEth.balanceOf(address(this));
         balancer.exitPool(balPoolId, address(this), address(this), request);
+        uint256 wBalance2 = wstEth.balanceOf(address(this));
+        require(wBalance2 > wBalance1, "No wstETH was withdrawn");
+        uint256 wstETHWithdrawn = wBalance2 - wBalance1;
+        return (wstETHWithdrawn);
     }
 
     function withdrawCRVPool(address pool, uint256 _amount) public {
@@ -381,6 +442,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
         min_amounts[1] = 0;
+        positions[currentWithdrawer].curveBalances = 0;
         uint256[2] memory returnAmt = ICrvEthPool(grETHPool).remove_liquidity(
             _amount,
             min_amounts
@@ -420,25 +482,24 @@ contract StrategyGoldenRatio is ERC1155Holder {
 
     function mintCvxNft(address sender, uint _amountLocked)
         public
-        returns (uint256 balance)
+        returns (uint256 balance, uint256 nftId)
     {
         uint amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
         IgrCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
-        cvxNfts[sender] = newCvxNftId;
-        cvxNftLockedBalances[newCvxNftId] = amountLocked;
+        positions[sender].cvxNFTID = newCvxNftId;
         uint256 mintedCvx1155 = IgrCVX1155(CVXNFT).balanceOf(
             address(this),
             newCvxNftId
         );
-        return mintedCvx1155;
+        return (mintedCvx1155, newCvxNftId);
     }
 
     function mintBundleNft(
         uint256 cvxNftId,
         uint256 cvxAmount,
         uint256 balPoolTokens
-    ) public returns (uint256 balance) {
+    ) public returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
         IgrBundle1155(bundleNFT).mint(
             cvxNftId,
@@ -447,23 +508,18 @@ contract StrategyGoldenRatio is ERC1155Holder {
             balPoolTokens,
             address(this)
         );
-        bundleNfts[currentDepositor] = newBundleNftId;
-        bundleNFtBalances[newBundleNftId] = balPoolTokens;
-        uint256 mintedBundle1155 = IgrBundle1155(bundleNFT).balanceOf(
-            address(this),
-            newBundleNftId
-        );
-        return mintedBundle1155;
+        // positions[currentDepositor] = newBundleNftId;
+        // bundleNFtBalances[newBundleNftId] = balPoolTokens;
+        return (newBundleNftId);
     }
 
     function burnBundleNFT(address user) public {
         uint256[2] memory ids;
         uint256[2] memory amounts;
-        //uint256[2] memory amounts;
-        ids[0] = bundleNfts[user];
-        ids[1] = cvxNfts[user];
-        amounts[0] = bundleNFtBalances[ids[0]];
-        amounts[1] = cvxNftLockedBalances[ids[1]];
+        ids[0] = positions[user].bundleNFTID;
+        ids[1] = positions[user].cvxNFTID;
+        amounts[0] = positions[user].balancerBalances;
+        amounts[1] = positions[user].convexBalances;
         IgrBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
@@ -472,9 +528,10 @@ contract StrategyGoldenRatio is ERC1155Holder {
         grEthToken.mint(address(this), amount);
     }
 
-    // burn GRETH
+    // burn grETH
     function burn(uint256 amount) public {
         IgrETH grEthToken = IgrETH(grETH);
+        positions[currentWithdrawer].grETH = 0;
         grEthToken.burn(address(this), amount);
     }
 
@@ -489,6 +546,10 @@ contract StrategyGoldenRatio is ERC1155Holder {
     function getName() external pure returns (string memory) {
         return "StrategyGoldenRatio";
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            FALLBACK
+    //////////////////////////////////////////////////////////////*/
 
     receive() external payable {}
 }

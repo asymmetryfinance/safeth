@@ -21,6 +21,8 @@ test-vault-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Vau
 test-strat-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Strategy -vvv
 test-gr-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract GoldenRatio -vvv
 test-warden-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Warden -vvv
+# fork mainnnet
+anvil :; anvil --fork-url $(MAINNET_RPC_URL) --chain-id 69420
 clean  :; forge clean
 snapshot :; forge snapshot
 
