@@ -78,7 +78,7 @@ contract Controller {
         uint256 amount
     ) public {
         require(msg.sender == vaults[_token], "!vault");
-        IStrategy(strategies[_token]).deposit(_user, amount);
+        IStrategy(strategies[_token]).openPosition(_user, amount);
     }
 
     function withdraw(
@@ -87,6 +87,6 @@ contract Controller {
         uint256 _amount
     ) public {
         require(msg.sender == vaults[_token], "!vault");
-        IStrategy(strategies[_token]).withdraw(_user);
+        IStrategy(strategies[_token]).closePosition(_user);
     }
 }
