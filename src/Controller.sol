@@ -84,9 +84,10 @@ contract Controller {
     function withdraw(
         address _token,
         address _user,
-        uint256 _amount
+        uint256 _amount,
+        bool _decision
     ) public {
         require(msg.sender == vaults[_token], "!vault");
-        IStrategy(strategies[_token]).closePosition(_user);
+        IStrategy(strategies[_token]).closePosition(_user, _decision);
     }
 }

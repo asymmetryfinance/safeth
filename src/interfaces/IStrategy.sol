@@ -6,7 +6,7 @@ interface IStrategy {
 
     function openPosition(address user, uint256 assets) external;
 
-    function closePosition(address user) external;
+    function closePosition(address user, bool decision) external;
 
     function balanceOf() external view returns (uint256);
 
