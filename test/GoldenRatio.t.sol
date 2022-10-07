@@ -82,9 +82,9 @@ contract GoldenRatioTest is Test {
         address pool = strategy.getPool();
         assertEq(IERC20(pool).balanceOf(address(strategy)), 32e18);
         console.log("Alice withdrawing 48ETH from vault...");
-        vm.warp(block.timestamp + 1000000);
+        vm.warp(block.timestamp + 1500000);
         vm.prank(alice);
-        vault.withdraw(48e18, msg.sender, msg.sender);
+        vault.withdraw(48e18, msg.sender, msg.sender, true);
         assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
         assertEq(IERC20(address(grETHToken)).balanceOf(address(strategy)), 0);
     }

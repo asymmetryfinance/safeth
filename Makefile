@@ -19,7 +19,7 @@ trace-contract :; forge test -vvv --fork-url ${FORK_URL} --match-contract $(cont
 test-mainnet-fork :; forge test --fork-url $(RPC_URL_MAINNET) --match-contract StETH4626.*Test -vvv
 test-vault-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Vault -vvv
 test-strat-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Strategy -vvv
-test-gr-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract GoldenRatio -vvv
+test-gr-fork :; forge test --fork-url $(MAINNET_RPC_URL) --gas-report --match-contract GoldenRatio -vvv
 test-warden-fork :; forge test --fork-url $(MAINNET_RPC_URL) --match-contract Warden -vvv
 # fork mainnnet
 anvil :; anvil --fork-url $(MAINNET_RPC_URL) --chain-id 69420

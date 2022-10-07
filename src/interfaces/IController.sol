@@ -11,7 +11,8 @@ interface IController {
     function withdraw(
         address,
         address,
-        uint256
+        uint256,
+        bool
     ) external;
 
     function balanceOf(address) external view returns (uint256);

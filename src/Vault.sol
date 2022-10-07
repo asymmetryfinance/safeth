@@ -58,10 +58,11 @@ contract Vault is ERC4626 {
     function withdraw(
         uint256 assets,
         address receiver,
-        address owner
-    ) public override returns (uint256 shares) {
+        address owner,
+        bool cvxNftDecision
+    ) public returns (uint256 shares) {
         shares = previewWithdraw(assets);
-        beforeWithdraw(assets);
+        beforeWithdraw(assets, cvxNftDecision);
 
         //_burn(owner, shares);
 
@@ -104,12 +105,17 @@ contract Vault is ERC4626 {
 
     // Vault has WETH
     // Reverse strat logic to repay initial deposit
-    function beforeWithdraw(uint256 assets) internal {
+    function beforeWithdraw(uint256 assets, bool decision) internal {
         // unwrap amount of weth left that's sent back to vault
         // eth + weth sent back
         // could also unwrap all and send back only eth to vault
         //weth.withdraw(assets);
-        IController(controller).withdraw(address(token), msg.sender, assets);
+        IController(controller).withdraw(
+            address(token),
+            msg.sender,
+            assets,
+            decision
+        );
         (bool sent, ) = msg.sender.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }

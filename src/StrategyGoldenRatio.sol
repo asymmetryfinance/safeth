@@ -165,48 +165,13 @@ contract StrategyGoldenRatio is ERC1155Holder {
             grETH: 16e18,
             createdAt: block.timestamp
         });
-
-        console.log("positions.id", positions[currentDepositor].positionID);
-        console.log(
-            "positions.userAddress",
-            positions[currentDepositor].userAddress
-        );
-        console.log(
-            "positions.rocketBalances",
-            positions[currentDepositor].rocketBalances
-        );
-        console.log(
-            "positions.lidoBalances",
-            positions[currentDepositor].lidoBalances
-        );
-        console.log(
-            "positions.curveBalances",
-            positions[currentDepositor].curveBalances
-        );
-        console.log(
-            "positions.convexBalances",
-            positions[currentDepositor].convexBalances
-        );
-        console.log(
-            "positions.balancerBalances",
-            positions[currentDepositor].balancerBalances
-        );
-        console.log("positions.cvxNFTID", positions[currentDepositor].cvxNFTID);
-        console.log(
-            "positions.bundleNFTID",
-            positions[currentDepositor].bundleNFTID
-        );
-        console.log("positions.grETH", positions[currentDepositor].grETH);
-        console.log(
-            "positions.createdAt",
-            positions[currentDepositor].createdAt
-        );
     }
 
     // add support for CVX burn or keep and transfer NFT to user
     // must transfer amount out tokens to vault
-    function closePosition(address sender) public {
+    function closePosition(address sender, bool decision) public {
         currentWithdrawer = sender;
+        withdrawCVXNft(decision);
         withdrawCRVPool(pool, 32e18);
         burn(16e18);
         burnBundleNFT(sender);
@@ -219,27 +184,6 @@ contract StrategyGoldenRatio is ERC1155Holder {
         address vault = IController(controller).getVault(WETH9);
         (bool sent, ) = address(vault).call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
-        console.log("-----------");
-        console.log("positions.id", positions[sender].positionID);
-        console.log("positions.userAddress", positions[sender].userAddress);
-        console.log(
-            "positions.rocketBalances",
-            positions[sender].rocketBalances
-        );
-        console.log("positions.lidoBalances", positions[sender].lidoBalances);
-        console.log("positions.curveBalances", positions[sender].curveBalances);
-        console.log(
-            "positions.convexBalances",
-            positions[sender].convexBalances
-        );
-        console.log(
-            "positions.balancerBalances",
-            positions[sender].balancerBalances
-        );
-        console.log("positions.cvxNFTID", positions[sender].cvxNFTID);
-        console.log("positions.bundleNFTID", positions[sender].bundleNFTID);
-        console.log("positions.grETH", positions[sender].grETH);
-        console.log("positions.createdAt", positions[sender].createdAt);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -384,7 +328,9 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         // convert stETH to ETH
+        console.log("Eth before swapping steth to eth:", address(this).balance);
         lidoPool.exchange(1, 0, stEthBal, 0);
+        console.log("Eth after swapping steth to eth:", address(this).balance);
     }
 
     // deploy new curve pool, add liquidity
@@ -430,6 +376,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         );
         // (uint256 balIn, uint256[] memory amountsOut) = helper.queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = wstEth.balanceOf(address(this));
+        positions[currentWithdrawer].balancerBalances = 0;
         balancer.exitPool(balPoolId, address(this), address(this), request);
         uint256 wBalance2 = wstEth.balanceOf(address(this));
         require(wBalance2 > wBalance1, "No wstETH was withdrawn");
@@ -513,6 +460,40 @@ contract StrategyGoldenRatio is ERC1155Holder {
         return (newBundleNftId);
     }
 
+    // user selection in front-end:
+    // True - user is transferred the 1155 NFT holding their CVX deposit
+    // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
+    // False - user pays fee to unlock their CVX and burn their NFT
+    function withdrawCVXNft(bool _decision) public {
+        if (_decision == true) {
+            IgrCVX1155(CVXNFT).safeTransferFrom(
+                address(this),
+                currentWithdrawer,
+                positions[currentWithdrawer].cvxNFTID,
+                positions[currentWithdrawer].convexBalances,
+                ""
+            );
+            console.log(
+                "user balance of CVX NFT:",
+                IgrCVX1155(CVXNFT).balanceOf(
+                    currentWithdrawer,
+                    positions[currentWithdrawer].cvxNFTID
+                )
+            );
+        } else {
+            console.log("decision: ", _decision);
+            // fees: 119 days - 1% per day to max 12% fee: 88 days to min fee
+            // 119 - 88 = 31
+            // block.timestamp - positions[createdAt] = time locked
+            // 1 day = 86400 seconds
+            // burn NFT
+            // swap CVX for ETH
+            // transfer ETH to user minus fee for unlock
+            // fee schedule:
+            //
+        }
+    }
+
     function burnBundleNFT(address user) public {
         uint256[2] memory ids;
         uint256[2] memory amounts;
@@ -553,3 +534,70 @@ contract StrategyGoldenRatio is ERC1155Holder {
 
     receive() external payable {}
 }
+
+// log struct vals:
+/*
+
+        deposit: 
+        
+        console.log("positions.id", positions[currentDepositor].positionID);
+        console.log(
+            "positions.userAddress",
+            positions[currentDepositor].userAddress
+        );
+        console.log(
+            "positions.rocketBalances",
+            positions[currentDepositor].rocketBalances
+        );
+        console.log(
+            "positions.lidoBalances",
+            positions[currentDepositor].lidoBalances
+        );
+        console.log(
+            "positions.curveBalances",
+            positions[currentDepositor].curveBalances
+        );
+        console.log(
+            "positions.convexBalances",
+            positions[currentDepositor].convexBalances
+        );
+        console.log(
+            "positions.balancerBalances",
+            positions[currentDepositor].balancerBalances
+        );
+        console.log("positions.cvxNFTID", positions[currentDepositor].cvxNFTID);
+        console.log(
+            "positions.bundleNFTID",
+            positions[currentDepositor].bundleNFTID
+        );
+        console.log("positions.grETH", positions[currentDepositor].grETH);
+        console.log(
+            "positions.createdAt",
+            positions[currentDepositor].createdAt
+        );
+
+        withdraw: 
+
+        console.log("-----------");
+        console.log("positions.id", positions[sender].positionID);
+        console.log("positions.userAddress", positions[sender].userAddress);
+        console.log(
+            "positions.rocketBalances",
+            positions[sender].rocketBalances
+        );
+        console.log("positions.lidoBalances", positions[sender].lidoBalances);
+        console.log("positions.curveBalances", positions[sender].curveBalances);
+        console.log(
+            "positions.convexBalances",
+            positions[sender].convexBalances
+        );
+        console.log(
+            "positions.balancerBalances",
+            positions[sender].balancerBalances
+        );
+        console.log("positions.cvxNFTID", positions[sender].cvxNFTID);
+        console.log("positions.bundleNFTID", positions[sender].bundleNFTID);
+        console.log("positions.grETH", positions[sender].grETH);
+        console.log("positions.createdAt", positions[sender].createdAt);
+
+*/
