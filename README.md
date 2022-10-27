@@ -10,13 +10,7 @@
 
 ## Local Development
 
-This project uses [Foundry](https://github.com/foundry-rs/foundry) as the development framework.
-
-### Dependencies
-
-```
-make install
-```
+This project uses [Foundry](https://github.com/foundry-rs/foundry) as the development framework.a
 
 ### Compilation
 
