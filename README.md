@@ -1,4 +1,4 @@
-# Golden Ratio • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
+# Asymmetry Finance • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
 
 ## About
 
