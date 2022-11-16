@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {ERC4626} from "solmate/mixins/ERC4626.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/IController.sol";
-import "forge-std/console.sol";
 
 contract Vault is ERC4626 {
-    using SafeTransferLib for ERC20;
-    using FixedPointMathLib for uint256;
-
+    using SafeERC20 for IERC20;
     address public controller;
     address public governance;
 
@@ -23,8 +17,8 @@ contract Vault is ERC4626 {
 
     // WETH token address
     // https://docs.uniswap.org/protocol/reference/deployments
-    address public constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    IWETH private weth = IWETH(WETH9);
+    IWETH public constant WETH =
+        IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     constructor(
         address _token,
@@ -32,10 +26,14 @@ contract Vault is ERC4626 {
         string memory _symbol,
         address _governance,
         address _controller
-    ) ERC4626(ERC20(_token), _name, _symbol) {
+    ) ERC4626(IERC20(_token)) ERC20(_name, _symbol) {
         token = ERC20(_token);
         governance = _governance;
         controller = _controller;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 18;
     }
 
     function deposit(uint256 assets, address receiver)
@@ -81,7 +79,7 @@ contract Vault is ERC4626 {
         // update balance of ETH deposited in GR Vault
         totalEthAmount += msg.value;
         // update count of funds in vault
-        weth.deposit{value: msg.value}();
+        WETH.deposit{value: msg.value}();
         //weth.approve(address(this), 1e18);
         //wethToken.approve(address(vault), 1e18);
         uint256 sharesMinted = deposit(msg.value, msg.sender);
@@ -95,7 +93,7 @@ contract Vault is ERC4626 {
     }
 
     // Withdraw any tokens that might airdropped or mistakenly be send to this address
-    function saveTokens(address _token, uint _amount) external {
+    function saveTokens(address _token, uint256 _amount) external {
         ERC20(_token).transfer(msg.sender, _amount);
     }
 
@@ -124,9 +122,9 @@ contract Vault is ERC4626 {
     // Trigger strategy
     function afterDeposit(uint256 assets) internal {
         // deposit weth in strategy
-        token.safeTransferFrom(
+        IERC20(token).safeTransferFrom(
             address(this),
-            IController(controller).getStrategy(address(WETH9)),
+            IController(controller).getStrategy(address(WETH)),
             assets
         );
         // Begin strategy deposit sequence

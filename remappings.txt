@@ -1,7 +1,0 @@
-forge-std=lib/forge-std/src/
-solmate=lib/solmate/src/
-@openzeppelin/=lib/openzeppelin-contracts/
-@chainlink/=lib/chainlink-brownie-contracts/
-@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/
-uniswap/=lib/v3-periphery-foundry/contracts/
-@uniswap/v3-core/=lib/v3-core/
