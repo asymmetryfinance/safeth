@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 // GR Interfaces
 import "./interfaces/IController.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
@@ -15,8 +15,7 @@ import "./interfaces/Igr1155.sol";
 // OZ
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 // Uniswap
-import "uniswap/interfaces/ISwapRouter.sol";
-import {TransferHelper} from "uniswap/libraries/TransferHelper.sol";
+import "./interfaces/uniswap/ISwapRouter.sol";
 // Curve
 import "./interfaces/curve/ICrvEthPool.sol";
 import "./interfaces/curve/ICurvePool.sol";
@@ -196,7 +195,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint24 poolFee,
         uint amountIn
     ) public returns (uint amountOut) {
-        TransferHelper.safeApprove(tokenIn, address(router), amountIn);
+        IERC20(tokenIn).approve(address(router), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
