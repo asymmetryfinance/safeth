@@ -1,34 +1,13 @@
-# Asymmetry Finance • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
+# Sample Hardhat Project
 
-## About
+This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
 
-## Architecture
+Try running some of the following tasks:
 
-- Controller
-- Vault
-- StrategyGoldenRatio
-
-## Local Development
-
-This project uses [Foundry](https://github.com/foundry-rs/foundry) as the development framework.a
-
-### Compilation
-
+```shell
+npx hardhat help
+npx hardhat test
+REPORT_GAS=true npx hardhat test
+npx hardhat node
+npx hardhat run scripts/deploy.ts
 ```
-make build
-```
-
-### Testing
-
-```
-make test
-```
-
-## License
-
-## Acknowledgements
-
-- [foundry](https://github.com/foundry-rs/foundry)
-- [solmate](https://github.com/Rari-Capital/solmate)
-- [forge-std](https://github.com/brockelmore/forge-std)
-- [EIP4626](https://eips.ethereum.org/EIPS/eip-4626)
