@@ -1,13 +1,32 @@
-# Sample Hardhat Project
+# Asymmetry Finance • ![solidity](https://img.shields.io/badge/solidity-^0.8.13-lightgrey)
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+## About
 
-Try running some of the following tasks:
+## Architecture
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+- Controller
+- Vault
+- StrategyGoldenRatio
+
+## Local Development
+To use the correct node version run
+```
+nvm use
+```
+
+To install dependencies run yarn
+```
+yarn
+```
+
+### Compilation
+
+```
+yarn compile
+```
+
+### Testing
+
+```
+yarn test
 ```
