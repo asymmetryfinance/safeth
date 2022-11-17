@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/IController.sol";
+import "hardhat/console.sol";
 
 contract Vault is ERC4626 {
     using SafeERC20 for IERC20;
@@ -36,21 +37,21 @@ contract Vault is ERC4626 {
         return 18;
     }
 
-    function deposit(uint256 assets, address receiver)
+    function deposit(uint256 amount, address receiver)
         public
         override
         returns (uint256 shares)
     {
         // Check for rounding error since we round down in previewDeposit.
-        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
+        require((shares = previewDeposit(amount)) != 0, "ZERO_SHARES");
 
         // No need to transfer 'want' token as ETH has already been sent
         // asset.safeTransferFrom(msg.sender, address(this), assets);
         _mint(receiver, shares);
 
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(msg.sender, receiver, amount, shares);
 
-        afterDeposit(assets);
+        afterDeposit(amount);
     }
 
     function withdraw(
@@ -122,6 +123,7 @@ contract Vault is ERC4626 {
     // Vault has WETH
     // Trigger strategy
     function afterDeposit(uint256 assets) internal {
+        console.log("balance", )
         // deposit weth in strategy
         IERC20(token).safeTransferFrom(
             address(this),
