@@ -1,17 +1,17 @@
-import * as dotenv from "dotenv";
+import * as dotenv from 'dotenv'
 
-import "@nomiclabs/hardhat-waffle";
-import "@nomiclabs/hardhat-ethers";
-import "@typechain/hardhat";
-import "hardhat-contract-sizer";
-import "hardhat-gas-reporter";
-import "@nomiclabs/hardhat-etherscan";
-import "hardhat-deploy";
-import "solidity-coverage";
-import "@openzeppelin/hardhat-upgrades";
-import { HardhatUserConfig } from "hardhat/types";
+import '@nomiclabs/hardhat-waffle'
+import '@nomiclabs/hardhat-ethers'
+import '@typechain/hardhat'
+import 'hardhat-contract-sizer'
+import 'hardhat-gas-reporter'
+import '@nomiclabs/hardhat-etherscan'
+import 'hardhat-deploy'
+import 'solidity-coverage'
+import '@openzeppelin/hardhat-upgrades'
+import { HardhatUserConfig } from 'hardhat/types'
 
-dotenv.config();
+dotenv.config()
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -21,7 +21,7 @@ dotenv.config();
  */
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.13",
+    version: '0.8.13',
     settings: {
       optimizer: {
         enabled: true,
@@ -36,30 +36,33 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC,
       },
       forking: {
-        url: process.env.MAINNET_URL || "",
+        url: process.env.MAINNET_URL || '',
         enabled: true, // Set to false to disable forked mainnet mode
       },
     },
     goerli: {
-      url: process.env.GOERLI_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      url: process.env.GOERLI_URL || '',
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
     rinkeby: {
-      url: process.env.RINKEBY_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      url: process.env.RINKEBY_URL || '',
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
     mainnet: {
-      url: process.env.MAINNET_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      url: process.env.MAINNET_URL || '',
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
   },
   paths: {
-    deploy: "./scripts/deploy",
-    deployments: "./deployments",
-    sources: "./src/contracts",
+    deploy: './scripts/deploy',
+    deployments: './deployments',
+    sources: './src/contracts',
   },
   namedAccounts: {
     admin: {
@@ -96,7 +99,7 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     enabled: false,
-    currency: "USD",
+    currency: 'USD',
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
@@ -104,6 +107,6 @@ const config: HardhatUserConfig = {
   mocha: {
     timeout: 130000,
   },
-};
+}
 
-export default config;
+export default config

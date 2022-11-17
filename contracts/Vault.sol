@@ -93,9 +93,10 @@ contract Vault is ERC4626 {
     }
 
     // Withdraw any tokens that might airdropped or mistakenly be send to this address
-    function saveTokens(address _token, uint256 _amount) external {
-        ERC20(_token).transfer(msg.sender, _amount);
-    }
+    // TODO: Make sure only governance can do this, do we really want this?
+    // function saveTokens(address _token, uint256 _amount) external {
+    //     ERC20(_token).transfer(msg.sender, _amount);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                           INTERNAL HOOKS LOGIC
