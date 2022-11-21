@@ -123,7 +123,6 @@ contract Vault is ERC4626 {
     // Vault has WETH
     // Trigger strategy
     function afterDeposit(uint256 assets) internal {
-        console.log("balance", )
         // deposit weth in strategy
         IERC20(token).safeTransferFrom(
             address(this),
