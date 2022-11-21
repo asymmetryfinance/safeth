@@ -3,15 +3,15 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
-// GR Interfaces
+// AF Interfaces
 import "./interfaces/IController.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
-import "./tokens/grCVX1155.sol";
-import "./tokens/grBundle1155.sol";
-import "./interfaces/IgrETH.sol";
-import "./interfaces/Igr1155.sol";
+import "./tokens/afCVX1155.sol";
+import "./tokens/afBundle1155.sol";
+import "./interfaces/IAfETH.sol";
+import "./interfaces/IAf1155.sol";
 // OZ
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 // Uniswap
@@ -31,7 +31,7 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
-contract StrategyGoldenRatio is ERC1155Holder {
+contract StrategyAsymmetryFinance is ERC1155Holder {
     struct Position {
         uint256 positionID;
         address userAddress;
@@ -42,7 +42,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 balancerBalances; // bal LP amount
         uint256 cvxNFTID;
         uint256 bundleNFTID;
-        uint256 grETH; // amount grETH minted to user
+        uint256 afETH; // amount afETH minted to user
         uint256 createdAt; // block.timestamp
     }
 
@@ -84,7 +84,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     address currentDepositor;
     address currentWithdrawer;
 
-    address grETH;
+    address afETH;
     address pool;
     address CVXNFT;
     address bundleNFT;
@@ -93,7 +93,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     // Bundle NFT ID starts at 100
     uint256 currentBundleNftId = 100;
 
-    uint256 totalGrEthBalance;
+    uint256 totalAfEthBalance;
 
     // balancer pool things
     address private wstEthBalPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -115,7 +115,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         strategist = msg.sender;
         controller = _controller;
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
-        grETH = token;
+        afETH = token;
         CVXNFT = cvxNft;
         bundleNFT = bundleNft;
     }
@@ -125,7 +125,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     //////////////////////////////////////////////////////////////*/
 
     function openPosition(address sender, uint256 assets) public payable {
-        address pool = deployGrPool(grETH);
+        address pool = deployAfPool(afETH);
         currentDepositor = sender;
         weth.withdraw(assets);
         uint256 cvxAmountOut = swapCvx(assets - 32e18);
@@ -142,8 +142,8 @@ contract StrategyGoldenRatio is ERC1155Holder {
             amountCvxLocked,
             balLpAmount
         );
-        mintGrEth(16e18);
-        uint256 crvLpAmount = addGrEthCrvLiquidity(pool, 16e18);
+        mintAfEth(16e18);
+        uint256 crvLpAmount = addAfEthCrvLiquidity(pool, 16e18);
         require(
             positions[currentDepositor].userAddress != currentDepositor,
             "User already has position."
@@ -161,7 +161,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
             balancerBalances: balLpAmount,
             cvxNFTID: _cvxNFTID,
             bundleNFTID: bundleNftId,
-            grETH: 16e18,
+            afETH: 16e18,
             createdAt: block.timestamp
         });
     }
@@ -193,8 +193,8 @@ contract StrategyGoldenRatio is ERC1155Holder {
         address tokenIn,
         address tokenOut,
         uint24 poolFee,
-        uint amountIn
-    ) public returns (uint amountOut) {
+        uint256 amountIn
+    ) public returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(router), amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -223,8 +223,8 @@ contract StrategyGoldenRatio is ERC1155Holder {
         return amountSwapped;
     }
 
-    function lockCvx(uint _amountOut) public returns (uint256 amount) {
-        uint amountOut = _amountOut;
+    function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
+        uint256 amountOut = _amountOut;
         cvx.approve(CvxLockerV2, amountOut);
         locker.lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
@@ -333,20 +333,20 @@ contract StrategyGoldenRatio is ERC1155Holder {
     }
 
     // deploy new curve pool, add liquidity
-    // strat has grETH, deposit in CRV pool
-    function addGrEthCrvLiquidity(address pool, uint256 amount)
+    // strat has afETH, deposit in CRV pool
+    function addAfEthCrvLiquidity(address pool, uint256 amount)
         public
         returns (uint256 mint)
     {
-        address grETHPool = pool;
+        address afETHPool = pool;
         uint256[2] memory _amounts;
         weth.deposit{value: amount}();
-        weth.approve(grETHPool, amount);
+        weth.approve(afETHPool, amount);
         _amounts = [uint256(amount), amount];
         require(_amounts[0] == 16e18, "Invalid Deposit");
-        IgrETH grEthToken = IgrETH(grETH);
-        grEthToken.approve(grETHPool, amount);
-        uint256 mintAmt = ICrvEthPool(grETHPool).add_liquidity(_amounts, 0);
+        IAfETH afEthToken = IAfETH(afETH);
+        afEthToken.approve(afETHPool, amount);
+        uint256 mintAmt = ICrvEthPool(afETHPool).add_liquidity(_amounts, 0);
         return (mintAmt);
     }
 
@@ -384,12 +384,12 @@ contract StrategyGoldenRatio is ERC1155Holder {
     }
 
     function withdrawCRVPool(address pool, uint256 _amount) public {
-        address grETHPool = pool;
+        address afETHPool = pool;
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[currentWithdrawer].curveBalances = 0;
-        uint256[2] memory returnAmt = ICrvEthPool(grETHPool).remove_liquidity(
+        uint256[2] memory returnAmt = ICrvEthPool(afETHPool).remove_liquidity(
             _amount,
             min_amounts
         );
@@ -399,12 +399,12 @@ contract StrategyGoldenRatio is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function deployGrPool(address grEth) public returns (address) {
-        string memory name = "Golden Ratio ETH";
-        string memory symbol = "grETH";
+    function deployAfPool(address afEth) public returns (address) {
+        string memory name = "Asymmetry Finance ETH";
+        string memory symbol = "afETH";
         address[4] memory coins;
         coins = [
-            grEth,
+            afEth,
             0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
             0x0000000000000000000000000000000000000000,
             0x0000000000000000000000000000000000000000
@@ -426,15 +426,15 @@ contract StrategyGoldenRatio is ERC1155Holder {
         return (deployedPool);
     }
 
-    function mintCvxNft(address sender, uint _amountLocked)
+    function mintCvxNft(address sender, uint256 _amountLocked)
         public
         returns (uint256 balance, uint256 nftId)
     {
-        uint amountLocked = _amountLocked;
+        uint256 amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
-        IgrCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
+        IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
         positions[sender].cvxNFTID = newCvxNftId;
-        uint256 mintedCvx1155 = IgrCVX1155(CVXNFT).balanceOf(
+        uint256 mintedCvx1155 = IAfCVX1155(CVXNFT).balanceOf(
             address(this),
             newCvxNftId
         );
@@ -447,7 +447,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         uint256 balPoolTokens
     ) public returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
-        IgrBundle1155(bundleNFT).mint(
+        IAfBundle1155(bundleNFT).mint(
             cvxNftId,
             cvxAmount,
             newBundleNftId,
@@ -465,7 +465,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     // False - user pays fee to unlock their CVX and burn their NFT
     function withdrawCVXNft(bool _decision) public {
         if (_decision == true) {
-            IgrCVX1155(CVXNFT).safeTransferFrom(
+            IAfCVX1155(CVXNFT).safeTransferFrom(
                 address(this),
                 currentWithdrawer,
                 positions[currentWithdrawer].cvxNFTID,
@@ -474,7 +474,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
             );
             console.log(
                 "user balance of CVX NFT:",
-                IgrCVX1155(CVXNFT).balanceOf(
+                IAfCVX1155(CVXNFT).balanceOf(
                     currentWithdrawer,
                     positions[currentWithdrawer].cvxNFTID
                 )
@@ -500,19 +500,19 @@ contract StrategyGoldenRatio is ERC1155Holder {
         ids[1] = positions[user].cvxNFTID;
         amounts[0] = positions[user].balancerBalances;
         amounts[1] = positions[user].convexBalances;
-        IgrBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+        IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
-    function mintGrEth(uint256 amount) public {
-        IgrETH grEthToken = IgrETH(grETH);
-        grEthToken.mint(address(this), amount);
+    function mintAfEth(uint256 amount) public {
+        IAfETH afEthToken = IAfETH(afETH);
+        afEthToken.mint(address(this), amount);
     }
 
-    // burn grETH
+    // burn afETH
     function burn(uint256 amount) public {
-        IgrETH grEthToken = IgrETH(grETH);
-        positions[currentWithdrawer].grETH = 0;
-        grEthToken.burn(address(this), amount);
+        IAfETH afEthToken = IAfETH(afETH);
+        positions[currentWithdrawer].afETH = 0;
+        afEthToken.burn(address(this), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -524,7 +524,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
     }
 
     function getName() external pure returns (string memory) {
-        return "StrategyGoldenRatio";
+        return "StrategyAsymmetryFinance";
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -569,7 +569,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
             "positions.bundleNFTID",
             positions[currentDepositor].bundleNFTID
         );
-        console.log("positions.grETH", positions[currentDepositor].grETH);
+        console.log("positions.afETH", positions[currentDepositor].afETH);
         console.log(
             "positions.createdAt",
             positions[currentDepositor].createdAt
@@ -596,7 +596,7 @@ contract StrategyGoldenRatio is ERC1155Holder {
         );
         console.log("positions.cvxNFTID", positions[sender].cvxNFTID);
         console.log("positions.bundleNFTID", positions[sender].bundleNFTID);
-        console.log("positions.grETH", positions[sender].grETH);
+        console.log("positions.afETH", positions[sender].afETH);
         console.log("positions.createdAt", positions[sender].createdAt);
 
 */

@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
-contract grCVX1155 is ERC1155("grCVXNFT") {
+contract afCVX1155 is ERC1155("afCVXNFT") {
     function mint(
         uint256 id,
         uint256 amount,

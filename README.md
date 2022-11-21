@@ -6,7 +6,7 @@
 
 - Controller
 - Vault
-- StrategyGoldenRatio
+- StrategyAsymmetryFinance
 
 ## Local Development
 To use the correct node version run

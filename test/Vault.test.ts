@@ -5,7 +5,7 @@
 // import "forge-std/console.sol";
 // import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 // import {Vault} from "../src/Vault.sol";
-// import "../src/StrategyGoldenRatio.sol";
+// import "../src/StrategyAsymmetryFinance.sol";
 // import {ERC20} from "solmate/tokens/ERC20.sol";
 // import "../src/interfaces/IWETH.sol";
 
@@ -19,13 +19,13 @@
 //     address public governance;
 //     address constant alice = 0xD9f7F0b351A1e9EaF411fA8BEAa35E75355acaD6;
 // */
-//     //StrategyGoldenRatio private strategy =
-//     //    new StrategyGoldenRatio(0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46);
+//     //StrategyAsymmetryFinance private strategy =
+//     //    new StrategyAsymmetryFinance(0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46);
 
 //     function setUp() public {
 //         // underlying is WETH
 //         //console.log("Deploying new vault with underlying WETH...");
-//         //vault = new Vault(WETH9, "Golden Ratio Vault", "grVault");
+//         //vault = new Vault(WETH9, "Asymmetry Finance Vault", "afVault");
 //         //console.log("Vault Deployed");
 //     }
 //     /*

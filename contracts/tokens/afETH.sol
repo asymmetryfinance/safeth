@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract grETH is ERC20 {
+contract afETH is ERC20 {
     address immutable MINTING_CONTRACT;
 
     constructor(

@@ -26,7 +26,7 @@
 //     IERC20 private stETH = IERC20(STETH);
 //     IERC20 private rETH = IERC20(RETH);
 //     IERC20[] public tokens = [rETH, stETH];
-//     string constant NAME = "grETH Test Pool";
+//     string constant NAME = "afETH Test Pool";
 //     string constant SYMBOL = "50stETH-50rETH";
 //     uint256 constant swapFeePercentage = 5e15; // 0.5%
 //     bool constant swapEnabledOnStart = false;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./StrategyGoldenRatio.sol";
+import "./StrategyAsymmetryFinance.sol";
 import "./interfaces/IStrategy.sol";
 
 contract Controller {

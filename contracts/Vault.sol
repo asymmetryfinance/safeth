@@ -72,12 +72,12 @@ contract Vault is ERC4626 {
         //require(sent, "Failed to send Ether");
     }
 
-    // Primary entrance into Golden Ratio Vault
+    // Primary entrance into Asymmetry Finance Vault
     // vault can receive ether and wrap as underlying token (WETH)
     function _deposit() public payable returns (uint256 shares) {
         // Require 48 ETH sent to contract to deposit in Vault
         require(msg.value == 48e18, "Invalid Deposit");
-        // update balance of ETH deposited in GR Vault
+        // update balance of ETH deposited in AF Vault
         totalEthAmount += msg.value;
         // update count of funds in vault
         WETH.deposit{value: msg.value}();
@@ -134,7 +134,7 @@ contract Vault is ERC4626 {
     }
 
     function getName() external pure returns (string memory) {
-        return "Golden Ratio Vault";
+        return "Asymmetry Finance Vault";
     }
 
     // Payable function to receive ETH after unwrapping WETH

@@ -7,20 +7,20 @@
 // import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 // //import {Vault} from "../src/Vault.sol";
 // import {Controller} from "../src/Controller.sol";
-// import {StrategyGoldenRatio} from "../src/StrategyGoldenRatio.sol";
+// import {StrategyAsymmetryFinance} from "../src/StrategyAsymmetryFinance.sol";
 
 // contract ControllerTest is Test {
 //     //Controller public controller;
 //     //ERC20Mock public testToken;
 //     //ERC20Mock2 public testToken2;
 //     //Vault public vault;
-//     //StrategyGoldenRatio public testStrategy;
+//     //StrategyAsymmetryFinance public testStrategy;
 
 //     function setUp() public {
 //         //controller = new Controller(address(0xABCD));
 //         //testToken = new ERC20Mock();
 //         //testToken2 = new ERC20Mock2();
-//         //testStrategy = new StrategyGoldenRatio();
+//         //testStrategy = new StrategyAsymmetryFinance();
 //         //vault = new Vault(testToken, "MockERC20", "MOCK", address(controller));
 //     }
 //     /*

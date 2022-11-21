@@ -6,22 +6,21 @@ import ERC20 from '@openzeppelin/contracts/build/contracts/ERC20.json'
 import { RETH_ADDRESS, ROCKET_STORAGE_ADDRESS, WETH_ADDRESS, WSTETH_ADRESS } from './constants'
 import {
   Controller,
-  GrBundle1155,
-  GrCVX1155,
-  GrETH,
-  StrategyGoldenRatio,
+  AfBundle1155,
+  AfCVX1155,
+  AfETH,
+  StrategyAsymmetryFinance,
   Vault,
-  Vault__factory,
 } from '../typechain-types'
 
-describe('Golden Ratio Strategy', function () {
+describe('Asymmetry Finance Strategy', function () {
   let accounts: SignerWithAddress[]
-  let afEth: GrETH
+  let afEth: AfETH
   let controller: Controller
   let rEthVault: Vault
-  let strategy: StrategyGoldenRatio
-  let grCvx1155: GrCVX1155
-  let grBundle1155: GrBundle1155
+  let strategy: StrategyAsymmetryFinance
+  let afCvx1155: AfCVX1155
+  let afBundle1155: AfBundle1155
   let aliceSigner: Signer
 
   beforeEach(async () => {
@@ -29,11 +28,11 @@ describe('Golden Ratio Strategy', function () {
     accounts = await ethers.getSigners()
 
     // Deploy contracts and store them in the variables above
-    const grCVX1155Deployment = await ethers.getContractFactory('grCVX1155')
-    grCvx1155 = (await grCVX1155Deployment.deploy()) as GrCVX1155
+    const afCVX1155Deployment = await ethers.getContractFactory('afCVX1155')
+    afCvx1155 = (await afCVX1155Deployment.deploy()) as AfCVX1155
 
-    const grBundle1155Deployment = await ethers.getContractFactory('grBundle1155')
-    grBundle1155 = (await grBundle1155Deployment.deploy()) as GrBundle1155
+    const afBundle1155Deployment = await ethers.getContractFactory('afBundle1155')
+    afBundle1155 = (await afBundle1155Deployment.deploy()) as AfBundle1155
 
     const controllerDeployment = await ethers.getContractFactory('Controller')
     controller = (await controllerDeployment.deploy()) as Controller
@@ -47,17 +46,17 @@ describe('Golden Ratio Strategy', function () {
       controller.address,
     )) as Vault
 
-    const strategyDeployment = await ethers.getContractFactory('StrategyGoldenRatio')
+    const strategyDeployment = await ethers.getContractFactory('StrategyAsymmetryFinance')
     strategy = (await strategyDeployment.deploy(
       RETH_ADDRESS,
       controller.address,
       ROCKET_STORAGE_ADDRESS,
-      grCvx1155.address,
-      grBundle1155.address,
-    )) as StrategyGoldenRatio
+      afCvx1155.address,
+      afBundle1155.address,
+    )) as StrategyAsymmetryFinance
 
-    const grETHDeployment = await ethers.getContractFactory('grETH')
-    afEth = (await grETHDeployment.deploy(strategy.address, 'Asymmetry Finance ETH', 'afETH')) as GrETH
+    const afETHDeployment = await ethers.getContractFactory('afETH')
+    afEth = (await afETHDeployment.deploy(strategy.address, 'Asymmetry Finance ETH', 'afETH')) as AfETH
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
@@ -70,7 +69,7 @@ describe('Golden Ratio Strategy', function () {
 
   describe('initialize', function () {
     it('Should have correct name', async () => {
-      expect(await strategy.getName()).eq('StrategyGoldenRatio')
+      expect(await strategy.getName()).eq('StrategyAsymmetryFinance')
     })
   })
 
@@ -111,7 +110,7 @@ describe('Golden Ratio Strategy', function () {
 
 // import "forge-std/Test.sol";
 // import "forge-std/console.sol";
-// import "../src/StrategyGoldenRatio.sol";
+// import "../src/StrategyAsymmetryFinance.sol";
 // import "../src/Vault.sol";
 // import "../src/Controller.sol";
 // import "../src/interfaces/IController.sol";
@@ -136,7 +135,7 @@ describe('Golden Ratio Strategy', function () {
 //     IWETH public weth = IWETH(WETH9);
 //     Controller public controller;
 //     Vault public vault;
-//     StrategyGoldenRatio public strategy;
+//     StrategyAsymmetryFinance public strategy;
 //     // test user account
 //     address constant alice = address(0xABCD);
 //     grETH grETHToken;
@@ -155,7 +154,7 @@ describe('Golden Ratio Strategy', function () {
 //             msg.sender,
 //             address(controller)
 //         );
-//         strategy = new StrategyGoldenRatio(
+//         strategy = new StrategyAsymmetryFinance(
 //             address(grETHToken),
 //             address(controller),
 //             0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46,

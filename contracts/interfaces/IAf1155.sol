@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
-interface IgrCVX1155 is IERC1155 {
+interface IAfCVX1155 is IERC1155 {
     function mint(
         uint256 id,
         uint256 amount,
@@ -17,7 +17,7 @@ interface IgrCVX1155 is IERC1155 {
     ) external;
 }
 
-interface IgrBundle1155 is IERC1155 {
+interface IAfBundle1155 is IERC1155 {
     function mint(
         uint256 cvxId,
         uint256 cvxAmount,
