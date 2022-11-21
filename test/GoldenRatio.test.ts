@@ -29,9 +29,6 @@ describe('Golden Ratio Strategy', function () {
     accounts = await ethers.getSigners()
 
     // Deploy contracts and store them in the variables above
-    const grETHDeployment = await ethers.getContractFactory('grETH')
-    afEth = (await grETHDeployment.deploy('Asymmetry Finance ETH', 'afETH')) as GrETH
-
     const grCVX1155Deployment = await ethers.getContractFactory('grCVX1155')
     grCvx1155 = (await grCVX1155Deployment.deploy()) as GrCVX1155
 
@@ -58,6 +55,9 @@ describe('Golden Ratio Strategy', function () {
       grCvx1155.address,
       grBundle1155.address,
     )) as StrategyGoldenRatio
+
+    const grETHDeployment = await ethers.getContractFactory('grETH')
+    afEth = (await grETHDeployment.deploy(strategy.address, 'Asymmetry Finance ETH', 'afETH')) as GrETH
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
