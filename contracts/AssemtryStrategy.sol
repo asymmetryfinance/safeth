@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 // AF Interfaces
-import "./interfaces/IController.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
@@ -31,7 +30,7 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
-contract StrategyAsymmetryFinance is ERC1155Holder {
+contract AsymmetryStrategy is ERC1155Holder {
     struct Position {
         uint256 positionID;
         address userAddress;
@@ -66,7 +65,6 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     address public governance;
-    address public controller;
     address public strategist;
 
     IWETH private weth = IWETH(WETH9);
@@ -106,14 +104,12 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
 
     constructor(
         address token,
-        address _controller,
         address _rocketStorageAddress,
         address cvxNft,
         address bundleNft
     ) {
         governance = msg.sender;
         strategist = msg.sender;
-        controller = _controller;
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
         afETH = token;
         CVXNFT = cvxNft;
@@ -178,11 +174,10 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         withdrawREth();
         withdrawWstEth(wstETH2Unwrap);
         weth.withdraw(weth.balanceOf(address(this)));
-        //uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
-        //console.log("CVX lp after withdraw:", lockedCvxAmount);
-        address vault = IController(controller).getVault(WETH9);
-        (bool sent, ) = address(vault).call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+
+        // address vault = IController(controller).getVault(WETH9);
+        // (bool sent, ) = address(vault).call{value: address(this).balance}("");
+        // require(sent, "Failed to send Ether");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -213,7 +208,7 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
 
     function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
         weth.deposit{value: amount}();
-        weth.approve(address(controller), amount);
+        // weth.approve(address(controller), amount); //TODO: should approve for cvx swap
         uint256 amountSwapped = swapExactInputSingleHop(
             WETH9,
             CVX,
