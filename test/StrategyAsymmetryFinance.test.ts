@@ -3,7 +3,14 @@ import { expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, Signer } from 'ethers'
 import ERC20 from '@openzeppelin/contracts/build/contracts/ERC20.json'
-import { RETH_ADDRESS, ROCKET_STORAGE_ADDRESS, WETH_ADDRESS, WSTETH_ADRESS } from './constants'
+import {
+  RETH_ADDRESS,
+  RETH_WHALE,
+  ROCKET_STORAGE_ADDRESS,
+  WETH_ADDRESS,
+  WSTETH_ADRESS,
+  WSTETH_WHALE,
+} from './constants'
 import {
   Controller,
   AfBundle1155,
@@ -22,6 +29,8 @@ describe('Asymmetry Finance Strategy', function () {
   let afCvx1155: AfCVX1155
   let afBundle1155: AfBundle1155
   let aliceSigner: Signer
+  let wstEth: Contract
+  let rEth: Contract
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts()
@@ -56,7 +65,15 @@ describe('Asymmetry Finance Strategy', function () {
     )) as StrategyAsymmetryFinance
 
     const afETHDeployment = await ethers.getContractFactory('afETH')
-    afEth = (await afETHDeployment.deploy(strategy.address, 'Asymmetry Finance ETH', 'afETH')) as AfETH
+    afEth = (await afETHDeployment.deploy(
+      strategy.address,
+      'Asymmetry Finance ETH',
+      'afETH',
+    )) as AfETH
+
+    // initialize derivative contracts
+    wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0])
+    rEth = new ethers.Contract(RETH_ADDRESS, ERC20.abi, accounts[0])
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
@@ -65,6 +82,30 @@ describe('Asymmetry Finance Strategy', function () {
     controller.setVault(WETH_ADDRESS, rEthVault.address) // TODO: Vaults should be set by derivatives
     controller.approveStrategy(WETH_ADDRESS, strategy.address)
     controller.setStrategy(WETH_ADDRESS, strategy.address)
+
+    // Send wstETH derivative to admin
+    await network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [WSTETH_WHALE],
+    })
+    let transferAmount = ethers.utils.parseEther('1000')
+    let whaleSigner = await ethers.getSigner(WSTETH_WHALE)
+    const wstEthWhale = wstEth.connect(whaleSigner)
+    await wstEthWhale.transfer(admin, transferAmount)
+    const wstEthBalance = await wstEth.balanceOf(admin)
+    expect(BigNumber.from(wstEthBalance)).gte(transferAmount)
+
+    // Send rETH derivative to admin
+    await network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [RETH_WHALE],
+    })
+    transferAmount = ethers.utils.parseEther('1000')
+    whaleSigner = await ethers.getSigner(RETH_WHALE)
+    const rEthWhale = rEth.connect(whaleSigner)
+    await rEthWhale.transfer(admin, transferAmount)
+    const rEthBalance = await rEth.balanceOf(admin)
+    expect(BigNumber.from(rEthBalance)).gte(transferAmount)
   })
 
   describe('initialize', function () {
@@ -77,6 +118,7 @@ describe('Asymmetry Finance Strategy', function () {
     it('Should deposit', async () => {
       const { admin, alice } = await getNamedAccounts() // addresses of named wallets
       console.log('bal', await ethers.provider.getBalance(alice))
+      console.log('reth bal', await rEth.balanceOf(alice))
       const aliceVaultSigner = rEthVault.connect(aliceSigner as Signer)
       const depositAmount = ethers.utils.parseEther('48')
       console.log('depositamount', depositAmount)
