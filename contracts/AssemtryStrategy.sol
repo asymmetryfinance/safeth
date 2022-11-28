@@ -131,7 +131,7 @@ contract AsymmetryStrategy is ERC1155Holder {
             amountCvxLocked
         );
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
-        uint256 rEthMinted = depositREth(assets - 40e18);
+        uint256 rEthMinted = depositREth(1e16);
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,
@@ -240,7 +240,8 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 wstEthBalance2 = wstEth.balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalance2 - wstEthBalance1;
         console.log("-----------");
-        console.log("wstETH amount before bal pool:", wstEthAmount);
+        console.log("wstETH amount before deposit:", wstEthBalance1);
+        console.log("wstETH amount after bal pool:", wstEthAmount);
         console.log("-----------");
         return (wstEthAmount);
     }
@@ -250,7 +251,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         payable
         returns (uint256 rEthAmount)
     {
-        require(amount == 8e18, "Invalid Deposit");
+        require(amount == 1e16, "Invalid Deposit");
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
