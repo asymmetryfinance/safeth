@@ -12,20 +12,18 @@ import {
   WSTETH_WHALE,
 } from './constants'
 import {
-  Controller,
   AfBundle1155,
   AfCVX1155,
   AfETH,
-  StrategyAsymmetryFinance,
+  AsymmetryStrategy,
   Vault,
 } from '../typechain-types'
 
 describe('Asymmetry Finance Strategy', function () {
   let accounts: SignerWithAddress[]
   let afEth: AfETH
-  let controller: Controller
   let rEthVault: Vault
-  let strategy: StrategyAsymmetryFinance
+  let strategy: AsymmetryStrategy
   let afCvx1155: AfCVX1155
   let afBundle1155: AfBundle1155
   let aliceSigner: Signer
@@ -43,26 +41,21 @@ describe('Asymmetry Finance Strategy', function () {
     const afBundle1155Deployment = await ethers.getContractFactory('afBundle1155')
     afBundle1155 = (await afBundle1155Deployment.deploy()) as AfBundle1155
 
-    const controllerDeployment = await ethers.getContractFactory('Controller')
-    controller = (await controllerDeployment.deploy()) as Controller
-
     const rEthVaultDeployment = await ethers.getContractFactory('Vault')
     rEthVault = (await rEthVaultDeployment.deploy(
       RETH_ADDRESS,
       'AF rETH Vault',
       'vrETH',
       admin,
-      controller.address,
     )) as Vault
 
-    const strategyDeployment = await ethers.getContractFactory('StrategyAsymmetryFinance')
+    const strategyDeployment = await ethers.getContractFactory('AsymmetryStrategy')
     strategy = (await strategyDeployment.deploy(
       RETH_ADDRESS,
-      controller.address,
       ROCKET_STORAGE_ADDRESS,
       afCvx1155.address,
       afBundle1155.address,
-    )) as StrategyAsymmetryFinance
+    )) as AsymmetryStrategy
 
     const afETHDeployment = await ethers.getContractFactory('afETH')
     afEth = (await afETHDeployment.deploy(
@@ -78,10 +71,6 @@ describe('Asymmetry Finance Strategy', function () {
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
     aliceSigner = accounts.find(account => account.address === alice) as Signer
-
-    controller.setVault(WETH_ADDRESS, rEthVault.address) // TODO: Vaults should be set by derivatives
-    controller.approveStrategy(WETH_ADDRESS, strategy.address)
-    controller.setStrategy(WETH_ADDRESS, strategy.address)
 
     // Send wstETH derivative to admin
     await network.provider.request({
@@ -119,10 +108,10 @@ describe('Asymmetry Finance Strategy', function () {
       const { admin, alice } = await getNamedAccounts() // addresses of named wallets
       console.log('bal', await ethers.provider.getBalance(alice))
       console.log('reth bal', await rEth.balanceOf(alice))
-      const aliceVaultSigner = rEthVault.connect(aliceSigner as Signer)
+      const aliceVaultSigner = strategy.connect(aliceSigner as Signer)
       const depositAmount = ethers.utils.parseEther('48')
       console.log('depositamount', depositAmount)
-      await aliceVaultSigner._deposit({ value: depositAmount })
+      await aliceVaultSigner.openPosition({ value: depositAmount })
       console.log('bal', await ethers.provider.getBalance(alice))
       const aliceMaxRedeem = rEthVault.maxRedeem(alice)
       expect(aliceMaxRedeem).eq(depositAmount)

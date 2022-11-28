@@ -46,7 +46,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     }
 
     // map user address to Position struct
-    mapping(address => Position) public positions;
+    mapping(address => Position) public positions; // only
     uint256 currentPositionId;
 
     // Contract Addresses
@@ -120,14 +120,14 @@ contract AsymmetryStrategy is ERC1155Holder {
                         OPEN/CLOSE POSITION LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function openPosition(address sender, uint256 assets) public payable {
-        address pool = deployAfPool(afETH);
-        currentDepositor = sender;
-        weth.withdraw(assets);
+    function openPosition() public payable {
+        address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
+        currentDepositor = msg.sender;
+        uint256 assets = msg.value;
         uint256 cvxAmountOut = swapCvx(assets - 32e18);
         uint256 amountCvxLocked = lockCvx(cvxAmountOut);
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
-            sender,
+            msg.sender,
             amountCvxLocked
         );
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
@@ -265,6 +265,12 @@ contract AsymmetryStrategy is ERC1155Holder {
             rocketTokenRETHAddress
         );
         uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+        uint256 ethBalance = address(this).balance;
+        console.log("rocketDepositPoolAddress", rocketDepositPoolAddress);
+        console.log("rocketTokenRETHAddress", rocketTokenRETHAddress);
+        console.log("rethBalance1", rethBalance1);
+        console.log("eth balance", ethBalance);
+        console.log("amount", amount);
         rocketDepositPool.deposit{value: amount}();
         uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
         require(rethBalance2 > rethBalance1, "No rETH was minted");
@@ -394,6 +400,7 @@ contract AsymmetryStrategy is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
+    // TODO: this shouldn't live here, should be a part of deploy scripts
     function deployAfPool(address afEth) public returns (address) {
         string memory name = "Asymmetry Finance ETH";
         string memory symbol = "afETH";
