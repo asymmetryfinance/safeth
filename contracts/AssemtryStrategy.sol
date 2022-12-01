@@ -133,6 +133,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         );
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
         uint256 rEthMinted = depositREth(assets - 40e18);
+        // TODO: create 4626 tokens for each derivative
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,

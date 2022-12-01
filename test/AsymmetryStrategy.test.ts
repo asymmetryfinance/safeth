@@ -115,7 +115,6 @@ describe('Asymmetry Finance Strategy', function () {
       const depositAmount = ethers.utils.parseEther('48')
       console.log('depositamount', depositAmount)
       await aliceVaultSigner.openPosition({ value: depositAmount })
-      console.log('bal', await ethers.provider.getBalance(alice))
       const aliceMaxRedeem = await rEthVault.maxRedeem(alice)
       console.log('aliceMaxRedeem', aliceMaxRedeem)
       // expect(aliceMaxRedeem).eq(depositAmount)
