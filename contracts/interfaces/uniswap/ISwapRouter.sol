@@ -7,7 +7,6 @@ interface ISwapRouter {
         address tokenOut;
         uint24 fee;
         address recipient;
-        uint deadline;
         uint amountIn;
         uint amountOutMinimum;
         uint160 sqrtPriceLimitX96;

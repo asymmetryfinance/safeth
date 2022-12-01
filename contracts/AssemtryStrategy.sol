@@ -51,7 +51,6 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant want = address(WETH9);
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
@@ -77,7 +76,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     ICurvePool private curve = ICurvePool(deployCurvePool);
 
     ISwapRouter constant router =
-        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+        ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address currentDepositor;
     address currentWithdrawer;
@@ -191,28 +190,38 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 amountIn
     ) public returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(router), amountIn);
-
+        console.log(
+            "allowance",
+            IERC20(tokenIn).allowance(address(this), address(router))
+        );
+        console.log(
+            "balance",
+            IERC20(tokenIn).balanceOf(address(this))
+        );
+        console.log(
+            "amountIn",
+            amountIn
+        );
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
                 fee: poolFee,
                 recipient: address(this),
-                deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
             });
         amountOut = router.exactInputSingle(params);
+        console.log("amount OUt", amountOut);
     }
 
     function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
         weth.deposit{value: amount}();
-        // weth.approve(address(controller), amount); //TODO: should approve for cvx swap
         uint256 amountSwapped = swapExactInputSingleHop(
             WETH9,
             CVX,
-            10000,
+            10000, // TODO: add pool fee
             amount
         );
         return amountSwapped;
@@ -252,32 +261,48 @@ contract AsymmetryStrategy is ERC1155Holder {
         returns (uint256 rEthAmount)
     {
         require(amount == 8e18, "Invalid Deposit");
-        // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = rocketStorage.getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
-        );
-        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-                rocketDepositPoolAddress
+        // TODO: check if rocketpool eth deposit is full and can accept amount of eth
+        if (true) {
+            weth.deposit{value: amount}();
+            uint256 amountSwapped = swapExactInputSingleHop(
+                WETH9,
+                RETH,
+                500,
+                amount
             );
-        address rocketTokenRETHAddress = rocketStorage.getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
-        );
-        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-            rocketTokenRETHAddress
-        );
-        uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-        uint256 ethBalance = address(this).balance;
-        console.log("rocketDepositPoolAddress", rocketDepositPoolAddress);
-        console.log("rocketTokenRETHAddress", rocketTokenRETHAddress);
-        console.log("rethBalance1", rethBalance1);
-        console.log("eth balance", ethBalance);
-        console.log("amount", amount);
-        rocketDepositPool.deposit{value: amount}();
-        uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
-        require(rethBalance2 > rethBalance1, "No rETH was minted");
-        uint256 rethMinted = rethBalance2 - rethBalance1;
-        //rocketBalances[currentDepositor] += rethMinted;
-        return (rethMinted);
+            return amountSwapped;
+        } else {
+            // Per RocketPool Docs query deposit pool address each time it is used
+            address rocketDepositPoolAddress = rocketStorage.getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketDepositPool")
+                )
+            );
+            RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                    rocketDepositPoolAddress
+                );
+            address rocketTokenRETHAddress = rocketStorage.getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
+            RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
+                rocketTokenRETHAddress
+            );
+            uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+            uint256 ethBalance = address(this).balance;
+            console.log("rocketDepositPoolAddress", rocketDepositPoolAddress);
+            console.log("rocketTokenRETHAddress", rocketTokenRETHAddress);
+            console.log("rethBalance1", rethBalance1);
+            console.log("eth balance", ethBalance);
+            console.log("amount", amount);
+            rocketDepositPool.deposit{value: amount}();
+            uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+            require(rethBalance2 > rethBalance1, "No rETH was minted");
+            uint256 rethMinted = rethBalance2 - rethBalance1;
+            //rocketBalances[currentDepositor] += rethMinted;
+            return (rethMinted);
+        }
     }
 
     function depositBalTokens(uint256 amount)
