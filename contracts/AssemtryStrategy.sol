@@ -192,12 +192,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 amountIn
     ) public returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(router), amountIn);
-        console.log(
-            "allowance",
-            IERC20(tokenIn).allowance(address(this), address(router))
-        );
-        console.log("balance", IERC20(tokenIn).balanceOf(address(this)));
-        console.log("amountIn", amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -209,7 +203,6 @@ contract AsymmetryStrategy is ERC1155Holder {
                 sqrtPriceLimitX96: 0
             });
         amountOut = router.exactInputSingle(params);
-        console.log("amount OUt", amountOut);
     }
 
     function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
@@ -244,10 +237,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         require(sent, "Failed to send Ether");
         uint256 wstEthBalance2 = wstEth.balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalance2 - wstEthBalance1;
-        console.log("-----------");
-        console.log("wstETH amount before deposit:", wstEthBalance1);
-        console.log("wstETH amount after bal pool:", wstEthAmount);
-        console.log("-----------");
         return (wstEthAmount);
     }
 
@@ -271,7 +260,7 @@ contract AsymmetryStrategy is ERC1155Holder {
             uint256 amountSwapped = swapExactInputSingleHop(
                 WETH9,
                 RETH,
-                500, // TODO: add pool fee
+                500,
                 amount
             );
             return amountSwapped;
@@ -286,11 +275,6 @@ contract AsymmetryStrategy is ERC1155Holder {
             );
             uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
             uint256 ethBalance = address(this).balance;
-            console.log("rocketDepositPoolAddress", rocketDepositPoolAddress);
-            console.log("rocketTokenRETHAddress", rocketTokenRETHAddress);
-            console.log("rethBalance1", rethBalance1);
-            console.log("eth balance", ethBalance);
-            console.log("amount", amount);
             rocketDepositPool.deposit{value: amount}();
             uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
             require(rethBalance2 > rethBalance1, "No rETH was minted");
