@@ -101,6 +101,8 @@ contract AsymmetryStrategy is ERC1155Holder {
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
     IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
 
+    uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000;
+
     constructor(
         address token,
         address _rocketStorageAddress,
@@ -194,14 +196,8 @@ contract AsymmetryStrategy is ERC1155Holder {
             "allowance",
             IERC20(tokenIn).allowance(address(this), address(router))
         );
-        console.log(
-            "balance",
-            IERC20(tokenIn).balanceOf(address(this))
-        );
-        console.log(
-            "amountIn",
-            amountIn
-        );
+        console.log("balance", IERC20(tokenIn).balanceOf(address(this)));
+        console.log("amountIn", amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -261,26 +257,25 @@ contract AsymmetryStrategy is ERC1155Holder {
         returns (uint256 rEthAmount)
     {
         require(amount == 8e18, "Invalid Deposit");
-        // TODO: check if rocketpool eth deposit is full and can accept amount of eth
-        if (true) {
+
+        // Per RocketPool Docs query deposit pool address each time it is used
+        address rocketDepositPoolAddress = rocketStorage.getAddress(
+            keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
+        );
+        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                rocketDepositPoolAddress
+            );
+        bool canDeposit = rocketDepositPool.getBalance() + amount <= ROCKET_POOL_LIMIT;
+        if (!canDeposit) {
             weth.deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 WETH9,
                 RETH,
-                500,
+                500, // TODO: add pool fee
                 amount
             );
             return amountSwapped;
         } else {
-            // Per RocketPool Docs query deposit pool address each time it is used
-            address rocketDepositPoolAddress = rocketStorage.getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketDepositPool")
-                )
-            );
-            RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-                    rocketDepositPoolAddress
-                );
             address rocketTokenRETHAddress = rocketStorage.getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
