@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 // AF Interfaces
-import "./interfaces/IController.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
@@ -31,7 +30,7 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
-contract StrategyAsymmetryFinance is ERC1155Holder {
+contract AsymmetryStrategy is ERC1155Holder {
     struct Position {
         uint256 positionID;
         address userAddress;
@@ -47,12 +46,11 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
     }
 
     // map user address to Position struct
-    mapping(address => Position) public positions;
+    mapping(address => Position) public positions; // only
     uint256 currentPositionId;
 
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant want = address(WETH9);
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
@@ -66,7 +64,6 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     address public governance;
-    address public controller;
     address public strategist;
 
     IWETH private weth = IWETH(WETH9);
@@ -79,7 +76,7 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
     ICurvePool private curve = ICurvePool(deployCurvePool);
 
     ISwapRouter constant router =
-        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+        ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address currentDepositor;
     address currentWithdrawer;
@@ -104,16 +101,16 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
     IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
 
+    uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable
+
     constructor(
         address token,
-        address _controller,
         address _rocketStorageAddress,
         address cvxNft,
         address bundleNft
     ) {
         governance = msg.sender;
         strategist = msg.sender;
-        controller = _controller;
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
         afETH = token;
         CVXNFT = cvxNft;
@@ -124,18 +121,19 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
                         OPEN/CLOSE POSITION LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function openPosition(address sender, uint256 assets) public payable {
-        address pool = deployAfPool(afETH);
-        currentDepositor = sender;
-        weth.withdraw(assets);
+    function openPosition() public payable {
+        address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
+        currentDepositor = msg.sender;
+        uint256 assets = msg.value;
         uint256 cvxAmountOut = swapCvx(assets - 32e18);
         uint256 amountCvxLocked = lockCvx(cvxAmountOut);
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
-            sender,
+            msg.sender,
             amountCvxLocked
         );
         uint256 wstEthMinted = depositWstEth(assets - 40e18);
         uint256 rEthMinted = depositREth(assets - 40e18);
+        // TODO: create 4626 tokens for each derivative
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,
@@ -178,11 +176,10 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         withdrawREth();
         withdrawWstEth(wstETH2Unwrap);
         weth.withdraw(weth.balanceOf(address(this)));
-        //uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
-        //console.log("CVX lp after withdraw:", lockedCvxAmount);
-        address vault = IController(controller).getVault(WETH9);
-        (bool sent, ) = address(vault).call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+
+        // address vault = IController(controller).getVault(WETH9);
+        // (bool sent, ) = address(vault).call{value: address(this).balance}("");
+        // require(sent, "Failed to send Ether");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -196,14 +193,12 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         uint256 amountIn
     ) public returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(router), amountIn);
-
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
                 fee: poolFee,
                 recipient: address(this),
-                deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
@@ -213,11 +208,10 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
 
     function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
         weth.deposit{value: amount}();
-        weth.approve(address(controller), amount);
         uint256 amountSwapped = swapExactInputSingleHop(
             WETH9,
             CVX,
-            10000,
+            10000, // TODO: add pool fee
             amount
         );
         return amountSwapped;
@@ -244,9 +238,6 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         require(sent, "Failed to send Ether");
         uint256 wstEthBalance2 = wstEth.balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalance2 - wstEthBalance1;
-        console.log("-----------");
-        console.log("wstETH amount before bal pool:", wstEthAmount);
-        console.log("-----------");
         return (wstEthAmount);
     }
 
@@ -256,6 +247,7 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         returns (uint256 rEthAmount)
     {
         require(amount == 8e18, "Invalid Deposit");
+
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
@@ -263,19 +255,34 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
-        address rocketTokenRETHAddress = rocketStorage.getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
-        );
-        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-            rocketTokenRETHAddress
-        );
-        uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-        rocketDepositPool.deposit{value: amount}();
-        uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
-        require(rethBalance2 > rethBalance1, "No rETH was minted");
-        uint256 rethMinted = rethBalance2 - rethBalance1;
-        //rocketBalances[currentDepositor] += rethMinted;
-        return (rethMinted);
+        bool canDeposit = rocketDepositPool.getBalance() + amount <= ROCKET_POOL_LIMIT;
+        if (!canDeposit) {
+            weth.deposit{value: amount}();
+            uint256 amountSwapped = swapExactInputSingleHop(
+                WETH9,
+                RETH,
+                500,
+                amount
+            );
+            return amountSwapped;
+        } else {
+            address rocketTokenRETHAddress = rocketStorage.getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
+            RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
+                rocketTokenRETHAddress
+            );
+            uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+            uint256 ethBalance = address(this).balance;
+            rocketDepositPool.deposit{value: amount}();
+            uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+            require(rethBalance2 > rethBalance1, "No rETH was minted");
+            uint256 rethMinted = rethBalance2 - rethBalance1;
+            //rocketBalances[currentDepositor] += rethMinted;
+            return (rethMinted);
+        }
     }
 
     function depositBalTokens(uint256 amount)
@@ -399,6 +406,7 @@ contract StrategyAsymmetryFinance is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
+    // TODO: this shouldn't live here, should be a part of deploy scripts
     function deployAfPool(address afEth) public returns (address) {
         string memory name = "Asymmetry Finance ETH";
         string memory symbol = "afETH";

@@ -4,12 +4,10 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IWETH.sol";
-import "./interfaces/IController.sol";
 import "hardhat/console.sol";
 
 contract Vault is ERC4626 {
     using SafeERC20 for IERC20;
-    address public controller;
     address public governance;
 
     ERC20 public immutable token;
@@ -25,12 +23,10 @@ contract Vault is ERC4626 {
         address _token,
         string memory _name,
         string memory _symbol,
-        address _governance,
-        address _controller
+        address _governance
     ) ERC4626(IERC20(_token)) ERC20(_name, _symbol) {
         token = ERC20(_token);
         governance = _governance;
-        controller = _controller;
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -51,7 +47,7 @@ contract Vault is ERC4626 {
 
         emit Deposit(msg.sender, receiver, amount, shares);
 
-        afterDeposit(amount);
+        // afterDeposit(amount);
     }
 
     function withdraw(
@@ -61,7 +57,7 @@ contract Vault is ERC4626 {
         bool cvxNftDecision
     ) public returns (uint256 shares) {
         shares = previewWithdraw(assets);
-        beforeWithdraw(assets, cvxNftDecision);
+        // beforeWithdraw(assets, cvxNftDecision);
 
         //_burn(owner, shares);
 
@@ -103,35 +99,35 @@ contract Vault is ERC4626 {
                           INTERNAL HOOKS LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // Vault has WETH
-    // Reverse strat logic to repay initial deposit
-    function beforeWithdraw(uint256 assets, bool decision) internal {
-        // unwrap amount of weth left that's sent back to vault
-        // eth + weth sent back
-        // could also unwrap all and send back only eth to vault
-        //weth.withdraw(assets);
-        IController(controller).withdraw(
-            address(token),
-            msg.sender,
-            assets,
-            decision
-        );
-        (bool sent, ) = msg.sender.call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
-    }
+    // // Vault has WETH
+    // // Reverse strat logic to repay initial deposit
+    // function beforeWithdraw(uint256 assets, bool decision) internal {
+    //     // unwrap amount of weth left that's sent back to vault
+    //     // eth + weth sent back
+    //     // could also unwrap all and send back only eth to vault
+    //     //weth.withdraw(assets);
+    //     IController(controller).withdraw(
+    //         address(token),
+    //         msg.sender,
+    //         assets,
+    //         decision
+    //     );
+    //     (bool sent, ) = msg.sender.call{value: address(this).balance}("");
+    //     require(sent, "Failed to send Ether");
+    // }
 
-    // Vault has WETH
-    // Trigger strategy
-    function afterDeposit(uint256 assets) internal {
-        // deposit weth in strategy
-        IERC20(token).safeTransferFrom(
-            address(this),
-            IController(controller).getStrategy(address(WETH)),
-            assets
-        );
-        // Begin strategy deposit sequence
-        IController(controller).deposit(address(token), msg.sender, assets);
-    }
+    // // Vault has WETH
+    // // Trigger strategy
+    // function afterDeposit(uint256 assets) internal {
+    //     // deposit weth in strategy
+    //     IERC20(token).safeTransferFrom(
+    //         address(this),
+    //         IController(controller).getStrategy(address(WETH)),
+    //         assets
+    //     );
+    //     // Begin strategy deposit sequence
+    //     IController(controller).deposit(address(token), msg.sender, assets);
+    // }
 
     function getName() external pure returns (string memory) {
         return "Asymmetry Finance Vault";
