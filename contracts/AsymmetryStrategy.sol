@@ -46,7 +46,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     }
 
     // map user address to Position struct
-    mapping(address => Position) public positions; // only
+    mapping(address => Position) public positions;
     uint256 currentPositionId;
 
     // Contract Addresses
@@ -57,8 +57,6 @@ contract AsymmetryStrategy is ERC1155Holder {
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant balPoolEthAddress =
-        0x0000000000000000000000000000000000000000;
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
     address constant deployCurvePool =
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
@@ -124,15 +122,20 @@ contract AsymmetryStrategy is ERC1155Holder {
     function openPosition() public payable {
         address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
         currentDepositor = msg.sender;
-        uint256 assets = msg.value;
-        uint256 cvxAmountOut = swapCvx(assets - 32e18);
-        uint256 amountCvxLocked = lockCvx(cvxAmountOut);
+        uint256 openAmount = msg.value;
+        uint256 ratio = getAsymmetryRatio();
+        uint256 cvxAmount = openAmount / 100 * ratio;
+        uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
+        uint256 numberOfDerivatives = 2;
+        uint256 cvxAmountReceived = swapCvx(cvxAmount);
+        uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
-        uint256 wstEthMinted = depositWstEth(assets - 40e18);
-        uint256 rEthMinted = depositREth(assets - 40e18);
+        uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
+        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
+
         // TODO: create 4626 tokens for each derivative
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
@@ -140,8 +143,8 @@ contract AsymmetryStrategy is ERC1155Holder {
             amountCvxLocked,
             balLpAmount
         );
-        mintAfEth(16e18);
-        uint256 crvLpAmount = addAfEthCrvLiquidity(pool, 16e18);
+        mintAfEth(ethAmount);
+        uint256 crvLpAmount = addAfEthCrvLiquidity(pool, ethAmount);
         require(
             positions[currentDepositor].userAddress != currentDepositor,
             "User already has position."
@@ -149,6 +152,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 newPositionID = ++currentPositionId;
 
         // storage of individual balances associated w/ user deposit
+        // TODO: This calculation doesn't update when afETH is transferred between wallets
         positions[currentDepositor] = Position({
             positionID: newPositionID,
             userAddress: currentDepositor,
@@ -159,19 +163,20 @@ contract AsymmetryStrategy is ERC1155Holder {
             balancerBalances: balLpAmount,
             cvxNFTID: _cvxNFTID,
             bundleNFTID: bundleNftId,
-            afETH: 16e18,
+            afETH: ethAmount,
             createdAt: block.timestamp
         });
     }
 
     // add support for CVX burn or keep and transfer NFT to user
     // must transfer amount out tokens to vault
-    function closePosition(address sender, bool decision) public {
-        currentWithdrawer = sender;
-        withdrawCVXNft(decision);
+    function closePosition(bool _instantWithdraw) public {
+        currentWithdrawer = msg.sender;
+        uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
+        withdrawCVXNft(_instantWithdraw);
         withdrawCRVPool(pool, 32e18);
-        burn(16e18);
-        burnBundleNFT(sender);
+        burn(afEthBalance);
+        burnBundleNFT(msg.sender);
         uint256 wstETH2Unwrap = withdrawBalTokens();
         withdrawREth();
         withdrawWstEth(wstETH2Unwrap);
@@ -185,6 +190,12 @@ contract AsymmetryStrategy is ERC1155Holder {
     /*//////////////////////////////////////////////////////////////
                         STRATEGY METHODS
     //////////////////////////////////////////////////////////////*/
+
+
+    function getAsymmetryRatio() public returns (uint256 ratio){
+        // TODO: implement percentage calculation
+        return 40;
+    }
 
     function swapExactInputSingleHop(
         address tokenIn,
@@ -211,7 +222,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 amountSwapped = swapExactInputSingleHop(
             WETH9,
             CVX,
-            10000, // TODO: add pool fee
+            10000,
             amount
         );
         return amountSwapped;
@@ -232,7 +243,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         payable
         returns (uint256 wstEthMintAmount)
     {
-        require(amount == 8e18, "Invalid Deposit");
         uint256 wstEthBalance1 = wstEth.balanceOf(address(this));
         (bool sent, ) = address(wstEth).call{value: amount}("");
         require(sent, "Failed to send Ether");
@@ -246,8 +256,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         payable
         returns (uint256 rEthAmount)
     {
-        require(amount == 8e18, "Invalid Deposit");
-
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
@@ -350,7 +358,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         weth.deposit{value: amount}();
         weth.approve(afETHPool, amount);
         _amounts = [uint256(amount), amount];
-        require(_amounts[0] == 16e18, "Invalid Deposit");
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.approve(afETHPool, amount);
         uint256 mintAmt = ICrvEthPool(afETHPool).add_liquidity(_amounts, 0);
@@ -435,7 +442,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     }
 
     function mintCvxNft(address sender, uint256 _amountLocked)
-        public
+        private
         returns (uint256 balance, uint256 nftId)
     {
         uint256 amountLocked = _amountLocked;
@@ -453,7 +460,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 cvxNftId,
         uint256 cvxAmount,
         uint256 balPoolTokens
-    ) public returns (uint256 id) {
+    ) private returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
         IAfBundle1155(bundleNFT).mint(
             cvxNftId,
@@ -471,8 +478,9 @@ contract AsymmetryStrategy is ERC1155Holder {
     // True - user is transferred the 1155 NFT holding their CVX deposit
     // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
     // False - user pays fee to unlock their CVX and burn their NFT
-    function withdrawCVXNft(bool _decision) public {
-        if (_decision == true) {
+    function withdrawCVXNft(bool _instantWithdraw) private {
+        if (_instantWithdraw == true) {
+            // TODO: start withdraw vlCVX
             IAfCVX1155(CVXNFT).safeTransferFrom(
                 address(this),
                 currentWithdrawer,
@@ -488,7 +496,7 @@ contract AsymmetryStrategy is ERC1155Holder {
                 )
             );
         } else {
-            console.log("decision: ", _decision);
+            console.log("instant withdraw: ", _instantWithdraw);
             // fees: 119 days - 1% per day to max 12% fee: 88 days to min fee
             // 119 - 88 = 31
             // block.timestamp - positions[createdAt] = time locked
@@ -501,7 +509,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         }
     }
 
-    function burnBundleNFT(address user) public {
+    function burnBundleNFT(address user) private {
         uint256[2] memory ids;
         uint256[2] memory amounts;
         ids[0] = positions[user].bundleNFTID;
@@ -511,13 +519,13 @@ contract AsymmetryStrategy is ERC1155Holder {
         IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
-    function mintAfEth(uint256 amount) public {
+    function mintAfEth(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.mint(address(this), amount);
     }
 
     // burn afETH
-    function burn(uint256 amount) public {
+    function burn(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
         positions[currentWithdrawer].afETH = 0;
         afEthToken.burn(address(this), amount);
