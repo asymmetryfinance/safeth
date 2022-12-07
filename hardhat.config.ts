@@ -36,7 +36,6 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC,
       },
       forking: {
-        blockNumber: 16078640,
         url: process.env.MAINNET_URL || '',
         enabled: true, // Set to false to disable forked mainnet mode
       },

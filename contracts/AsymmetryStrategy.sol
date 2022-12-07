@@ -30,6 +30,8 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
 contract AsymmetryStrategy is ERC1155Holder {
     struct Position {
         uint256 positionID;
@@ -57,9 +59,15 @@ contract AsymmetryStrategy is ERC1155Holder {
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
     address constant deployCurvePool =
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
+
+    AggregatorV3Interface constant chainLinkEthFeed =
+        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+
+    AggregatorV3Interface constant chainLinkCvxFeed =
+        AggregatorV3Interface(0xd962fC30A72A84cE50161031391756Bf2876Af5D);
+    RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
     address public governance;
     address public strategist;
@@ -86,7 +94,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100
-    uint256 currentBundleNftId = 100;
+    uint256 currentBundleNftId = 100; // TODO: why?
 
     uint256 totalAfEthBalance;
 
@@ -99,7 +107,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
     IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
 
-    uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable
+    uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
 
     constructor(
         address token,
@@ -124,7 +132,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
         uint256 ratio = getAsymmetryRatio();
-        uint256 cvxAmount = openAmount / 100 * ratio;
+        uint256 cvxAmount = (openAmount / 100) * ratio;
         uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
         uint256 numberOfDerivatives = 2;
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
@@ -191,8 +199,7 @@ contract AsymmetryStrategy is ERC1155Holder {
                         STRATEGY METHODS
     //////////////////////////////////////////////////////////////*/
 
-
-    function getAsymmetryRatio() public returns (uint256 ratio){
+    function getAsymmetryRatio() public returns (uint256 ratio) {
         // TODO: implement percentage calculation
         return 40;
     }
@@ -263,7 +270,8 @@ contract AsymmetryStrategy is ERC1155Holder {
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
-        bool canDeposit = rocketDepositPool.getBalance() + amount <= ROCKET_POOL_LIMIT;
+        bool canDeposit = rocketDepositPool.getBalance() + amount <=
+            ROCKET_POOL_LIMIT;
         if (!canDeposit) {
             weth.deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
@@ -413,6 +421,18 @@ contract AsymmetryStrategy is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
+    function getEthPriceData() public view returns (uint8, int256) {
+        (, int price, , , ) = chainLinkEthFeed.latestRoundData();
+        uint8 decimals = priceFeed.decimals();
+        return (decimals, price);
+    }
+
+    function getCvxPriceData() public view returns (uint8, int256) {
+        (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
+        uint8 decimals = priceFeed.decimals();
+        return (decimals, price);
+    }
+
     // TODO: this shouldn't live here, should be a part of deploy scripts
     function deployAfPool(address afEth) public returns (address) {
         string memory name = "Asymmetry Finance ETH";
@@ -549,70 +569,3 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     receive() external payable {}
 }
-
-// log struct vals:
-/*
-
-        deposit: 
-        
-        console.log("positions.id", positions[currentDepositor].positionID);
-        console.log(
-            "positions.userAddress",
-            positions[currentDepositor].userAddress
-        );
-        console.log(
-            "positions.rocketBalances",
-            positions[currentDepositor].rocketBalances
-        );
-        console.log(
-            "positions.lidoBalances",
-            positions[currentDepositor].lidoBalances
-        );
-        console.log(
-            "positions.curveBalances",
-            positions[currentDepositor].curveBalances
-        );
-        console.log(
-            "positions.convexBalances",
-            positions[currentDepositor].convexBalances
-        );
-        console.log(
-            "positions.balancerBalances",
-            positions[currentDepositor].balancerBalances
-        );
-        console.log("positions.cvxNFTID", positions[currentDepositor].cvxNFTID);
-        console.log(
-            "positions.bundleNFTID",
-            positions[currentDepositor].bundleNFTID
-        );
-        console.log("positions.afETH", positions[currentDepositor].afETH);
-        console.log(
-            "positions.createdAt",
-            positions[currentDepositor].createdAt
-        );
-
-        withdraw: 
-
-        console.log("-----------");
-        console.log("positions.id", positions[sender].positionID);
-        console.log("positions.userAddress", positions[sender].userAddress);
-        console.log(
-            "positions.rocketBalances",
-            positions[sender].rocketBalances
-        );
-        console.log("positions.lidoBalances", positions[sender].lidoBalances);
-        console.log("positions.curveBalances", positions[sender].curveBalances);
-        console.log(
-            "positions.convexBalances",
-            positions[sender].convexBalances
-        );
-        console.log(
-            "positions.balancerBalances",
-            positions[sender].balancerBalances
-        );
-        console.log("positions.cvxNFTID", positions[sender].cvxNFTID);
-        console.log("positions.bundleNFTID", positions[sender].bundleNFTID);
-        console.log("positions.afETH", positions[sender].afETH);
-        console.log("positions.createdAt", positions[sender].createdAt);
-
-*/
