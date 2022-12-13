@@ -54,8 +54,10 @@ contract AsymmetryStrategy is ERC1155Holder {
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
+    address constant CvxRewards = 0xCF50b810E57Ac33B91dCF525C6ddd9881B139332;
+    address constant vlCvx = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
@@ -75,10 +77,8 @@ contract AsymmetryStrategy is ERC1155Holder {
     address public strategist;
 
     IWETH private weth = IWETH(WETH9);
-    IERC20 private cvx = IERC20(CVX);
-    IERC20 private reth = IERC20(RETH);
-    ICvxLockerV2 constant locker = ICvxLockerV2(CvxLockerV2);
-    ILockedCvx constant lockedCvx = ILockedCvx(CvxLockerV2);
+    ICvxLockerV2 constant locker = ICvxLockerV2(vlCvx);
+    ILockedCvx constant lockedCvx = ILockedCvx(vlCvx);
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
     ICrvEthPool private lidoPool = ICrvEthPool(lidoCrvPool);
     ICurvePool private curve = ICurvePool(deployCurvePool);
@@ -130,6 +130,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     //////////////////////////////////////////////////////////////*/
 
     function openPosition() public payable {
+        getAsymmetryRatio();
         address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
         currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
@@ -202,7 +203,19 @@ contract AsymmetryStrategy is ERC1155Holder {
     //////////////////////////////////////////////////////////////*/
 
     function getAsymmetryRatio() public returns (uint256 ratio) {
-        // TODO: implement percentage calculation
+        int256 crvPrice = getCrvPriceData();
+        int256 cvxPrice = getCvxPriceData();
+        uint256 vcrvSupply = IERC20(veCRV).totalSupply();
+        uint256 lockedCvxSupply = IERC20(vlCvx).totalSupply();
+        uint256 cvxSupply = IERC20(CVX).totalSupply();
+        uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
+
+        console.log("crv price", uint(crvPrice));
+        console.log("cvx price", uint(cvxPrice));
+        console.log("vcrvSupply supply", vcrvSupply);
+        console.log("lockedCvxSupply supply", lockedCvxSupply);
+        console.log("cvxSupply supply", cvxSupply);
+
         return 40;
     }
 
@@ -239,7 +252,7 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
-        cvx.approve(CvxLockerV2, amountOut);
+        IERC20(CVX).approve(vlCvx, amountOut);
         locker.lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
         return lockedCvxAmount;
@@ -278,7 +291,7 @@ contract AsymmetryStrategy is ERC1155Holder {
             weth.deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 WETH9,
-                RETH,
+                rETH,
                 500,
                 amount
             );
@@ -423,22 +436,25 @@ contract AsymmetryStrategy is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function getEthPriceData() public view returns (uint8, int256) {
+    function getEthPriceData() public view returns (int256) {
         (, int price, , , ) = chainLinkEthFeed.latestRoundData();
         uint8 decimals = chainLinkEthFeed.decimals();
-        return (decimals, price);
+        return (price);
     }
 
-    function getCvxPriceData() public view returns (uint8, int256) {
+    function getCvxPriceData() public view returns (int256) {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
         uint8 decimals = chainLinkCvxFeed.decimals();
-        return (decimals, price);
+        console.log("dec", decimals);
+        return (price);
     }
 
-    function getCrvPriceData() public view returns (uint8, int256) {
+    function getCrvPriceData() public view returns (int256) {
         (, int price, , , ) = chainLinkCrvFeed.latestRoundData();
         uint8 decimals = chainLinkCrvFeed.decimals();
-        return (decimals, price);
+        console.log("dec crv", decimals);
+
+        return (price);
     }
 
     // TODO: this shouldn't live here, should be a part of deploy scripts
