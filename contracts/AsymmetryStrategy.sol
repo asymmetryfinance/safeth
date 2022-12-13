@@ -63,10 +63,12 @@ contract AsymmetryStrategy is ERC1155Holder {
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     AggregatorV3Interface constant chainLinkEthFeed =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-
+        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated?
     AggregatorV3Interface constant chainLinkCvxFeed =
         AggregatorV3Interface(0xd962fC30A72A84cE50161031391756Bf2876Af5D);
+    AggregatorV3Interface constant chainLinkCrvFeed =
+        AggregatorV3Interface(0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f);
+
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
     address public governance;
@@ -423,13 +425,19 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     function getEthPriceData() public view returns (uint8, int256) {
         (, int price, , , ) = chainLinkEthFeed.latestRoundData();
-        uint8 decimals = priceFeed.decimals();
+        uint8 decimals = chainLinkEthFeed.decimals();
         return (decimals, price);
     }
 
     function getCvxPriceData() public view returns (uint8, int256) {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
-        uint8 decimals = priceFeed.decimals();
+        uint8 decimals = chainLinkCvxFeed.decimals();
+        return (decimals, price);
+    }
+
+    function getCrvPriceData() public view returns (uint8, int256) {
+        (, int price, , , ) = chainLinkCrvFeed.latestRoundData();
+        uint8 decimals = chainLinkCrvFeed.decimals();
         return (decimals, price);
     }
 
