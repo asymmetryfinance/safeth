@@ -58,6 +58,7 @@ contract AsymmetryStrategy is ERC1155Holder {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant CvxRewards = 0xCF50b810E57Ac33B91dCF525C6ddd9881B139332;
     address constant vlCvx = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
@@ -208,7 +209,33 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 vcrvSupply = IERC20(veCRV).totalSupply();
         uint256 lockedCvxSupply = IERC20(vlCvx).totalSupply();
         uint256 cvxSupply = IERC20(CVX).totalSupply();
+        uint256 cvxCrvSupply = IERC20(cvxCrv).totalSupply();
         uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
+        uint256 vecrv_per_cvx = cvxCrvSupply / lockedCvxSupply;
+
+        // Calculate emissions that are being emitted this year
+        uint256 baseEmission = 274815283000000000; // hardcoded emissions for year 1
+
+        // 1597471200 - represents Aug 15th 2020 when curve was initialized
+        // 31556926 - represents 1 year including leap years
+        uint256 emissionYear = (block.timestamp - 1597471200) / 31556926; // which year the emission schedule is on
+        uint256 reductionFactorRate = 1189207115; // reduction rate of emissions each year
+        uint256 reductionFactor = (reductionFactorRate**emissionYear) / 10**(9*(emissionYear - 1));
+        uint256 emissionsPerYear = baseEmission / reductionFactor;
+        console.log("emissionYear", emissionYear);
+        console.log("emissionsPerYear", emissionsPerYear);
+
+        // crv_emissions = {'date': [dt.datetime(2022, 9, 11), dt.datetime(2023, 9, 10)],
+        //                  'state': [521530493, 713443052]}
+        // uint256 daily_minted_crv_per_cvx = crv_pd/cvx_total_supply
+
+        // yearly_minted_crv_per_cvx = daily_minted_crv_per_cvx*365
+
+        // yearly_minted_crv_per_cvx_USD = round(
+        //     yearly_minted_crv_per_cvx*crv_p, 2)
+        // yearly_minted_cvx_per_crv_USD = round(0, 2)
+
+        // return (((apy+1) * pool_size) - pool_size) / (yearly_minted_crv_per_cvx_USD + yearly_minted_cvx_per_crv_USD)
 
         console.log("crv price", uint(crvPrice));
         console.log("cvx price", uint(cvxPrice));
@@ -436,17 +463,12 @@ contract AsymmetryStrategy is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function getEthPriceData() public view returns (int256) {
-        (, int price, , , ) = chainLinkEthFeed.latestRoundData();
-        uint8 decimals = chainLinkEthFeed.decimals();
-        return (price);
-    }
-
     function getCvxPriceData() public view returns (int256) {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
         uint8 decimals = chainLinkCvxFeed.decimals();
         console.log("dec", decimals);
-        return (price);
+
+        return price;
     }
 
     function getCrvPriceData() public view returns (int256) {
@@ -454,7 +476,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint8 decimals = chainLinkCrvFeed.decimals();
         console.log("dec crv", decimals);
 
-        return (price);
+        return price;
     }
 
     // TODO: this shouldn't live here, should be a part of deploy scripts
