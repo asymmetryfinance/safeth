@@ -292,7 +292,8 @@ contract AsymmetryStrategy is ERC1155Holder {
         //     cvxSupply
         // );
 
-        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) / cvxSupply) *
+        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) /
+            cvxSupply) *
             365 *
             uint(crvPrice);
         console.log(
@@ -304,18 +305,22 @@ contract AsymmetryStrategy is ERC1155Holder {
             "((((apy + 10000) * tvl) - tvl))",
             ((((apy + 10000) * (tvl / 10000)) - tvl) * 10**offset)
         );
-        uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) * 10**offset) / yearly_minted_crv_per_cvx;
+        uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
+            10**offset) / yearly_minted_crv_per_cvx;
 
         console.log("crv price", uint(crvPrice));
         console.log("cvx price", uint(cvxPrice));
         console.log("vcrvSupply supply", vcrvSupply);
         console.log("lockedCvxSupply supply", lockedCvxSupply);
+        console.log("uint(cvxPrice) / 10**18)", uint(cvxPrice) / 10**18);
 
         console.log("cvx amount", cvx_amount);
-        uint256 allocationPercentage = (cvx_amount * uint(cvxPrice)) / (tvl * uint(cvxPrice));
+        uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
+            10**18) * 10000) /
+            (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
         console.log("allocationPercentage", allocationPercentage);
 
-        return 40;
+        return allocationPercentage;
     }
 
     function swapExactInputSingleHop(
