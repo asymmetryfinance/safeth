@@ -109,14 +109,14 @@ describe('Asymmetry Finance Strategy', function () {
   describe('deposit/withdraw', function () {
     it('Should deposit', async () => {
       const { admin, alice } = await getNamedAccounts() // addresses of named wallets
-      console.log('bal', await ethers.provider.getBalance(alice))
-      console.log('reth bal', await rEth.balanceOf(alice))
+      // console.log('bal', await ethers.provider.getBalance(alice))
+      // console.log('reth bal', await rEth.balanceOf(alice))
       const aliceVaultSigner = strategy.connect(aliceSigner as Signer)
       const depositAmount = ethers.utils.parseEther('48')
-      console.log('depositamount', depositAmount)
+      // console.log('depositamount', depositAmount)
       await aliceVaultSigner.openPosition({ value: depositAmount })
       const aliceMaxRedeem = await rEthVault.maxRedeem(alice)
-      console.log('aliceMaxRedeem', aliceMaxRedeem)
+      // console.log('aliceMaxRedeem', aliceMaxRedeem)
       // expect(aliceMaxRedeem).eq(depositAmount)
 
       // Old code written in Solidity

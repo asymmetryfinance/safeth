@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "hardhat/console.sol";
 // AF Interfaces
 import "./interfaces/IWETH.sol";
@@ -33,6 +34,8 @@ import "./interfaces/balancer/IBalancerHelpers.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AsymmetryStrategy is ERC1155Holder {
+    using Strings for uint256;
+
     struct Position {
         uint256 positionID;
         address userAddress;
@@ -46,6 +49,9 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 afETH; // amount afETH minted to user
         uint256 createdAt; // block.timestamp
     }
+
+    // curve emissions based on year
+    mapping(uint256 => uint256) private emissionsPerYear;
 
     // map user address to Position struct
     mapping(address => Position) public positions;
@@ -124,6 +130,17 @@ contract AsymmetryStrategy is ERC1155Holder {
         afETH = token;
         CVXNFT = cvxNft;
         bundleNFT = bundleNft;
+        // emissions of CRV per year
+        emissionsPerYear[1] = 274815283;
+        emissionsPerYear[2] = 231091186;
+        emissionsPerYear[3] = 194323750;
+        emissionsPerYear[4] = 163406144;
+        emissionsPerYear[5] = 137407641;
+        emissionsPerYear[6] = 115545593;
+        emissionsPerYear[7] = 97161875;
+        emissionsPerYear[8] = 81703072;
+        emissionsPerYear[9] = 68703820;
+        emissionsPerYear[10] = 57772796;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -203,45 +220,100 @@ contract AsymmetryStrategy is ERC1155Holder {
                         STRATEGY METHODS
     //////////////////////////////////////////////////////////////*/
 
+    function division(
+        uint256 decimalPlaces,
+        uint256 numerator,
+        uint256 denominator
+    )
+        public
+        view
+        returns (
+            uint256 quotient,
+            uint256 remainder,
+            string memory result
+        )
+    {
+        uint256 factor = 10**decimalPlaces;
+        quotient = numerator / denominator;
+        bool rounding = 2 * ((numerator * factor) % denominator) >= denominator;
+        remainder = ((numerator * factor) / denominator) % factor;
+        if (rounding) {
+            remainder += 1;
+        }
+        result = string(
+            abi.encodePacked(
+                quotient.toString(),
+                ".",
+                numToFixedLengthStr(decimalPlaces, remainder)
+            )
+        );
+    }
+
+    function numToFixedLengthStr(uint256 decimalPlaces, uint256 num)
+        internal
+        pure
+        returns (string memory result)
+    {
+        bytes memory byteString;
+        for (uint256 i = 0; i < decimalPlaces; i++) {
+            uint256 remainder = num % 10;
+            byteString = abi.encodePacked(remainder.toString(), byteString);
+            num = num / 10;
+        }
+        result = string(byteString);
+    }
+
     function getAsymmetryRatio() public returns (uint256 ratio) {
         int256 crvPrice = getCrvPriceData();
         int256 cvxPrice = getCvxPriceData();
         uint256 vcrvSupply = IERC20(veCRV).totalSupply();
-        uint256 lockedCvxSupply = IERC20(vlCvx).totalSupply();
+        uint256 lockedCvxSupply = IERC20(CvxRewards).totalSupply();
         uint256 cvxSupply = IERC20(CVX).totalSupply();
         uint256 cvxCrvSupply = IERC20(cvxCrv).totalSupply();
         uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
-        uint256 vecrv_per_cvx = cvxCrvSupply / lockedCvxSupply;
-
-        // Calculate emissions that are being emitted this year
-        uint256 baseEmission = 274815283000000000; // hardcoded emissions for year 1
+        uint256 apy = 1500;
+        uint256 offset = 30;
+        // uint256 vecrv_per_cvx = cvxCrvSupply / lockedCvxSupply;
 
         // 1597471200 - represents Aug 15th 2020 when curve was initialized
         // 31556926 - represents 1 year including leap years
-        uint256 emissionYear = (block.timestamp - 1597471200) / 31556926; // which year the emission schedule is on
-        uint256 reductionFactorRate = 1189207115; // reduction rate of emissions each year
-        uint256 reductionFactor = (reductionFactorRate**emissionYear) / 10**(9*(emissionYear - 1));
-        uint256 emissionsPerYear = baseEmission / reductionFactor;
+        uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
+        uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
         console.log("emissionYear", emissionYear);
-        console.log("emissionsPerYear", emissionsPerYear);
+        console.log("crvPerDay", crvPerDay);
+        console.log("cvxSupply", (cvxSupply));
 
-        // crv_emissions = {'date': [dt.datetime(2022, 9, 11), dt.datetime(2023, 9, 10)],
-        //                  'state': [521530493, 713443052]}
-        // uint256 daily_minted_crv_per_cvx = crv_pd/cvx_total_supply
+        // uint256 yearly_minted_crv_per_cvx = daily_minted_crv_per_cvx * 365;
+        // console.log("yearly_minted_crv_per_cvx", yearly_minted_crv_per_cvx);
 
-        // yearly_minted_crv_per_cvx = daily_minted_crv_per_cvx*365
+        // (uint256 quotient, uint256 remainder, string memory result) = division(
+        //     30,
+        //     crvPerDay,
+        //     cvxSupply
+        // );
 
-        // yearly_minted_crv_per_cvx_USD = round(
-        //     yearly_minted_crv_per_cvx*crv_p, 2)
-        // yearly_minted_cvx_per_crv_USD = round(0, 2)
-
-        // return (((apy+1) * pool_size) - pool_size) / (yearly_minted_crv_per_cvx_USD + yearly_minted_cvx_per_crv_USD)
+        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) / cvxSupply) *
+            365 *
+            uint(crvPrice);
+        console.log(
+            "yearly_minted_crv_per_cvx no price",
+            ((crvPerDay * 10**offset) / cvxSupply) * 365
+        );
+        console.log("yearly_minted_crv_per_cvx", yearly_minted_crv_per_cvx);
+        console.log(
+            "((((apy + 10000) * tvl) - tvl))",
+            ((((apy + 10000) * (tvl / 10000)) - tvl) * 10**offset)
+        );
+        uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) * 10**offset) / yearly_minted_crv_per_cvx;
 
         console.log("crv price", uint(crvPrice));
         console.log("cvx price", uint(cvxPrice));
         console.log("vcrvSupply supply", vcrvSupply);
         console.log("lockedCvxSupply supply", lockedCvxSupply);
-        console.log("cvxSupply supply", cvxSupply);
+
+        console.log("cvx amount", cvx_amount);
+        uint256 allocationPercentage = (cvx_amount * uint(cvxPrice)) / (tvl * uint(cvxPrice));
+        console.log("allocationPercentage", allocationPercentage);
 
         return 40;
     }
@@ -468,7 +540,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint8 decimals = chainLinkCvxFeed.decimals();
         console.log("dec", decimals);
 
-        return price;
+        return price * 10**10;
     }
 
     function getCrvPriceData() public view returns (int256) {
@@ -476,7 +548,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint8 decimals = chainLinkCrvFeed.decimals();
         console.log("dec crv", decimals);
 
-        return price;
+        return price * 10**10;
     }
 
     // TODO: this shouldn't live here, should be a part of deploy scripts
