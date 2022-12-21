@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "hardhat/console.sol";
 // AF Interfaces
 import "./interfaces/IWETH.sol";
@@ -33,6 +34,8 @@ import "./interfaces/balancer/IBalancerHelpers.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AsymmetryStrategy is ERC1155Holder {
+    using Strings for uint256;
+
     struct Position {
         uint256 positionID;
         address userAddress;
@@ -47,6 +50,9 @@ contract AsymmetryStrategy is ERC1155Holder {
         uint256 createdAt; // block.timestamp
     }
 
+    // curve emissions based on year
+    mapping(uint256 => uint256) private emissionsPerYear;
+
     // map user address to Position struct
     mapping(address => Position) public positions;
     uint256 currentPositionId;
@@ -54,8 +60,11 @@ contract AsymmetryStrategy is ERC1155Holder {
     // Contract Addresses
     address constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address constant CvxLockerV2 = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
+    address constant CvxRewards = 0xCF50b810E57Ac33B91dCF525C6ddd9881B139332;
+    address constant vlCvx = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
     address constant wStEthToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
@@ -63,20 +72,20 @@ contract AsymmetryStrategy is ERC1155Holder {
         0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     AggregatorV3Interface constant chainLinkEthFeed =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-
+        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated?
     AggregatorV3Interface constant chainLinkCvxFeed =
         AggregatorV3Interface(0xd962fC30A72A84cE50161031391756Bf2876Af5D);
+    AggregatorV3Interface constant chainLinkCrvFeed =
+        AggregatorV3Interface(0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f);
+
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
     address public governance;
     address public strategist;
 
     IWETH private weth = IWETH(WETH9);
-    IERC20 private cvx = IERC20(CVX);
-    IERC20 private reth = IERC20(RETH);
-    ICvxLockerV2 constant locker = ICvxLockerV2(CvxLockerV2);
-    ILockedCvx constant lockedCvx = ILockedCvx(CvxLockerV2);
+    ICvxLockerV2 constant locker = ICvxLockerV2(vlCvx);
+    ILockedCvx constant lockedCvx = ILockedCvx(vlCvx);
     IWStETH private wstEth = IWStETH(payable(wStEthToken));
     ICrvEthPool private lidoPool = ICrvEthPool(lidoCrvPool);
     ICurvePool private curve = ICurvePool(deployCurvePool);
@@ -121,6 +130,17 @@ contract AsymmetryStrategy is ERC1155Holder {
         afETH = token;
         CVXNFT = cvxNft;
         bundleNFT = bundleNft;
+        // emissions of CRV per year
+        emissionsPerYear[1] = 274815283;
+        emissionsPerYear[2] = 231091186;
+        emissionsPerYear[3] = 194323750;
+        emissionsPerYear[4] = 163406144;
+        emissionsPerYear[5] = 137407641;
+        emissionsPerYear[6] = 115545593;
+        emissionsPerYear[7] = 97161875;
+        emissionsPerYear[8] = 81703072;
+        emissionsPerYear[9] = 68703820;
+        emissionsPerYear[10] = 57772796;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -128,11 +148,12 @@ contract AsymmetryStrategy is ERC1155Holder {
     //////////////////////////////////////////////////////////////*/
 
     function openPosition() public payable {
+        getAsymmetryRatio();
         address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
         currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
         uint256 ratio = getAsymmetryRatio();
-        uint256 cvxAmount = (openAmount / 100) * ratio;
+        uint256 cvxAmount = (openAmount / 100) * (ratio / 1000);
         uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
         uint256 numberOfDerivatives = 2;
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
@@ -200,8 +221,32 @@ contract AsymmetryStrategy is ERC1155Holder {
     //////////////////////////////////////////////////////////////*/
 
     function getAsymmetryRatio() public returns (uint256 ratio) {
-        // TODO: implement percentage calculation
-        return 40;
+        int256 crvPrice = getCrvPriceData();
+        int256 cvxPrice = getCvxPriceData();
+        uint256 cvxSupply = IERC20(CVX).totalSupply();
+        uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
+        uint256 apy = 1500;
+        uint256 offset = 30;
+
+        // 1597471200 - represents Aug 15th 2020 when curve was initialized
+        // 31556926 - represents 1 year including leap years
+        uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
+        uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
+
+        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) /
+            cvxSupply) *
+            365 *
+            uint(crvPrice);
+
+        uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
+            10**offset) / yearly_minted_crv_per_cvx;
+
+        uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
+            10**18) * 10000) /
+            (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
+        console.log("allocationPercentage", allocationPercentage);
+
+        return allocationPercentage;
     }
 
     function swapExactInputSingleHop(
@@ -237,7 +282,7 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
-        cvx.approve(CvxLockerV2, amountOut);
+        IERC20(CVX).approve(vlCvx, amountOut);
         locker.lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
         return lockedCvxAmount;
@@ -276,7 +321,7 @@ contract AsymmetryStrategy is ERC1155Holder {
             weth.deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 WETH9,
-                RETH,
+                rETH,
                 500,
                 amount
             );
@@ -421,16 +466,20 @@ contract AsymmetryStrategy is ERC1155Holder {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function getEthPriceData() public view returns (uint8, int256) {
-        (, int price, , , ) = chainLinkEthFeed.latestRoundData();
-        uint8 decimals = priceFeed.decimals();
-        return (decimals, price);
+    function getCvxPriceData() public view returns (int256) {
+        (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
+        uint8 decimals = chainLinkCvxFeed.decimals();
+        console.log("dec", decimals);
+
+        return price * 10**10;
     }
 
-    function getCvxPriceData() public view returns (uint8, int256) {
-        (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
-        uint8 decimals = priceFeed.decimals();
-        return (decimals, price);
+    function getCrvPriceData() public view returns (int256) {
+        (, int price, , , ) = chainLinkCrvFeed.latestRoundData();
+        uint8 decimals = chainLinkCrvFeed.decimals();
+        console.log("dec crv", decimals);
+
+        return price * 10**10;
     }
 
     // TODO: this shouldn't live here, should be a part of deploy scripts
