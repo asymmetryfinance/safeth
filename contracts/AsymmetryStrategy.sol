@@ -153,7 +153,7 @@ contract AsymmetryStrategy is ERC1155Holder {
         currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
         uint256 ratio = getAsymmetryRatio();
-        uint256 cvxAmount = (openAmount / 100) * ratio;
+        uint256 cvxAmount = (openAmount / 100) * (ratio / 1000);
         uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
         uint256 numberOfDerivatives = 2;
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
@@ -220,101 +220,27 @@ contract AsymmetryStrategy is ERC1155Holder {
                         STRATEGY METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function division(
-        uint256 decimalPlaces,
-        uint256 numerator,
-        uint256 denominator
-    )
-        public
-        view
-        returns (
-            uint256 quotient,
-            uint256 remainder,
-            string memory result
-        )
-    {
-        uint256 factor = 10**decimalPlaces;
-        quotient = numerator / denominator;
-        bool rounding = 2 * ((numerator * factor) % denominator) >= denominator;
-        remainder = ((numerator * factor) / denominator) % factor;
-        if (rounding) {
-            remainder += 1;
-        }
-        result = string(
-            abi.encodePacked(
-                quotient.toString(),
-                ".",
-                numToFixedLengthStr(decimalPlaces, remainder)
-            )
-        );
-    }
-
-    function numToFixedLengthStr(uint256 decimalPlaces, uint256 num)
-        internal
-        pure
-        returns (string memory result)
-    {
-        bytes memory byteString;
-        for (uint256 i = 0; i < decimalPlaces; i++) {
-            uint256 remainder = num % 10;
-            byteString = abi.encodePacked(remainder.toString(), byteString);
-            num = num / 10;
-        }
-        result = string(byteString);
-    }
-
     function getAsymmetryRatio() public returns (uint256 ratio) {
         int256 crvPrice = getCrvPriceData();
         int256 cvxPrice = getCvxPriceData();
-        uint256 vcrvSupply = IERC20(veCRV).totalSupply();
-        uint256 lockedCvxSupply = IERC20(CvxRewards).totalSupply();
         uint256 cvxSupply = IERC20(CVX).totalSupply();
-        uint256 cvxCrvSupply = IERC20(cvxCrv).totalSupply();
         uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
         uint256 apy = 1500;
         uint256 offset = 30;
-        // uint256 vecrv_per_cvx = cvxCrvSupply / lockedCvxSupply;
 
         // 1597471200 - represents Aug 15th 2020 when curve was initialized
         // 31556926 - represents 1 year including leap years
         uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
         uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
-        console.log("emissionYear", emissionYear);
-        console.log("crvPerDay", crvPerDay);
-        console.log("cvxSupply", (cvxSupply));
-
-        // uint256 yearly_minted_crv_per_cvx = daily_minted_crv_per_cvx * 365;
-        // console.log("yearly_minted_crv_per_cvx", yearly_minted_crv_per_cvx);
-
-        // (uint256 quotient, uint256 remainder, string memory result) = division(
-        //     30,
-        //     crvPerDay,
-        //     cvxSupply
-        // );
 
         uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) /
             cvxSupply) *
             365 *
             uint(crvPrice);
-        console.log(
-            "yearly_minted_crv_per_cvx no price",
-            ((crvPerDay * 10**offset) / cvxSupply) * 365
-        );
-        console.log("yearly_minted_crv_per_cvx", yearly_minted_crv_per_cvx);
-        console.log(
-            "((((apy + 10000) * tvl) - tvl))",
-            ((((apy + 10000) * (tvl / 10000)) - tvl) * 10**offset)
-        );
+
         uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
             10**offset) / yearly_minted_crv_per_cvx;
 
-        console.log("crv price", uint(crvPrice));
-        console.log("cvx price", uint(cvxPrice));
-        console.log("vcrvSupply supply", vcrvSupply);
-        console.log("lockedCvxSupply supply", lockedCvxSupply);
-        console.log("uint(cvxPrice) / 10**18)", uint(cvxPrice) / 10**18);
-
-        console.log("cvx amount", cvx_amount);
         uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
             10**18) * 10000) /
             (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
