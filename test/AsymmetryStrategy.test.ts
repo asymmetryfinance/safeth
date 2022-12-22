@@ -11,13 +11,7 @@ import {
   WSTETH_ADRESS,
   WSTETH_WHALE,
 } from './constants'
-import {
-  AfBundle1155,
-  AfCVX1155,
-  AfETH,
-  AsymmetryStrategy,
-  Vault,
-} from '../typechain-types'
+import { AfBundle1155, AfCVX1155, AfETH, AsymmetryStrategy, Vault } from '../typechain-types'
 
 describe('Asymmetry Finance Strategy', function () {
   let accounts: SignerWithAddress[]
@@ -50,10 +44,7 @@ describe('Asymmetry Finance Strategy', function () {
     )) as Vault
 
     const afETHDeployment = await ethers.getContractFactory('afETH')
-    afEth = (await afETHDeployment.deploy(
-      'Asymmetry Finance ETH',
-      'afETH',
-    )) as AfETH
+    afEth = (await afETHDeployment.deploy('Asymmetry Finance ETH', 'afETH')) as AfETH
 
     const strategyDeployment = await ethers.getContractFactory('AsymmetryStrategy')
     strategy = (await strategyDeployment.deploy(
@@ -64,8 +55,8 @@ describe('Asymmetry Finance Strategy', function () {
     )) as AsymmetryStrategy
 
     await afEth.initialize(strategy.address)
-
-
+    await afCvx1155.initialize(strategy.address)
+    await afBundle1155.initialize(strategy.address)
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0])
