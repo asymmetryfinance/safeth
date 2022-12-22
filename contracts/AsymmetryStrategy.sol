@@ -14,6 +14,7 @@ import "./interfaces/IAfETH.sol";
 import "./interfaces/IAf1155.sol";
 // OZ
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 // Uniswap
 import "./interfaces/uniswap/ISwapRouter.sol";
 // Curve
@@ -33,8 +34,10 @@ import "./interfaces/balancer/IBalancerHelpers.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract AsymmetryStrategy is ERC1155Holder {
+contract AsymmetryStrategy is ERC1155Holder, Ownable {
     using Strings for uint256;
+    event StakingPaused(bool paused);
+    event UnstakingPaused(bool paused);
 
     struct Position {
         uint256 positionID;
@@ -80,9 +83,6 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
 
-    address public governance;
-    address public strategist;
-
     IWETH private weth = IWETH(WETH9);
     ICvxLockerV2 constant locker = ICvxLockerV2(vlCvx);
     ILockedCvx constant lockedCvx = ILockedCvx(vlCvx);
@@ -117,6 +117,8 @@ contract AsymmetryStrategy is ERC1155Holder {
     IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
 
     uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
+    bool pauseStaking = false;
+    bool pauseUnstaking = false;
 
     constructor(
         address token,
@@ -124,8 +126,6 @@ contract AsymmetryStrategy is ERC1155Holder {
         address cvxNft,
         address bundleNft
     ) {
-        governance = msg.sender;
-        strategist = msg.sender;
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
         afETH = token;
         CVXNFT = cvxNft;
@@ -147,9 +147,10 @@ contract AsymmetryStrategy is ERC1155Holder {
                         OPEN/CLOSE POSITION LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function openPosition() public payable {
+    function stake() public payable {
+        require(pauseStaking == false, "staking is paused");
         getAsymmetryRatio();
-        address pool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
+        address crvPool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
         currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
         uint256 ratio = getAsymmetryRatio();
@@ -173,7 +174,7 @@ contract AsymmetryStrategy is ERC1155Holder {
             balLpAmount
         );
         mintAfEth(ethAmount);
-        uint256 crvLpAmount = addAfEthCrvLiquidity(pool, ethAmount);
+        uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
         require(
             positions[currentDepositor].userAddress != currentDepositor,
             "User already has position."
@@ -199,12 +200,14 @@ contract AsymmetryStrategy is ERC1155Holder {
 
     // add support for CVX burn or keep and transfer NFT to user
     // must transfer amount out tokens to vault
-    function closePosition(bool _instantWithdraw) public {
+    function unstake(bool _instantWithdraw) public {
+        require(pauseUnstaking == false, "unstaking is paused");
+
         currentWithdrawer = msg.sender;
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
         withdrawCVXNft(_instantWithdraw);
         withdrawCRVPool(pool, 32e18);
-        burn(afEthBalance);
+        burnAfEth(afEthBalance);
         burnBundleNFT(msg.sender);
         uint256 wstETH2Unwrap = withdrawBalTokens();
         withdrawREth();
@@ -220,7 +223,7 @@ contract AsymmetryStrategy is ERC1155Holder {
                         STRATEGY METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function getAsymmetryRatio() public returns (uint256 ratio) {
+    function getAsymmetryRatio() public view returns (uint256 ratio) {
         int256 crvPrice = getCrvPriceData();
         int256 cvxPrice = getCvxPriceData();
         uint256 cvxSupply = IERC20(CVX).totalSupply();
@@ -594,10 +597,20 @@ contract AsymmetryStrategy is ERC1155Holder {
     }
 
     // burn afETH
-    function burn(uint256 amount) private {
+    function burnAfEth(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
         positions[currentWithdrawer].afETH = 0;
         afEthToken.burn(address(this), amount);
+    }
+
+    function setPauseStaking(bool _pause) public onlyOwner {
+        pauseStaking = _pause;
+        emit StakingPaused(_pause);
+    }
+
+    function setPauseuntaking(bool _pause) public onlyOwner {
+        pauseUnstaking = _pause;
+        emit UnstakingPaused(_pause);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -105,7 +105,7 @@ describe('Asymmetry Finance Strategy', function () {
       const aliceVaultSigner = strategy.connect(aliceSigner as Signer)
       const depositAmount = ethers.utils.parseEther('48')
       // console.log('depositamount', depositAmount)
-      await aliceVaultSigner.openPosition({ value: depositAmount })
+      await aliceVaultSigner.stake({ value: depositAmount })
       const aliceMaxRedeem = await rEthVault.maxRedeem(alice)
       // console.log('aliceMaxRedeem', aliceMaxRedeem)
       // expect(aliceMaxRedeem).eq(depositAmount)
