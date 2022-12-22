@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 interface IStrategy {
     function want() external view returns (address);
 
-    function openPosition(address user, uint256 assets) external;
+    function stake(address user, uint256 assets) external;
 
-    function closePosition(address user, bool decision) external;
+    function unstake(address user, bool decision) external;
 
     function balanceOf() external view returns (uint256);
 
