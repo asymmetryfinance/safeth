@@ -79,17 +79,10 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     AggregatorV3Interface constant chainLinkCrvFeed =
         AggregatorV3Interface(0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f);
 
-    RocketStorageInterface rocketStorage = RocketStorageInterface(address(0));
+    RocketStorageInterface rocketStorage;
 
-    ILockedCvx constant lockedCvx = ILockedCvx(vlCVX);
-    ICrvEthPool private lidoPool = ICrvEthPool(lidoCrvPool);
-    ICurvePool private curve = ICurvePool(deployCurvePool);
-
-    ISwapRouter constant router =
+    ISwapRouter constant swapRouter =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-
-    address currentDepositor;
-    address currentWithdrawer;
 
     address afETH;
     address pool;
@@ -97,19 +90,17 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address bundleNFT;
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
-    // Bundle NFT ID starts at 100
-    uint256 currentBundleNftId = 100; // TODO: why?
+    // Bundle NFT ID starts at 100 // TODO: why?
+    uint256 currentBundleNftId = 100;
 
     uint256 totalAfEthBalance;
 
     // balancer pool things
-    address private wstETHBalPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    IVault balancer = IVault(wstETHBalPool);
+    address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
     bytes32 balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
     address private balancerHelpers =
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
-    IBalancerHelpers helper = IBalancerHelpers(balancerHelpers);
 
     uint256 constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
     bool pauseStaking = false;
@@ -146,7 +137,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         require(pauseStaking == false, "staking is paused");
         getAsymmetryRatio();
         address crvPool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
-        currentDepositor = msg.sender;
         uint256 openAmount = msg.value;
         uint256 ratio = getAsymmetryRatio();
         uint256 cvxAmount = (openAmount / 100) * (ratio / 1000);
@@ -171,16 +161,16 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         mintAfEth(ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
         require(
-            positions[currentDepositor].userAddress != currentDepositor,
+            positions[msg.sender].userAddress != msg.sender,
             "User already has position."
         );
         uint256 newPositionID = ++currentPositionId;
 
         // storage of individual balances associated w/ user deposit
         // TODO: This calculation doesn't update when afETH is transferred between wallets
-        positions[currentDepositor] = Position({
+        positions[msg.sender] = Position({
             positionID: newPositionID,
-            userAddress: currentDepositor,
+            userAddress: msg.sender, // TODO: why??
             rocketBalances: rEthMinted,
             lidoBalances: wstEthMinted,
             curveBalances: crvLpAmount,
@@ -198,7 +188,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     function unstake(bool _instantWithdraw) public {
         require(pauseUnstaking == false, "unstaking is paused");
 
-        currentWithdrawer = msg.sender;
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
         withdrawCVXNft(_instantWithdraw);
         withdrawCRVPool(pool, 32e18);
@@ -253,7 +242,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint24 poolFee,
         uint256 amountIn
     ) public returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(router), amountIn);
+        IERC20(tokenIn).approve(address(swapRouter), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -264,7 +253,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
             });
-        amountOut = router.exactInputSingle(params);
+        amountOut = swapRouter.exactInputSingle(params);
     }
 
     function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
@@ -282,7 +271,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
         ICvxLockerV2(vlCVX).lock(address(this), amountOut, 0);
-        uint256 lockedCvxAmount = lockedCvx.lockedBalanceOf(address(this));
+        uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
+            address(this)
+        );
         return lockedCvxAmount;
     }
 
@@ -293,11 +284,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         payable
         returns (uint256 wstEthMintAmount)
     {
-        uint256 wstEthBalance1 = IWStETH(wstETH).balanceOf(address(this));
+        uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
         (bool sent, ) = wstETH.call{value: amount}("");
         require(sent, "Failed to send Ether");
-        uint256 wstEthBalance2 = IWStETH(wstETH).balanceOf(address(this));
-        uint256 wstEthAmount = wstEthBalance2 - wstEthBalance1;
+        uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
+        uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
         return (wstEthAmount);
     }
 
@@ -362,8 +353,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             userDataEncoded,
             false
         );
-        IWStETH(wstETH).approve(wstETHBalPool, amount);
-        balancer.joinPool(balPoolId, address(this), address(this), request);
+        IWStETH(wstETH).approve(afBalancerPool, amount);
+        IVault(afBalancerPool).joinPool(
+            balPoolId,
+            address(this),
+            address(this),
+            request
+        );
         return (
             ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230).balanceOf(
                 address(this)
@@ -379,8 +375,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             rocketTokenRETHAddress
         );
         uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-        uint256 amount = positions[currentWithdrawer].rocketBalances;
-        positions[currentWithdrawer].rocketBalances = 0;
+        uint256 amount = positions[msg.sender].rocketBalances;
+        positions[msg.sender].rocketBalances = 0;
         rocketTokenRETH.burn(amount);
         uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
         require(rethBalance1 > rethBalance2, "No rETH was burned");
@@ -388,13 +384,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function withdrawWstEth(uint256 _amount) public {
-        positions[currentWithdrawer].lidoBalances = 0;
+        positions[msg.sender].lidoBalances = 0;
         IWStETH(wstETH).unwrap(_amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         // convert stETH to ETH
         console.log("Eth before swapping steth to eth:", address(this).balance);
-        lidoPool.exchange(1, 0, stEthBal, 0);
+        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
         console.log("Eth after swapping steth to eth:", address(this).balance);
     }
 
@@ -417,13 +413,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
         // bal lp amount
-        uint256 amount = positions[currentWithdrawer].balancerBalances;
+        uint256 amount = positions[msg.sender].balancerBalances;
         address[] memory _assets = new address[](2);
         uint256[] memory _amounts = new uint256[](2);
         _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         _assets[1] = 0x0000000000000000000000000000000000000000;
         // account for slippage from Balancer withdrawal
-        _amounts[0] = (positions[currentWithdrawer].lidoBalances * 99) / 100;
+        _amounts[0] = (positions[msg.sender].lidoBalances * 99) / 100;
         _amounts[1] = 0;
         uint256 exitKind = 0;
         uint256 exitTokenIndex = 0;
@@ -438,10 +434,15 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             userDataEncoded,
             false
         );
-        // (uint256 balIn, uint256[] memory amountsOut) = helper.queryExit(balPoolId,address(this),address(this),request);
+        // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
-        positions[currentWithdrawer].balancerBalances = 0;
-        balancer.exitPool(balPoolId, address(this), address(this), request);
+        positions[msg.sender].balancerBalances = 0;
+        IVault(afBalancerPool).exitPool(
+            balPoolId,
+            address(this),
+            address(this),
+            request
+        );
         uint256 wBalance2 = IWStETH(wstETH).balanceOf(address(this));
         require(wBalance2 > wBalance1, "No wstETH was withdrawn");
         uint256 wstETHWithdrawn = wBalance2 - wBalance1;
@@ -453,7 +454,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
         min_amounts[1] = 0;
-        positions[currentWithdrawer].curveBalances = 0;
+        positions[msg.sender].curveBalances = 0;
         uint256[2] memory returnAmt = ICrvEthPool(afETHPool).remove_liquidity(
             _amount,
             min_amounts
@@ -495,7 +496,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 fee = 4000000;
         uint256 asset_type = 1;
         uint256 implementation_idx = 1;
-        address deployedPool = curve.deploy_plain_pool(
+        address deployedPool = ICurvePool(deployCurvePool).deploy_plain_pool(
             name,
             symbol,
             coins,
@@ -550,16 +551,16 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             // TODO: start withdraw vlCVX
             IAfCVX1155(CVXNFT).safeTransferFrom(
                 address(this),
-                currentWithdrawer,
-                positions[currentWithdrawer].cvxNFTID,
-                positions[currentWithdrawer].convexBalances,
+                msg.sender,
+                positions[msg.sender].cvxNFTID,
+                positions[msg.sender].convexBalances,
                 ""
             );
             console.log(
                 "user balance of CVX NFT:",
                 IAfCVX1155(CVXNFT).balanceOf(
-                    currentWithdrawer,
-                    positions[currentWithdrawer].cvxNFTID
+                    msg.sender,
+                    positions[msg.sender].cvxNFTID
                 )
             );
         } else {
@@ -594,8 +595,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     // burn afETH
     function burnAfEth(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
-        positions[currentWithdrawer].afETH = 0;
         afEthToken.burn(address(this), amount);
+        positions[msg.sender].afETH = 0;
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {
