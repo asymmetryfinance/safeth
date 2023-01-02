@@ -19,6 +19,4 @@ abstract contract IWStETH is ERC20 {
         returns (uint256);
 
     function stEthPerToken() external view virtual returns (uint256);
-
-    receive() external payable virtual;
 }
