@@ -60,7 +60,7 @@ describe('Asymmetry Finance Strategy', function () {
       'afwstEthETH',
     )) as Vault
 
-    await strategy.setVault(RETH_ADDRESS, rEThVault.address)
+    await strategy.setVault(RETH_ADDRESS, rEthVault.address)
     await strategy.setVault(WSTETH_ADRESS, wstEthVault.address)
 
     await afEth.initialize(strategy.address)

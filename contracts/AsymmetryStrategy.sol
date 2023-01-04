@@ -57,6 +57,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // curve emissions based on year
     mapping(uint256 => uint256) private emissionsPerYear;
+
+    // ERC-4626 Vaults of each derivative (token address => vault address)
     mapping(address => address) public vaults;
 
     // map user address to Position struct
@@ -95,8 +97,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
     uint256 currentBundleNftId = 100;
-
-    uint256 totalAfEthBalance;
+    uint256 numberOfDerivatives = 2;
+    address crvPool;
 
     // balancer pool things
     address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
@@ -119,6 +121,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         afETH = token;
         CVXNFT = cvxNft;
         bundleNFT = bundleNft;
+        crvPool = deployAfPool(afETH); // TODO: should be set outside contract
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
         emissionsPerYear[2] = 231091186;
@@ -138,25 +141,37 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        getAsymmetryRatio();
-        address crvPool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
-        uint256 openAmount = msg.value;
+        console.log("balance ", address(this).balance);
+
         uint256 ratio = getAsymmetryRatio();
-        uint256 cvxAmount = (openAmount / 100) * (ratio / 1000);
-        uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
-        uint256 numberOfDerivatives = 2;
+        uint256 cvxAmount = (msg.value * ratio) / 10000;
+        uint256 ethAmount = (msg.value - cvxAmount) / 2; // will split half of remaining eth into derivatives
+        console.log("msg.value", msg.value);
+        console.log("cvxAmount", cvxAmount);
+        console.log("ethAmount", ethAmount);
+        console.log("balance ", address(this).balance);
+
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
+        console.log("balance ", address(this).balance);
+
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
+        console.log("balance ", address(this).balance);
+
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
+        console.log("balance ", address(this).balance);
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        // address vault = IController(controller).getVault(wETH);
-        // (bool sent, ) = address(vault).call{value: address(this).balance}("");
-        // require(sent, "Failed to send Ether");
+        (bool sent, ) = address(vaults[wstETH]).call{value: wstEthMinted}(""); // TODO: don't just send to there, smh
+        require(sent, "Fail to deposit wst Vault");
 
+        console.log("balance ", address(this).balance);
+        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
+        (sent, ) = address(vaults[rETH]).call{value: rEthMinted}("");
+        require(sent, "Fail to deposit rETH Vault");
+
+        console.log("balance ", address(this).balance);
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,
@@ -401,18 +416,20 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // deploy new curve pool, add liquidity
     // strat has afETH, deposit in CRV pool
-    function addAfEthCrvLiquidity(address pool, uint256 amount)
+    function addAfEthCrvLiquidity(address _pool, uint256 _amount)
         public
         returns (uint256 mint)
     {
-        address afETHPool = pool;
+        require(_amount <= address(this).balance, "Not Enough ETH");
         uint256[2] memory _amounts;
-        IWETH(wETH).deposit{value: amount}();
-        IWETH(wETH).approve(afETHPool, amount);
-        _amounts = [uint256(amount), amount];
+        console.log(address(this).balance);
+        console.log(_amount);
+        IWETH(wETH).deposit{value: _amount}();
+        IWETH(wETH).approve(_pool, _amount);
+        _amounts = [uint256(_amount), _amount];
         IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.approve(afETHPool, amount);
-        uint256 mintAmt = ICrvEthPool(afETHPool).add_liquidity(_amounts, 0);
+        afEthToken.approve(_pool, _amount);
+        uint256 mintAmt = ICrvEthPool(_pool).add_liquidity(_amounts, 0);
         return (mintAmt);
     }
 
