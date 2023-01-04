@@ -8,25 +8,20 @@ import "hardhat/console.sol";
 
 contract Vault is ERC4626 {
     using SafeERC20 for IERC20;
-    address public governance;
-
     ERC20 public immutable token;
 
     uint256 totalEthAmount;
 
     // WETH token address
-    // https://docs.uniswap.org/protocol/reference/deployments
     IWETH public constant WETH =
         IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     constructor(
         address _token,
         string memory _name,
-        string memory _symbol,
-        address _governance
+        string memory _symbol
     ) ERC4626(IERC20(_token)) ERC20(_name, _symbol) {
         token = ERC20(_token);
-        governance = _governance;
     }
 
     function decimals() public view virtual override returns (uint8) {

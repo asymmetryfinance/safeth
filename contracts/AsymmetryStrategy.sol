@@ -32,12 +32,14 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
+import "./Vault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AsymmetryStrategy is ERC1155Holder, Ownable {
     using Strings for uint256;
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
+    event SetVault(address token, address vault);
 
     struct Position {
         uint256 positionID;
@@ -55,6 +57,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // curve emissions based on year
     mapping(uint256 => uint256) private emissionsPerYear;
+    mapping(address => address) public vaults;
 
     // map user address to Position struct
     mapping(address => Position) public positions;
@@ -150,8 +153,10 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         );
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
+        // address vault = IController(controller).getVault(wETH);
+        // (bool sent, ) = address(vault).call{value: address(this).balance}("");
+        // require(sent, "Failed to send Ether");
 
-        // TODO: create 4626 tokens for each derivative
         uint256 balLpAmount = depositBalTokens(wstEthMinted);
         uint256 bundleNftId = mintBundleNft(
             currentCvxNftId,
@@ -597,6 +602,15 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.burn(address(this), amount);
         positions[msg.sender].afETH = 0;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        OWNER METHODS
+    //////////////////////////////////////////////////////////////*/
+
+    function setVault(address _token, address _vault) public onlyOwner {
+        vaults[_token] = _vault;
+        emit SetVault(_token, _vault);
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {

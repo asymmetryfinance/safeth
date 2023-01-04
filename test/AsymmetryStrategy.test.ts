@@ -22,7 +22,9 @@ describe('Asymmetry Finance Strategy', function () {
   let afBundle1155: AfBundle1155
   let aliceSigner: Signer
   let wstEth: Contract
+  let wstEthVault: Vault
   let rEth: Contract
+  let rEThVault: Vault
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts()
@@ -35,14 +37,6 @@ describe('Asymmetry Finance Strategy', function () {
     const afBundle1155Deployment = await ethers.getContractFactory('afBundle1155')
     afBundle1155 = (await afBundle1155Deployment.deploy()) as AfBundle1155
 
-    const rEthVaultDeployment = await ethers.getContractFactory('Vault')
-    rEthVault = (await rEthVaultDeployment.deploy(
-      RETH_ADDRESS,
-      'AF rETH Vault',
-      'vrETH',
-      admin,
-    )) as Vault
-
     const afETHDeployment = await ethers.getContractFactory('afETH')
     afEth = (await afETHDeployment.deploy('Asymmetry Finance ETH', 'afETH')) as AfETH
 
@@ -53,6 +47,21 @@ describe('Asymmetry Finance Strategy', function () {
       afCvx1155.address,
       afBundle1155.address,
     )) as AsymmetryStrategy
+
+    const VaultDeployment = await ethers.getContractFactory('Vault')
+    rEthVault = (await VaultDeployment.deploy(
+      RETH_ADDRESS,
+      'Asymmetry Rocket Pool Vault',
+      'afrEthVault',
+    )) as Vault
+    wstEthVault = (await VaultDeployment.deploy(
+      WSTETH_ADRESS,
+      'Asymmetry Lido Vault',
+      'afwstEthETH',
+    )) as Vault
+
+    await strategy.setVault(RETH_ADDRESS, rEThVault.address)
+    await strategy.setVault(WSTETH_ADRESS, wstEthVault.address)
 
     await afEth.initialize(strategy.address)
     await afCvx1155.initialize(strategy.address)
@@ -102,10 +111,10 @@ describe('Asymmetry Finance Strategy', function () {
       const { admin, alice } = await getNamedAccounts() // addresses of named wallets
       // console.log('bal', await ethers.provider.getBalance(alice))
       // console.log('reth bal', await rEth.balanceOf(alice))
-      const aliceVaultSigner = strategy.connect(aliceSigner as Signer)
+      const aliceStrategySigner = strategy.connect(aliceSigner as Signer)
       const depositAmount = ethers.utils.parseEther('48')
       // console.log('depositamount', depositAmount)
-      await aliceVaultSigner.stake({ value: depositAmount })
+      await aliceStrategySigner.stake({ value: depositAmount })
       const aliceMaxRedeem = await rEthVault.maxRedeem(alice)
       // console.log('aliceMaxRedeem', aliceMaxRedeem)
       // expect(aliceMaxRedeem).eq(depositAmount)
