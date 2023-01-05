@@ -163,12 +163,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         );
         console.log("balance ", address(this).balance);
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        (bool sent, ) = address(vaults[wstETH]).call{value: wstEthMinted}(""); // TODO: don't just send to there, smh
-        require(sent, "Fail to deposit wst Vault");
+        Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
 
         console.log("balance ", address(this).balance);
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        (sent, ) = address(vaults[rETH]).call{value: rEthMinted}("");
+        (bool sent, ) = address(vaults[rETH]).call{value: rEthMinted}("");
         require(sent, "Fail to deposit rETH Vault");
 
         console.log("balance ", address(this).balance);
@@ -309,6 +308,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
+        console.log('pre', wstEthBalancePre);
+        console.log('post', wstEthBalancePost);
+        console.log('total', wstEthAmount);
         return (wstEthAmount);
     }
 
@@ -345,7 +347,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
                 rocketTokenRETHAddress
             );
             uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-            uint256 ethBalance = address(this).balance;
             rocketDepositPool.deposit{value: amount}();
             uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
             require(rethBalance2 > rethBalance1, "No rETH was minted");
@@ -649,7 +650,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function getName() external pure returns (string memory) {
-        return "StrategyAsymmetryFinance";
+        return "AsymmetryFinance Strategy";
     }
 
     /*//////////////////////////////////////////////////////////////
