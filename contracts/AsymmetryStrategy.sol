@@ -32,12 +32,14 @@ import "./interfaces/lido/IstETH.sol";
 import "./interfaces/balancer/IVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
+import "./Vault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AsymmetryStrategy is ERC1155Holder, Ownable {
     using Strings for uint256;
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
+    event SetVault(address token, address vault);
 
     struct Position {
         uint256 positionID;
@@ -55,6 +57,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // curve emissions based on year
     mapping(uint256 => uint256) private emissionsPerYear;
+
+    // ERC-4626 Vaults of each derivative (token address => vault address)
+    mapping(address => address) public vaults;
 
     // map user address to Position struct
     mapping(address => Position) public positions;
@@ -92,8 +97,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
     uint256 currentBundleNftId = 100;
-
-    uint256 totalAfEthBalance;
+    uint256 numberOfDerivatives = 2;
+    address crvPool;
 
     // balancer pool things
     address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
@@ -116,6 +121,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         afETH = token;
         CVXNFT = cvxNft;
         bundleNFT = bundleNft;
+        crvPool = deployAfPool(afETH); // TODO: should be set outside contract
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
         emissionsPerYear[2] = 231091186;
@@ -135,13 +141,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        getAsymmetryRatio();
-        address crvPool = deployAfPool(afETH); // TODO: why deploy curve pool everytime someone opens position?
-        uint256 openAmount = msg.value;
+
         uint256 ratio = getAsymmetryRatio();
-        uint256 cvxAmount = (openAmount / 100) * (ratio / 1000);
-        uint256 ethAmount = (openAmount - cvxAmount) / 2; // will split half of remaining eth into derivatives
-        uint256 numberOfDerivatives = 2;
+        uint256 cvxAmount = (msg.value * ratio) / 10000;
+        uint256 ethAmount = (msg.value - cvxAmount) / 2; // will split half of remaining eth into derivatives
+
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
@@ -149,15 +153,21 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             amountCvxLocked
         );
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
+        Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
 
-        // TODO: create 4626 tokens for each derivative
-        uint256 balLpAmount = depositBalTokens(wstEthMinted);
-        uint256 bundleNftId = mintBundleNft(
-            currentCvxNftId,
-            amountCvxLocked,
-            balLpAmount
-        );
+        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
+        Vault(vaults[rETH]).deposit(rEthMinted, address(this));
+
+        // TODO: Deploy and deposit balancer tokens of the 4626 vaults
+        //uint256 balLpAmount = depositBalTokens(wstEthMinted);
+
+        // TODO: After depositing to the balancer pool, mint a bundle NFT
+        // uint256 bundleNftId = mintBundleNft(
+        //     currentCvxNftId,
+        //     amountCvxLocked,
+        //     balLpAmount
+        // );
+
         mintAfEth(ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
         require(
@@ -175,9 +185,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             lidoBalances: wstEthMinted,
             curveBalances: crvLpAmount,
             convexBalances: amountCvxLocked,
-            balancerBalances: balLpAmount,
+            balancerBalances: 0, //balLpAmount,
             cvxNFTID: _cvxNFTID,
-            bundleNFTID: bundleNftId,
+            bundleNFTID: 0, //bundleNftId,
             afETH: ethAmount,
             createdAt: block.timestamp
         });
@@ -231,7 +241,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
             10**18) * 10000) /
             (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
-        console.log("allocationPercentage", allocationPercentage);
 
         return allocationPercentage;
     }
@@ -325,7 +334,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
                 rocketTokenRETHAddress
             );
             uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-            uint256 ethBalance = address(this).balance;
             rocketDepositPool.deposit{value: amount}();
             uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
             require(rethBalance2 > rethBalance1, "No rETH was minted");
@@ -396,18 +404,18 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // deploy new curve pool, add liquidity
     // strat has afETH, deposit in CRV pool
-    function addAfEthCrvLiquidity(address pool, uint256 amount)
+    function addAfEthCrvLiquidity(address _pool, uint256 _amount)
         public
         returns (uint256 mint)
     {
-        address afETHPool = pool;
+        require(_amount <= address(this).balance, "Not Enough ETH");
         uint256[2] memory _amounts;
-        IWETH(wETH).deposit{value: amount}();
-        IWETH(wETH).approve(afETHPool, amount);
-        _amounts = [uint256(amount), amount];
+        IWETH(wETH).deposit{value: _amount}();
+        IWETH(wETH).approve(_pool, _amount);
+        _amounts = [uint256(_amount), _amount];
         IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.approve(afETHPool, amount);
-        uint256 mintAmt = ICrvEthPool(afETHPool).add_liquidity(_amounts, 0);
+        afEthToken.approve(_pool, _amount);
+        uint256 mintAmt = ICrvEthPool(_pool).add_liquidity(_amounts, 0);
         return (mintAmt);
     }
 
@@ -469,7 +477,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
         uint8 decimals = chainLinkCvxFeed.decimals();
         console.log("dec", decimals);
-
+        // TODO: clean this up find a better solution
         return price * 10**10;
     }
 
@@ -599,6 +607,16 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         positions[msg.sender].afETH = 0;
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        OWNER METHODS
+    //////////////////////////////////////////////////////////////*/
+
+    function setVault(address _token, address _vault) public onlyOwner {
+        vaults[_token] = _vault;
+        emit SetVault(_token, _vault);
+        IERC20(_token).approve(_vault, type(uint256).max);
+    }
+
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
         emit StakingPaused(_pause);
@@ -618,7 +636,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function getName() external pure returns (string memory) {
-        return "StrategyAsymmetryFinance";
+        return "AsymmetryFinance Strategy";
     }
 
     /*//////////////////////////////////////////////////////////////
