@@ -141,42 +141,33 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        console.log("balance ", address(this).balance);
 
         uint256 ratio = getAsymmetryRatio();
         uint256 cvxAmount = (msg.value * ratio) / 10000;
         uint256 ethAmount = (msg.value - cvxAmount) / 2; // will split half of remaining eth into derivatives
-        console.log("msg.value", msg.value);
-        console.log("cvxAmount", cvxAmount);
-        console.log("ethAmount", ethAmount);
-        console.log("balance ", address(this).balance);
 
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
-        console.log("balance ", address(this).balance);
-
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
-        console.log("balance ", address(this).balance);
-
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
-        console.log("balance ", address(this).balance);
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
         Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
 
-        console.log("balance ", address(this).balance);
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        (bool sent, ) = address(vaults[rETH]).call{value: rEthMinted}("");
-        require(sent, "Fail to deposit rETH Vault");
+        Vault(vaults[rETH]).deposit(rEthMinted, address(this));
 
-        console.log("balance ", address(this).balance);
-        uint256 balLpAmount = depositBalTokens(wstEthMinted);
-        uint256 bundleNftId = mintBundleNft(
-            currentCvxNftId,
-            amountCvxLocked,
-            balLpAmount
-        );
+        // TODO: Deploy and deposit balancer tokens of the 4626 vaults
+        //uint256 balLpAmount = depositBalTokens(wstEthMinted);
+
+        // TODO: After depositing to the balancer pool, mint a bundle NFT
+        // uint256 bundleNftId = mintBundleNft(
+        //     currentCvxNftId,
+        //     amountCvxLocked,
+        //     balLpAmount
+        // );
+
         mintAfEth(ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
         require(
@@ -194,9 +185,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             lidoBalances: wstEthMinted,
             curveBalances: crvLpAmount,
             convexBalances: amountCvxLocked,
-            balancerBalances: balLpAmount,
+            balancerBalances: 0, //balLpAmount,
             cvxNFTID: _cvxNFTID,
-            bundleNFTID: bundleNftId,
+            bundleNFTID: 0, //bundleNftId,
             afETH: ethAmount,
             createdAt: block.timestamp
         });
@@ -308,9 +299,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
-        console.log('pre', wstEthBalancePre);
-        console.log('post', wstEthBalancePost);
-        console.log('total', wstEthAmount);
         return (wstEthAmount);
     }
 
@@ -629,6 +617,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     function setVault(address _token, address _vault) public onlyOwner {
         vaults[_token] = _vault;
         emit SetVault(_token, _vault);
+        IERC20(_token).approve(_vault, type(uint256).max);
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {

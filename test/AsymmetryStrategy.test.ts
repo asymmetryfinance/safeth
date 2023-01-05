@@ -102,7 +102,7 @@ describe('Asymmetry Finance Strategy', function () {
 
   describe('initialize', function () {
     it('Should have correct name', async () => {
-      expect(await strategy.getName()).eq('StrategyAsymmetryFinance')
+      expect(await strategy.getName()).eq('AsymmetryFinance Strategy')
     })
   })
 
