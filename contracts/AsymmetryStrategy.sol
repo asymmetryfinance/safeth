@@ -241,7 +241,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
             10**18) * 10000) /
             (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
-        console.log("allocationPercentage", allocationPercentage);
 
         return allocationPercentage;
     }
@@ -411,8 +410,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     {
         require(_amount <= address(this).balance, "Not Enough ETH");
         uint256[2] memory _amounts;
-        console.log(address(this).balance);
-        console.log(_amount);
         IWETH(wETH).deposit{value: _amount}();
         IWETH(wETH).approve(_pool, _amount);
         _amounts = [uint256(_amount), _amount];
@@ -480,7 +477,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
         uint8 decimals = chainLinkCvxFeed.decimals();
         console.log("dec", decimals);
-
+        // TODO: clean this up find a better solution
         return price * 10**10;
     }
 
