@@ -75,7 +75,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address constant deployCurvePool =
-        0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
+        0xF18056Bbd320E96A48e3Fbf8bC061322531aac99;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
@@ -168,8 +168,15 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         //     balLpAmount
         // );
 
-        mintAfEth(ethAmount);
-        uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
+        uint256 afEthAmount = ethAmount + 1;
+        mintAfEth(afEthAmount);
+        console.log('afETh', afEthAmount);
+        console.log('ethAmount', ethAmount);
+        console.log('cvxAmount', cvxAmount);
+
+        console.log('eth bal', address(this).balance);
+        console.log('afETH bal', IERC20(afETH).balanceOf(address(this)));
+        uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount, afEthAmount);
         require(
             positions[msg.sender].userAddress != msg.sender,
             "User already has position."
@@ -404,17 +411,19 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // deploy new curve pool, add liquidity
     // strat has afETH, deposit in CRV pool
-    function addAfEthCrvLiquidity(address _pool, uint256 _amount)
+    function addAfEthCrvLiquidity(address _pool, uint256 _ethAmount, uint256 _afEthAmount)
         public
         returns (uint256 mint)
     {
-        require(_amount <= address(this).balance, "Not Enough ETH");
-        uint256[2] memory _amounts;
-        IWETH(wETH).deposit{value: _amount}();
-        IWETH(wETH).approve(_pool, _amount);
-        _amounts = [uint256(_amount), _amount];
+        require(_ethAmount <= address(this).balance, "Not Enough ETH");
+
+        IWETH(wETH).deposit{value: _ethAmount}();
+        IWETH(wETH).approve(_pool, _ethAmount);
+        
         IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.approve(_pool, _amount);
+        afEthToken.approve(_pool, _afEthAmount);
+
+        uint256[2] memory _amounts = [_ethAmount, _afEthAmount];
         uint256 mintAmt = ICrvEthPool(_pool).add_liquidity(_amounts, 0);
         return (mintAmt);
     }
@@ -493,25 +502,28 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     function deployAfPool(address afEth) public returns (address) {
         string memory name = "Asymmetry Finance ETH";
         string memory symbol = "afETH";
-        address[4] memory coins;
-        coins = [
+        address[2] memory coins = [
             afEth,
-            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
+            wETH
         ];
-        uint256 _A = 1000;
-        uint256 fee = 4000000;
-        uint256 asset_type = 1;
-        uint256 implementation_idx = 1;
-        address deployedPool = ICurvePool(deployCurvePool).deploy_plain_pool(
+        uint256 A = 4000;
+        uint256 gamma = 3.5 * 10**15;
+        uint256 midFee = 1.1 * 10**7;
+        uint256 outFee = 4.5 * 10**7;
+        address deployedPool = ICurvePool(deployCurvePool).deploy_pool(
             name,
             symbol,
             coins,
-            _A,
-            fee,
-            asset_type,
-            implementation_idx
+            A,
+            gamma,
+            midFee,
+            outFee,
+            2*1012,
+            5 * 10**14,
+            490000000000000,
+            0,
+            600,
+            0
         );
         pool = deployedPool;
         return (deployedPool);
