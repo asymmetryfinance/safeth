@@ -56,45 +56,72 @@ describe("Asymmetry Finance Strategy", function () {
     )) as AfETH;
     const crvPool = new ethers.Contract(
       CRV_POOL_FACTORY,
-      crvPoolAbi, 
+      crvPoolAbi,
+      accounts[0]
+    ) as any;
+    const signer = await ethers.getSigner(crvPool.address);
+    const count = await signer.getTransactionCount();
+    const address = ethers.utils.getContractAddress({
+      from: crvPool.address,
+      nonce: count + 1,
+    });
+    console.log("address", address);
+
+    const address2 = ethers.utils.getContractAddress({
+      from: crvPool.address,
+      nonce: count,
+    });
+    console.log("address token", address2);
+
+    console.log("afeth add", afEth.address);
+    console.log("account", accounts[0].address);
+    const deployCrv = await crvPool.deploy_pool(
+      "Asymmetry Finance ETH",
+      "afETH",
+      [afEth.address, WETH_ADDRESS],
+      BigNumber.from("400000"),
+      BigNumber.from("145000000000000"),
+      BigNumber.from("26000000"),
+      BigNumber.from("45000000"),
+      BigNumber.from("2000000000000"),
+      BigNumber.from("230000000000000"),
+      BigNumber.from("146000000000000"),
+      BigNumber.from("5000000000"),
+      BigNumber.from("600"),
+      BigNumber.from("963627746451487500")
+    );
+
+    // await network.provider.request({ method: "evm_mine", params: [] });
+    // await network.provider.request({ method: "evm_mine", params: [] });
+    // await network.provider.request({ method: "evm_mine", params: [] });
+    // await network.provider.request({ method: "evm_mine", params: [] });
+    // await network.provider.request({ method: "evm_mine", params: [] });
+    // await network.provider.request({ method: "evm_mine", params: [] });
+
+    // const crvPoolReceipt = await deployCrv.wait();
+    // console.log("crvPoolReceipt logs", await crvPoolReceipt?.events);
+    const pool = await crvPool["find_pool_for_coins(address,address)"](afEth.address, WETH_ADDRESS)
+      console.log('pool', pool)
+    const mint = new Contract(
+      address2,
+      ['function minter() external view returns (address)'],
       accounts[0]
     );
-    const signer = await ethers.getSigner(crvPool.address)
-  const count = await signer.getTransactionCount()
-    const address = ethers.utils.getContractAddress({from: crvPool.address, nonce: count+1})
-    console.log('address', address)
+    console.log("mint", await mint.minter());
+    console.log("address", address);
 
-    console.log('afeth add', afEth.address)
-    console.log('account', accounts[0].address)
-    // const deployCrv = await crvPool.deploy_pool(
-    //   "Asymmetry Finance ETH",
-    //   "afETH",
-    //   [afEth.address, WETH_ADDRESS],
-    //   BigNumber.from("400000"),
-    //   BigNumber.from("145000000000000"),
-    //   BigNumber.from("26000000"),
-    //   BigNumber.from("45000000"),
-    //   BigNumber.from("2000000000000"),
-    //   BigNumber.from("230000000000000"),
-    //   BigNumber.from("146000000000000"),
-    //   BigNumber.from("5000000000"),
-    //   BigNumber.from("600"),
-    //   BigNumber.from("963627746451487500")
-    // );
-    // const crvPoolReceipt = await deployCrv.wait()
-    // console.log('crvPoolReceipt logs',await  crvPoolReceipt?.events)
+
     // const crvToken = await crvPoolReceipt?.events?.[0]?.address
     // console.log('crveToken', crvToken)
 
     // const crvAddress = new ethers.Contract(crvToken,  crvTokenAbi , accounts[0])
     // const minter = await crvAddress.minter()
     // console.log('minter', minter)
-  //   const logs = await ethers.provider.getLogs({
-  //     address: "0xF18056Bbd320E96A48e3Fbf8bC061322531aac99",
-  //     topics: ["0x0394cb40d7dbe28dad1d4ee890bdd35bbb0d89e17924a80a542535e83d54ba14"]
-  // });
-  // console.log('logs', logs)
-
+    //   const logs = await ethers.provider.getLogs({
+    //     address: "0xF18056Bbd320E96A48e3Fbf8bC061322531aac99",
+    //     topics: ["0x0394cb40d7dbe28dad1d4ee890bdd35bbb0d89e17924a80a542535e83d54ba14"]
+    // });
+    // console.log('logs', logs)
 
     const strategyDeployment = await ethers.getContractFactory(
       "AsymmetryStrategy"

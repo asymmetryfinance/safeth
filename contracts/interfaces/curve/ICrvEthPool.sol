@@ -7,9 +7,10 @@ pragma solidity ^0.8.13;
  * https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
  */
 interface ICrvEthPool {
-    function add_liquidity(uint256[2] memory amounts, uint256 min_mint_amount, bool use_eth, address sender)
+    function add_liquidity(uint256[2] memory amounts, uint256 min_mint_amount)
         external
-        payable;
+        payable
+        returns (uint256);
 
     function calc_token_amount(uint256[2] memory amounts, bool is_deposit)
         external

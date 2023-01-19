@@ -423,8 +423,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.approve(_pool, _afEthAmount);
 
-        uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
-        ICrvEthPool(_pool).add_liquidity(_amounts, 0, true, msg.sender);
+        uint256[2] memory _amounts = [uint(100000), uint(100000)];
+        uint256 a = ICrvEthPool(_pool).add_liquidity(_amounts, uint(10000));
 
         return (100);
     }
