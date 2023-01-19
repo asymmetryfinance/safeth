@@ -19,7 +19,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/uniswap/ISwapRouter.sol";
 // Curve
 import "./interfaces/curve/ICrvEthPool.sol";
-import "./interfaces/curve/ICurvePool.sol";
 // RocketPool
 import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "./interfaces/rocketpool/RocketStorageInterface.sol";
@@ -74,8 +73,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant deployCurvePool =
-        0xF18056Bbd320E96A48e3Fbf8bC061322531aac99;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
@@ -112,16 +109,18 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     bool pauseUnstaking = false;
 
     constructor(
-        address token,
+        address _token,
         address _rocketStorageAddress,
-        address cvxNft,
-        address bundleNft
+        address _cvxNft,
+        address _bundleNft,
+        address _crvPool
     ) {
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
-        afETH = token;
-        CVXNFT = cvxNft;
-        bundleNFT = bundleNft;
-        crvPool = deployAfPool(afETH); // TODO: should be set outside contract
+        afETH = _token;
+        CVXNFT = _cvxNft;
+        bundleNFT = _bundleNft;
+        crvPool = _crvPool;
+
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
         emissionsPerYear[2] = 231091186;
@@ -174,8 +173,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         console.log('ethAmount', ethAmount);
         console.log('cvxAmount', cvxAmount);
 
-        console.log('eth bal', address(this).balance);
-        console.log('afETH bal', IERC20(afETH).balanceOf(address(this)));
+        // console.log('eth bal', address(this).balance);
+        // console.log('afETH bal', IERC20(afETH).balanceOf(address(this)));
+        console.log('crvPool', crvPool);
         uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount, afEthAmount);
         require(
             positions[msg.sender].userAddress != msg.sender,
@@ -423,9 +423,10 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.approve(_pool, _afEthAmount);
 
-        uint256[2] memory _amounts = [_ethAmount, _afEthAmount];
-        uint256 mintAmt = ICrvEthPool(_pool).add_liquidity(_amounts, 0);
-        return (mintAmt);
+        uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
+        ICrvEthPool(_pool).add_liquidity(_amounts, 0, true, msg.sender);
+
+        return (100);
     }
 
     function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
@@ -496,37 +497,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         console.log("dec crv", decimals);
 
         return price * 10**10;
-    }
-
-    // TODO: this shouldn't live here, should be a part of deploy scripts
-    function deployAfPool(address afEth) public returns (address) {
-        string memory name = "Asymmetry Finance ETH";
-        string memory symbol = "afETH";
-        address[2] memory coins = [
-            afEth,
-            wETH
-        ];
-        uint256 A = 4000;
-        uint256 gamma = 3.5 * 10**15;
-        uint256 midFee = 1.1 * 10**7;
-        uint256 outFee = 4.5 * 10**7;
-        address deployedPool = ICurvePool(deployCurvePool).deploy_pool(
-            name,
-            symbol,
-            coins,
-            A,
-            gamma,
-            midFee,
-            outFee,
-            2*1012,
-            5 * 10**14,
-            490000000000000,
-            0,
-            600,
-            0
-        );
-        pool = deployedPool;
-        return (deployedPool);
     }
 
     function mintCvxNft(address sender, uint256 _amountLocked)
