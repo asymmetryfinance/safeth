@@ -19,15 +19,14 @@ interface ILockedCvx {
 
     function getReward(address _account, bool _stake) external;
 
-    function balanceAtEpochOf(uint256 _epoch, address _user)
-        external
-        view
-        returns (uint256 amount);
+    function balanceAtEpochOf(
+        uint256 _epoch,
+        address _user
+    ) external view returns (uint256 amount);
 
-    function totalSupplyAtEpoch(uint256 _epoch)
-        external
-        view
-        returns (uint256 supply);
+    function totalSupplyAtEpoch(
+        uint256 _epoch
+    ) external view returns (uint256 supply);
 
     function epochCount() external view returns (uint256);
 
@@ -37,24 +36,24 @@ interface ILockedCvx {
 
     function balanceOf(address _account) external view returns (uint256);
 
-    function lockedBalanceOf(address _user)
-        external
-        view
-        returns (uint256 amount);
+    function lockedBalanceOf(
+        address _user
+    ) external view returns (uint256 amount);
 
-    function pendingLockOf(address _user)
-        external
-        view
-        returns (uint256 amount);
+    function pendingLockOf(
+        address _user
+    ) external view returns (uint256 amount);
 
-    function pendingLockAtEpochOf(uint256 _epoch, address _user)
-        external
-        view
-        returns (uint256 amount);
+    function pendingLockAtEpochOf(
+        uint256 _epoch,
+        address _user
+    ) external view returns (uint256 amount);
 
     function totalSupply() external view returns (uint256 supply);
 
-    function lockedBalances(address _user)
+    function lockedBalances(
+        address _user
+    )
         external
         view
         returns (

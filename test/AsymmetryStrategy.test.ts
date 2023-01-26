@@ -1,4 +1,4 @@
-import { ethers, getNamedAccounts, network, upgrades } from "hardhat";
+import { ethers, getNamedAccounts, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, Signer } from "ethers";
@@ -20,7 +20,6 @@ import {
   Vault,
 } from "../typechain-types";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
-import { crvTokenAbi } from "./abi/crvTokenAbi";
 
 describe("Asymmetry Finance Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -33,14 +32,12 @@ describe("Asymmetry Finance Strategy", function () {
   let wstEth: Contract;
   let wstEthVault: Vault;
   let rEth: Contract;
-  let rEThVault: Vault;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
     accounts = await ethers.getSigners();
 
     // Deploy contracts and store them in the variables above
-
     const afCVX1155Deployment = await ethers.getContractFactory("afCVX1155");
     afCvx1155 = (await afCVX1155Deployment.deploy()) as AfCVX1155;
 
@@ -58,23 +55,8 @@ describe("Asymmetry Finance Strategy", function () {
       CRV_POOL_FACTORY,
       crvPoolAbi,
       accounts[0]
-    ) as any;
-    const signer = await ethers.getSigner(crvPool.address);
-    const count = await signer.getTransactionCount();
-    const address = ethers.utils.getContractAddress({
-      from: crvPool.address,
-      nonce: count + 1,
-    });
-    console.log("address", address);
+    );
 
-    const address2 = ethers.utils.getContractAddress({
-      from: crvPool.address,
-      nonce: count,
-    });
-    console.log("address token", address2);
-
-    console.log("afeth add", afEth.address);
-    console.log("account", accounts[0].address);
     const deployCrv = await crvPool.deploy_pool(
       "Asymmetry Finance ETH",
       "afETH",
@@ -91,37 +73,14 @@ describe("Asymmetry Finance Strategy", function () {
       BigNumber.from("1000000000000000000")
     );
 
-    // await network.provider.request({ method: "evm_mine", params: [] });
-    // await network.provider.request({ method: "evm_mine", params: [] });
-    // await network.provider.request({ method: "evm_mine", params: [] });
-    // await network.provider.request({ method: "evm_mine", params: [] });
-    // await network.provider.request({ method: "evm_mine", params: [] });
-    // await network.provider.request({ method: "evm_mine", params: [] });
-
-    // const crvPoolReceipt = await deployCrv.wait();
-    // console.log("crvPoolReceipt logs", await crvPoolReceipt?.events);
-    const pool = await crvPool["find_pool_for_coins(address,address)"](afEth.address, WETH_ADDRESS)
-      console.log('pool', pool)
-    const mint = new Contract(
-      address2,
-      ['function minter() external view returns (address)'],
+    const crvPoolReceipt = await deployCrv.wait();
+    const crvToken = await crvPoolReceipt?.events?.[0]?.address;
+    const crvAddress = new ethers.Contract(
+      crvToken,
+      ["function minter() external view returns (address)"],
       accounts[0]
     );
-    console.log("mint", await mint.minter());
-    console.log("address", address);
-
-
-    // const crvToken = await crvPoolReceipt?.events?.[0]?.address
-    // console.log('crveToken', crvToken)
-
-    // const crvAddress = new ethers.Contract(crvToken,  crvTokenAbi , accounts[0])
-    // const minter = await crvAddress.minter()
-    // console.log('minter', minter)
-    //   const logs = await ethers.provider.getLogs({
-    //     address: "0xF18056Bbd320E96A48e3Fbf8bC061322531aac99",
-    //     topics: ["0x0394cb40d7dbe28dad1d4ee890bdd35bbb0d89e17924a80a542535e83d54ba14"]
-    // });
-    // console.log('logs', logs)
+    const afEthCrvPoolAddress = await crvAddress.minter();
 
     const strategyDeployment = await ethers.getContractFactory(
       "AsymmetryStrategy"
@@ -131,7 +90,7 @@ describe("Asymmetry Finance Strategy", function () {
       ROCKET_STORAGE_ADDRESS,
       afCvx1155.address,
       afBundle1155.address,
-      address
+      afEthCrvPoolAddress
     )) as AsymmetryStrategy;
 
     const VaultDeployment = await ethers.getContractFactory("Vault");
@@ -200,9 +159,9 @@ describe("Asymmetry Finance Strategy", function () {
       const depositAmount = ethers.utils.parseEther("48");
       await aliceStrategySigner.stake({ value: depositAmount });
       const rEthRedeem = await rEthVault.maxRedeem(strategy.address);
-      expect(rEthRedeem).eq("7929950091941014379");
+      expect(rEthRedeem).eq("8043654617117268894");
       const wstEthRedeem = await wstEthVault.maxRedeem(strategy.address);
-      expect(wstEthRedeem).eq("7635498782886781147");
+      expect(wstEthRedeem).eq("7768559950232955794");
 
       // Old code written in Solidity
       //         console.log("Alice depositing 48ETH into vault...");
