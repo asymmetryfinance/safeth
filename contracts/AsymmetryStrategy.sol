@@ -167,14 +167,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         //     balLpAmount
         // );
 
-        uint256 afEthAmount = ethAmount + 1;
+        uint256 afEthAmount = ethAmount + 100000000;
         mintAfEth(afEthAmount);
         console.log('afETh', afEthAmount);
         console.log('ethAmount', ethAmount);
         console.log('cvxAmount', cvxAmount);
-
-        // console.log('eth bal', address(this).balance);
-        // console.log('afETH bal', IERC20(afETH).balanceOf(address(this)));
         console.log('crvPool', crvPool);
         uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount, afEthAmount);
         require(
@@ -423,9 +420,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IAfETH afEthToken = IAfETH(afETH);
         afEthToken.approve(_pool, _afEthAmount);
 
-        uint256[2] memory _amounts = [uint(100000), uint(100000)];
-        uint256 a = ICrvEthPool(_pool).add_liquidity(_amounts, uint(10000));
-
+        uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
+        uint256 a = ICrvEthPool(_pool).add_liquidity(_amounts, uint(100000), false);
+        console.log("a", a);
         return (100);
     }
 

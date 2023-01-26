@@ -88,7 +88,7 @@ describe("Asymmetry Finance Strategy", function () {
       BigNumber.from("146000000000000"),
       BigNumber.from("5000000000"),
       BigNumber.from("600"),
-      BigNumber.from("963627746451487500")
+      BigNumber.from("1000000000000000000")
     );
 
     // await network.provider.request({ method: "evm_mine", params: [] });
