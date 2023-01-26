@@ -9,12 +9,15 @@
 - StrategyAsymmetryFinance
 
 ## Local Development
+
 To use the correct node version run
+
 ```
 nvm use
 ```
 
 To install dependencies run yarn
+
 ```
 yarn
 ```

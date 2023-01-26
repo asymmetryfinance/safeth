@@ -19,7 +19,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/uniswap/ISwapRouter.sol";
 // Curve
 import "./interfaces/curve/ICrvEthPool.sol";
-import "./interfaces/curve/ICurvePool.sol";
 // RocketPool
 import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "./interfaces/rocketpool/RocketStorageInterface.sol";
@@ -74,8 +73,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant deployCurvePool =
-        0xB9fC157394Af804a3578134A6585C0dc9cc990d4;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
@@ -112,16 +109,18 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     bool pauseUnstaking = false;
 
     constructor(
-        address token,
+        address _token,
         address _rocketStorageAddress,
-        address cvxNft,
-        address bundleNft
+        address _cvxNft,
+        address _bundleNft,
+        address _crvPool
     ) {
         rocketStorage = RocketStorageInterface(_rocketStorageAddress);
-        afETH = token;
-        CVXNFT = cvxNft;
-        bundleNFT = bundleNft;
-        crvPool = deployAfPool(afETH); // TODO: should be set outside contract
+        afETH = _token;
+        CVXNFT = _cvxNft;
+        bundleNFT = _bundleNft;
+        crvPool = _crvPool;
+
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
         emissionsPerYear[2] = 231091186;
@@ -168,8 +167,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         //     balLpAmount
         // );
 
-        mintAfEth(ethAmount);
-        uint256 crvLpAmount = addAfEthCrvLiquidity(crvPool, ethAmount);
+        uint256 afEthAmount = ethAmount;
+        mintAfEth(afEthAmount);
+        uint256 crvLpAmount = addAfEthCrvLiquidity(
+            crvPool,
+            ethAmount,
+            afEthAmount
+        );
         require(
             positions[msg.sender].userAddress != msg.sender,
             "User already has position."
@@ -218,8 +222,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     //////////////////////////////////////////////////////////////*/
 
     function getAsymmetryRatio() public view returns (uint256 ratio) {
-        int256 crvPrice = getCrvPriceData();
-        int256 cvxPrice = getCvxPriceData();
+        uint256 crvPrice = getCrvPriceData();
+        uint256 cvxPrice = getCvxPriceData();
         uint256 cvxSupply = IERC20(CVX).totalSupply();
         uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
         uint256 apy = 1500;
@@ -230,17 +234,18 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
         uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
 
-        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) /
+        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10 ** offset) /
             cvxSupply) *
             365 *
             uint(crvPrice);
 
         uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
-            10**offset) / yearly_minted_crv_per_cvx;
+            10 ** offset) / yearly_minted_crv_per_cvx;
 
         uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
-            10**18) * 10000) /
-            (tvl + ((cvx_amount * uint(cvxPrice)) / 10**18))) * 10000) / 10000;
+            10 ** 18) * 10000) /
+            (tvl + ((cvx_amount * uint(cvxPrice)) / 10 ** 18))) * 10000) /
+            10000;
 
         return allocationPercentage;
     }
@@ -288,11 +293,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
     // send ETH and bypass stETH, recieve wstETH for BAL pool
-    function depositWstEth(uint256 amount)
-        public
-        payable
-        returns (uint256 wstEthMintAmount)
-    {
+    function depositWstEth(
+        uint256 amount
+    ) public payable returns (uint256 wstEthMintAmount) {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
         (bool sent, ) = wstETH.call{value: amount}("");
         require(sent, "Failed to send Ether");
@@ -301,11 +304,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return (wstEthAmount);
     }
 
-    function depositREth(uint256 amount)
-        public
-        payable
-        returns (uint256 rEthAmount)
-    {
+    function depositREth(
+        uint256 amount
+    ) public payable returns (uint256 rEthAmount) {
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
@@ -343,10 +344,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         }
     }
 
-    function depositBalTokens(uint256 amount)
-        public
-        returns (uint256 lpAmount)
-    {
+    function depositBalTokens(
+        uint256 amount
+    ) public returns (uint256 lpAmount) {
         address[] memory _assets = new address[](2);
         uint256[] memory _amounts = new uint256[](2);
         _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
@@ -404,19 +404,26 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // deploy new curve pool, add liquidity
     // strat has afETH, deposit in CRV pool
-    function addAfEthCrvLiquidity(address _pool, uint256 _amount)
-        public
-        returns (uint256 mint)
-    {
-        require(_amount <= address(this).balance, "Not Enough ETH");
-        uint256[2] memory _amounts;
-        IWETH(wETH).deposit{value: _amount}();
-        IWETH(wETH).approve(_pool, _amount);
-        _amounts = [uint256(_amount), _amount];
+    function addAfEthCrvLiquidity(
+        address _pool,
+        uint256 _ethAmount,
+        uint256 _afEthAmount
+    ) public returns (uint256 mint) {
+        require(_ethAmount <= address(this).balance, "Not Enough ETH");
+
+        IWETH(wETH).deposit{value: _ethAmount}();
+        IWETH(wETH).approve(_pool, _ethAmount);
+
         IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.approve(_pool, _amount);
-        uint256 mintAmt = ICrvEthPool(_pool).add_liquidity(_amounts, 0);
-        return (mintAmt);
+        afEthToken.approve(_pool, _afEthAmount);
+
+        uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
+        uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
+            _amounts,
+            uint(100000),
+            false
+        );
+        return (poolTokensMinted);
     }
 
     function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
@@ -473,54 +480,28 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
                         TOKEN METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function getCvxPriceData() public view returns (int256) {
+    function getCvxPriceData() public view returns (uint256) {
         (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
+        if (price < 0) {
+            price = 0;
+        }
         uint8 decimals = chainLinkCvxFeed.decimals();
-        console.log("dec", decimals);
-        // TODO: clean this up find a better solution
-        return price * 10**10;
+        return uint(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
-    function getCrvPriceData() public view returns (int256) {
+    function getCrvPriceData() public view returns (uint256) {
         (, int price, , , ) = chainLinkCrvFeed.latestRoundData();
+        if (price < 0) {
+            price = 0;
+        }
         uint8 decimals = chainLinkCrvFeed.decimals();
-        console.log("dec crv", decimals);
-
-        return price * 10**10;
+        return uint(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
-    // TODO: this shouldn't live here, should be a part of deploy scripts
-    function deployAfPool(address afEth) public returns (address) {
-        string memory name = "Asymmetry Finance ETH";
-        string memory symbol = "afETH";
-        address[4] memory coins;
-        coins = [
-            afEth,
-            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-            0x0000000000000000000000000000000000000000,
-            0x0000000000000000000000000000000000000000
-        ];
-        uint256 _A = 1000;
-        uint256 fee = 4000000;
-        uint256 asset_type = 1;
-        uint256 implementation_idx = 1;
-        address deployedPool = ICurvePool(deployCurvePool).deploy_plain_pool(
-            name,
-            symbol,
-            coins,
-            _A,
-            fee,
-            asset_type,
-            implementation_idx
-        );
-        pool = deployedPool;
-        return (deployedPool);
-    }
-
-    function mintCvxNft(address sender, uint256 _amountLocked)
-        private
-        returns (uint256 balance, uint256 nftId)
-    {
+    function mintCvxNft(
+        address sender,
+        uint256 _amountLocked
+    ) private returns (uint256 balance, uint256 nftId) {
         uint256 amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
         IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));

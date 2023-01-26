@@ -13,21 +13,13 @@ contract afCVX1155 is ERC1155("afCVXNFT") {
         MINTING_CONTRACT = _mintingContract;
     }
 
-    function mint(
-        uint256 id,
-        uint256 amount,
-        address recipient
-    ) public {
+    function mint(uint256 id, uint256 amount, address recipient) public {
         require(msg.sender == MINTING_CONTRACT, "Must mint from contract");
 
         _mint(recipient, id, amount, "");
     }
 
-    function burn(
-        address from,
-        uint256 id,
-        uint256 amount
-    ) public {
+    function burn(address from, uint256 id, uint256 amount) public {
         require(msg.sender == MINTING_CONTRACT, "Must burn from contract");
         _burn(from, id, amount);
     }
