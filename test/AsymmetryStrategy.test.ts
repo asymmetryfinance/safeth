@@ -183,7 +183,7 @@ describe("Asymmetry Finance Strategy", function () {
       const depositAmount = ethers.utils.parseEther("48");
       await aliceStrategySigner.stake({ value: depositAmount });
 
-      await aliceStrategySigner.unstake(false)
+      await aliceStrategySigner.unstake(false);
 
       // Old code written in Solidity
       //         console.log("Alice depositing 48ETH into vault...");
