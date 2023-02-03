@@ -153,7 +153,7 @@ describe("Asymmetry Finance Strategy", function () {
     });
   });
 
-  describe("deposit flow", function () {
+  describe("deposit/withdraw", function () {
     it("Should deposit", async () => {
       const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
       const depositAmount = ethers.utils.parseEther("48");
