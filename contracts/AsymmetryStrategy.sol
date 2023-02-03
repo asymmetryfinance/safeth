@@ -201,6 +201,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     function unstake(bool _instantWithdraw) public {
         require(pauseUnstaking == false, "unstaking is paused");
 
+        // TODO: add option to not unstake all
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
         withdrawCVXNft(_instantWithdraw);
         withdrawCRVPool(crvPool, 100000);
