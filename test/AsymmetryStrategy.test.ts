@@ -178,5 +178,12 @@ describe("Asymmetry Finance Strategy", function () {
       //         assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
       //         assertEq(IERC20(address(grETHToken)).balanceOf(address(strategy)), 0);
     });
+    it("Should withdraw", async () => {
+      const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
+      const depositAmount = ethers.utils.parseEther("48");
+      await aliceStrategySigner.stake({ value: depositAmount });
+
+      await aliceStrategySigner.unstake(false);
+    });
   });
 });
