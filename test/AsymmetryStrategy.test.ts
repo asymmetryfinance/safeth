@@ -184,21 +184,6 @@ describe("Asymmetry Finance Strategy", function () {
       await aliceStrategySigner.stake({ value: depositAmount });
 
       await aliceStrategySigner.unstake(false);
-
-      // Old code written in Solidity
-      //         console.log("Alice depositing 48ETH into vault...");
-      //         vm.prank(address(alice));
-      //         vault._deposit{value: 48e18}();
-      //         uint256 aliceMaxRedeem = vault.maxRedeem(address(alice));
-      //         assertEq(aliceMaxRedeem, 48e18);
-      //         address pool = strategy.getPool();
-      //         assertEq(IERC20(pool).balanceOf(address(strategy)), 32e18);
-      //         console.log("Alice withdrawing 48ETH from vault...");
-      //         vm.warp(block.timestamp + 1500000);
-      //         vm.prank(alice);
-      //         vault.withdraw(48e18, msg.sender, msg.sender, true);
-      //         assertEq(IERC20(pool).balanceOf(address(strategy)), 0);
-      //         assertEq(IERC20(address(grETHToken)).balanceOf(address(strategy)), 0);
     });
   });
 });
