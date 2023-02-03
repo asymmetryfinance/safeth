@@ -87,7 +87,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address afETH;
-    address pool;
     address CVXNFT;
     address bundleNFT;
     // cvx NFT ID starts at 0
@@ -204,12 +203,14 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
         withdrawCVXNft(_instantWithdraw);
-        withdrawCRVPool(pool, 32e18);
-        burnAfEth(afEthBalance);
-        burnBundleNFT(msg.sender);
-        uint256 wstETH2Unwrap = withdrawBalTokens();
-        withdrawREth();
-        withdrawWstEth(wstETH2Unwrap);
+        withdrawCRVPool(crvPool, 100000);
+
+        // TODO: Reintegrate Balancer with 4626 vaults
+        // burnAfEth(afEthBalance);
+        // burnBundleNFT(msg.sender);
+        // uint256 wstETH2Unwrap = withdrawBalTokens();
+        // withdrawREth();
+        // withdrawWstEth(wstETH2Unwrap);
         IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken
 
         // address vault = IController(controller).getVault(wETH);
@@ -234,17 +235,17 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
         uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
 
-        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10 ** offset) /
+        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10**offset) /
             cvxSupply) *
             365 *
-            uint(crvPrice);
+            uint256(crvPrice);
 
         uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
-            10 ** offset) / yearly_minted_crv_per_cvx;
+            10**offset) / yearly_minted_crv_per_cvx;
 
-        uint256 allocationPercentage = (((((cvx_amount * uint(cvxPrice)) /
-            10 ** 18) * 10000) /
-            (tvl + ((cvx_amount * uint(cvxPrice)) / 10 ** 18))) * 10000) /
+        uint256 allocationPercentage = (((((cvx_amount * uint256(cvxPrice)) /
+            10**18) * 10000) /
+            (tvl + ((cvx_amount * uint256(cvxPrice)) / 10**18))) * 10000) /
             10000;
 
         return allocationPercentage;
@@ -293,9 +294,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
     // send ETH and bypass stETH, recieve wstETH for BAL pool
-    function depositWstEth(
-        uint256 amount
-    ) public payable returns (uint256 wstEthMintAmount) {
+    function depositWstEth(uint256 amount)
+        public
+        payable
+        returns (uint256 wstEthMintAmount)
+    {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
         (bool sent, ) = wstETH.call{value: amount}("");
         require(sent, "Failed to send Ether");
@@ -304,9 +307,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return (wstEthAmount);
     }
 
-    function depositREth(
-        uint256 amount
-    ) public payable returns (uint256 rEthAmount) {
+    function depositREth(uint256 amount)
+        public
+        payable
+        returns (uint256 rEthAmount)
+    {
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
@@ -344,9 +349,10 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         }
     }
 
-    function depositBalTokens(
-        uint256 amount
-    ) public returns (uint256 lpAmount) {
+    function depositBalTokens(uint256 amount)
+        public
+        returns (uint256 lpAmount)
+    {
         address[] memory _assets = new address[](2);
         uint256[] memory _amounts = new uint256[](2);
         _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
@@ -420,7 +426,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
             _amounts,
-            uint(100000),
+            uint256(100000),
             false
         );
         return (poolTokensMinted);
@@ -464,13 +470,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return (wstETHWithdrawn);
     }
 
-    function withdrawCRVPool(address pool, uint256 _amount) public {
-        address afETHPool = pool;
+    function withdrawCRVPool(address _pool, uint256 _amount) public {
+        address afETHPool = _pool;
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[msg.sender].curveBalances = 0;
-        uint256[2] memory returnAmt = ICrvEthPool(afETHPool).remove_liquidity(
+        ICrvEthPool(afETHPool).remove_liquidity(
             _amount,
             min_amounts
         );
@@ -481,27 +487,27 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     //////////////////////////////////////////////////////////////*/
 
     function getCvxPriceData() public view returns (uint256) {
-        (, int price, , , ) = chainLinkCvxFeed.latestRoundData();
+        (, int256 price, , , ) = chainLinkCvxFeed.latestRoundData();
         if (price < 0) {
             price = 0;
         }
         uint8 decimals = chainLinkCvxFeed.decimals();
-        return uint(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
+        return uint256(price) * 10**(decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
     function getCrvPriceData() public view returns (uint256) {
-        (, int price, , , ) = chainLinkCrvFeed.latestRoundData();
+        (, int256 price, , , ) = chainLinkCrvFeed.latestRoundData();
         if (price < 0) {
             price = 0;
         }
         uint8 decimals = chainLinkCrvFeed.decimals();
-        return uint(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
+        return uint256(price) * 10**(decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
-    function mintCvxNft(
-        address sender,
-        uint256 _amountLocked
-    ) private returns (uint256 balance, uint256 nftId) {
+    function mintCvxNft(address sender, uint256 _amountLocked)
+        private
+        returns (uint256 balance, uint256 nftId)
+    {
         uint256 amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
         IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
@@ -611,10 +617,6 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     /*//////////////////////////////////////////////////////////////
                         VIEW METHODS
     //////////////////////////////////////////////////////////////*/
-
-    function getPool() public view returns (address) {
-        return (pool);
-    }
 
     function getName() external pure returns (string memory) {
         return "AsymmetryFinance Strategy";

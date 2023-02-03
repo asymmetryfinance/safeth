@@ -21,7 +21,7 @@ interface ICrvEthPool {
     function remove_liquidity(
         uint256 _amount,
         uint256[2] memory _min_amounts
-    ) external returns (uint256[2] memory amounts);
+    ) external;
 
     function remove_liquidity_one_coin(
         uint256 _token_amount,
