@@ -12,6 +12,8 @@ import "./tokens/afCVX1155.sol";
 import "./tokens/afBundle1155.sol";
 import "./interfaces/IAfETH.sol";
 import "./interfaces/IAf1155.sol";
+import "./interfaces/frax/IFrxETHMinter.sol";
+
 // OZ
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -375,6 +377,12 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
                 address(this)
             )
         );
+    }
+
+    function depositEthForSfrxETH() public payable {
+        address frxETHMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxETHMinterAddress);
+        frxETHMinterContract.submitAndDeposit{value: msg.value}(msg.sender);
     }
 
     function withdrawREth() public {

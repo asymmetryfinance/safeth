@@ -2,6 +2,7 @@ import { ethers, getNamedAccounts, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, Signer } from "ethers";
+
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
   CRV_POOL_FACTORY,
@@ -20,6 +21,7 @@ import {
   Vault,
 } from "../typechain-types";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
+import { sfrxEthAbi } from "./abi/sfrxEthAbi";
 
 describe("Asymmetry Finance Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -184,6 +186,44 @@ describe("Asymmetry Finance Strategy", function () {
       await aliceStrategySigner.stake({ value: depositAmount });
 
       await aliceStrategySigner.unstake(false);
+    });
+  });
+
+  describe("Frax Deposit/Withdraw", function () {
+    const sfrxContractAddress = "0xac3E018457B222d93114458476f3E3416Abbe38F";
+    const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+
+    let sfrxContract: Contract;
+
+    beforeEach(async () => {
+      sfrxContract = new ethers.Contract(
+        sfrxContractAddress,
+        sfrxEthAbi,
+        accounts[0]
+      );
+    });
+
+    it("Should deposit eth in exchange for the expected amount of sfrx", async () => {
+      const expectedSfrxOutput = await sfrxContract.convertToShares(oneEth);
+
+      await strategy.depositEthForSfrxETH({
+        value: oneEth,
+      });
+
+      const sfrxBalance = await sfrxContract.balanceOf(accounts[0].address);
+
+      // how different is the expected amount vs received amount
+      // its always slightly off but only by a tiny amount
+      const sfrxBalanceDiff = expectedSfrxOutput.sub(sfrxBalance);
+
+      // ratio of sfrxBalanceDiff to our original balance
+      const sfrxBalanceDiffRatio = sfrxBalance.div(sfrxBalanceDiff);
+
+      // check to be sure the difference percent is within 0.00001 of our expected output ( ratio is > 100,000)
+      expect(sfrxBalanceDiffRatio.gt("100000")).eq(true);
+
+      // We should always receive less sfrx out than eth in because the price is always rising
+      expect(expectedSfrxOutput.lt(oneEth)).eq(true);
     });
   });
 });
