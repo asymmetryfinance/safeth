@@ -12,6 +12,8 @@ import "./tokens/afCVX1155.sol";
 import "./tokens/afBundle1155.sol";
 import "./interfaces/IAfETH.sol";
 import "./interfaces/IAf1155.sol";
+import "./interfaces/frax/IFrxETHMinter.sol";
+
 // OZ
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -52,6 +54,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 bundleNFTID;
         uint256 afETH; // amount afETH minted to user
         uint256 createdAt; // block.timestamp
+        uint256 sfraxBalances; // Staked frax
     }
 
     // curve emissions based on year
@@ -73,6 +76,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address constant sfrax = 0xac3E018457B222d93114458476f3E3416Abbe38F;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
@@ -93,7 +97,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
     uint256 currentBundleNftId = 100;
-    uint256 numberOfDerivatives = 2;
+    uint256 numberOfDerivatives = 3;
     address crvPool;
 
     // balancer pool things
@@ -156,6 +160,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
         Vault(vaults[rETH]).deposit(rEthMinted, address(this));
 
+        uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
+        Vault(vaults[sfrax]).deposit(sfraxMinted, address(this));
+
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
         //uint256 balLpAmount = depositBalTokens(wstEthMinted);
 
@@ -192,7 +199,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             cvxNFTID: _cvxNFTID,
             bundleNFTID: 0, //bundleNftId,
             afETH: ethAmount,
-            createdAt: block.timestamp
+            createdAt: block.timestamp,
+            sfraxBalances: sfraxMinted
         });
     }
 
@@ -291,6 +299,16 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             address(this)
         );
         return lockedCvxAmount;
+    }
+
+
+    function depositSfrax(uint256 amount) public payable returns (uint256) {
+        address frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
+        uint256 sfrxBalancePre = IERC20(sfrax).balanceOf(address(this));
+        frxETHMinterContract.submitAndDeposit{value: amount}(address(this));
+        uint256 sfrxBalancePost = IERC20(sfrax).balanceOf(address(this));
+        return sfrxBalancePost - sfrxBalancePre;
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
