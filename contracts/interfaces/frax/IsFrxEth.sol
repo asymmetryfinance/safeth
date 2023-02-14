@@ -8,5 +8,5 @@ interface IsFrxEth {
         address receiver,
         address owner) external payable returns (uint256 assets);
     function approve(address spender, uint256 amount) external returns (bool);
-
+    function convertToAssets(uint256 shares) external view returns (uint256);
 }
