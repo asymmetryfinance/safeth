@@ -22,6 +22,6 @@ jobs: # list of things to do
 
       - name: Run Tests
         env:
-          MAINNET_URL: ${{ secrets.MAINNET_URL }}
+          MAINNET_URL: ${{ secrets.develop.MAINNET_URL }}
 
         run: yarn && yarn compile && yarn test
