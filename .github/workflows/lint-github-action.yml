@@ -22,8 +22,8 @@ jobs: # list of things to do
 
       - name: Run Tests
         env:
-          MAINNET_URL: ${{ vars.MAINNET_URL }}
-          ETHERSCAN_API_KEY: ${{ vars.ETHERSCAN_API_KEY }}
+          MAINNET_URL: ${{ secrets.MAINNET_URL }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           MNEMONIC: test test test test test test test test test test test junk
 
         run: yarn && yarn compile && yarn test
