@@ -53,7 +53,7 @@ contract AfStrategy is Ownable {
     address public afETH;
     uint256 private numberOfDerivatives = 3;
 
-    // balancer pool things
+    // balancer pool things 
     address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
     bytes32 balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
