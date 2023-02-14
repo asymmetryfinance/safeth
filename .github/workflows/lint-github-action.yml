@@ -21,4 +21,9 @@ jobs: # list of things to do
         uses: actions/checkout@v2
 
       - name: Run Tests
+        env:
+          MAINNET_URL: ${{ develop.MAINNET_URL }}
+          ETHERSCAN_API_KEY: ${{ develop.ETHERSCAN_API_KEY }}
+          MNEMONIC: ${{ develop.MNEMONIC }}
+
         run: yarn && yarn compile && yarn test
