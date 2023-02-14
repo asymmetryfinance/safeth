@@ -43,17 +43,17 @@ contract AfStrategy is Ownable {
     mapping(address => Position) public positions;
     uint256 private currentPositionId;
 
-    AggregatorV3Interface constant private CHAIN_LINK_ETH_FEED =
+    AggregatorV3Interface private constant CHAIN_LINK_ETH_FEED =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-    RocketStorageInterface constant private ROCKET_STORAGE =
+    RocketStorageInterface private constant ROCKET_STORAGE =
         RocketStorageInterface(rocketStorageAddress);
-    ISwapRouter constant private SWAP_ROUTER =
+    ISwapRouter private constant SWAP_ROUTER =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address public afETH;
     uint256 private numberOfDerivatives = 3;
 
-    // balancer pool things 
+    // balancer pool things
     address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
     bytes32 balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
@@ -359,8 +359,10 @@ contract AfStrategy is Ownable {
 
     function burnAfEth(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
+        positions[msg.sender].afETHBalance =
+            positions[msg.sender].afETHBalance -
+            amount;
         afEthToken.burn(address(this), amount);
-        positions[msg.sender].afETHBalance = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
