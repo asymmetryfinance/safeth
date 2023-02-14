@@ -293,7 +293,7 @@ describe("Asymmetry Finance Strategy (Part 2)", function () {
       expect(sfrxBalanceDiffRatio.gt("100000")).eq(true);
 
       // We should always receive less sfrx out than eth in because the price is always rising
-      expect(expectedSfrxOutput.lt(oneEth)).eq(true);
+      expect(sfrxBalance.lt(oneEth)).eq(true);
     });
   });
 
@@ -303,6 +303,13 @@ describe("Asymmetry Finance Strategy (Part 2)", function () {
       const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
       const rethPrice = await strategy.rethPrice(oneReth);
       expect(rethPrice.gt(oneEth)).eq(true);
+    });
+
+    it("Should get sfrxEthPrice which is higher than eth price", async () => {
+      const oneSfrxEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const sfrxPrice = await strategy.sfrxEthPrice(oneSfrxEth);
+      expect(sfrxPrice.gt(oneEth)).eq(true);
     });
   });
 });
