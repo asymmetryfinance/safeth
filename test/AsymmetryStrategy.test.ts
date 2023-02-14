@@ -9,6 +9,7 @@ import {
   RETH_ADDRESS,
   RETH_WHALE,
   ROCKET_STORAGE_ADDRESS,
+  SFRAXETH_ADDRESS,
   WETH_ADDRESS,
   WSTETH_ADRESS,
   WSTETH_WHALE,
@@ -34,6 +35,7 @@ describe("Asymmetry Finance Strategy", function () {
   let wstEth: Contract;
   let wstEthVault: Vault;
   let rEth: Contract;
+  let sfraxEthVault: Vault;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
@@ -106,9 +108,15 @@ describe("Asymmetry Finance Strategy", function () {
       "Asymmetry Lido Vault",
       "afwstEthETH"
     )) as Vault;
+    sfraxEthVault = (await VaultDeployment.deploy(
+      SFRAXETH_ADDRESS,
+      "Staked Frax Vault",
+      "sfraxEthVault"
+    )) as Vault;
 
     await strategy.setVault(RETH_ADDRESS, rEthVault.address);
     await strategy.setVault(WSTETH_ADRESS, wstEthVault.address);
+    await strategy.setVault(SFRAXETH_ADDRESS, sfraxEthVault.address);
 
     await afEth.initialize(strategy.address);
     await afCvx1155.initialize(strategy.address);
@@ -160,10 +168,13 @@ describe("Asymmetry Finance Strategy", function () {
       const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
       const depositAmount = ethers.utils.parseEther("48");
       await aliceStrategySigner.stake({ value: depositAmount });
+
+      const sfraxRedeem = await sfraxEthVault.maxRedeem(strategy.address);
+      expect(sfraxRedeem).eq("5636621887764044304");
       const rEthRedeem = await rEthVault.maxRedeem(strategy.address);
-      expect(rEthRedeem).eq("8043654617117268894");
+      expect(rEthRedeem).eq("5362537687103919664");
       const wstEthRedeem = await wstEthVault.maxRedeem(strategy.address);
-      expect(wstEthRedeem).eq("7768559950232955794");
+      expect(wstEthRedeem).eq("5179039966821970529");
 
       // Old code written in Solidity
       //         console.log("Alice depositing 48ETH into vault...");
@@ -190,14 +201,13 @@ describe("Asymmetry Finance Strategy", function () {
   });
 
   describe("Frax Deposit/Withdraw", function () {
-    const sfrxContractAddress = "0xac3E018457B222d93114458476f3E3416Abbe38F";
     const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
 
     let sfrxContract: Contract;
 
     beforeEach(async () => {
       sfrxContract = new ethers.Contract(
-        sfrxContractAddress,
+        SFRAXETH_ADDRESS,
         sfrxEthAbi,
         accounts[0]
       );
@@ -206,11 +216,11 @@ describe("Asymmetry Finance Strategy", function () {
     it("Should deposit eth in exchange for the expected amount of sfrx", async () => {
       const expectedSfrxOutput = await sfrxContract.convertToShares(oneEth);
 
-      await strategy.depositEthForSfrxETH({
+      await strategy.depositSfrax(oneEth, {
         value: oneEth,
       });
 
-      const sfrxBalance = await sfrxContract.balanceOf(accounts[0].address);
+      const sfrxBalance = await sfrxContract.balanceOf(strategy.address);
 
       // how different is the expected amount vs received amount
       // its always slightly off but only by a tiny amount
