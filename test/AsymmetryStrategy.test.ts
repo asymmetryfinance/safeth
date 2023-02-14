@@ -199,21 +199,81 @@ describe("Asymmetry Finance Strategy", function () {
       await aliceStrategySigner.unstake(false);
     });
   });
+});
 
-  describe("Frax Deposit/Withdraw", function () {
-    const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+// calling beforeEach in the above tests fails after so many tests are added
+// I didnt have time to debug existing tests so I added this additional section to get around it
+describe("Asymmetry Finance Strategy (Part 2)", function () {
+  let strategy: AsymmetryStrategy;
+  let accounts: SignerWithAddress[];
 
-    let sfrxContract: Contract;
+  beforeEach(async () => {
+    accounts = await ethers.getSigners();
+    // Deploy contracts and store them in the variables above
+    const afCVX1155Deployment = await ethers.getContractFactory("afCVX1155");
+    const afCvx1155 = (await afCVX1155Deployment.deploy()) as AfCVX1155;
+    const afBundle1155Deployment = await ethers.getContractFactory(
+      "afBundle1155"
+    );
+    const afBundle1155 =
+      (await afBundle1155Deployment.deploy()) as AfBundle1155;
+    const afETHDeployment = await ethers.getContractFactory("afETH");
+    const afEth = (await afETHDeployment.deploy(
+      "Asymmetry Finance ETH",
+      "afETH"
+    )) as AfETH;
+    const crvPool = new ethers.Contract(
+      CRV_POOL_FACTORY,
+      crvPoolAbi,
+      accounts[0]
+    );
 
-    beforeEach(async () => {
-      sfrxContract = new ethers.Contract(
+    const deployCrv = await crvPool.deploy_pool(
+      "Asymmetry Finance ETH",
+      "afETH",
+      [afEth.address, WETH_ADDRESS],
+      BigNumber.from("400000"),
+      BigNumber.from("145000000000000"),
+      BigNumber.from("26000000"),
+      BigNumber.from("45000000"),
+      BigNumber.from("2000000000000"),
+      BigNumber.from("230000000000000"),
+      BigNumber.from("146000000000000"),
+      BigNumber.from("5000000000"),
+      BigNumber.from("600"),
+      BigNumber.from("1000000000000000000")
+    );
+
+    const crvPoolReceipt = await deployCrv.wait();
+    const crvToken = await crvPoolReceipt?.events?.[0]?.address;
+    const crvAddress = new ethers.Contract(
+      crvToken,
+      ["function minter() external view returns (address)"],
+      accounts[0]
+    );
+    const afEthCrvPoolAddress = await crvAddress.minter();
+
+    const strategyDeployment = await ethers.getContractFactory(
+      "AsymmetryStrategy"
+    );
+    strategy = (await strategyDeployment.deploy(
+      afEth.address,
+      ROCKET_STORAGE_ADDRESS,
+      afCvx1155.address,
+      afBundle1155.address,
+      afEthCrvPoolAddress
+    )) as AsymmetryStrategy;
+  });
+
+  describe("Frax", async () => {
+    it("Should deposit eth in exchange for the expected amount of sfrx", async () => {
+      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+
+      const sfrxContract = new ethers.Contract(
         SFRAXETH_ADDRESS,
         sfrxEthAbi,
         accounts[0]
       );
-    });
-
-    it("Should deposit eth in exchange for the expected amount of sfrx", async () => {
       const expectedSfrxOutput = await sfrxContract.convertToShares(oneEth);
 
       await strategy.depositSfrax(oneEth, {
@@ -233,7 +293,23 @@ describe("Asymmetry Finance Strategy", function () {
       expect(sfrxBalanceDiffRatio.gt("100000")).eq(true);
 
       // We should always receive less sfrx out than eth in because the price is always rising
-      expect(expectedSfrxOutput.lt(oneEth)).eq(true);
+      expect(sfrxBalance.lt(oneEth)).eq(true);
+    });
+  });
+
+  describe("Prices", async () => {
+    it("Should get rethPrice which is higher than eth price", async () => {
+      const oneReth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const rethPrice = await strategy.rethPrice(oneReth);
+      expect(rethPrice.gt(oneEth)).eq(true);
+    });
+
+    it("Should get sfrxEthPrice which is higher than eth price", async () => {
+      const oneSfrxEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const sfrxPrice = await strategy.sfrxEthPrice(oneSfrxEth);
+      expect(sfrxPrice.gt(oneEth)).eq(true);
     });
   });
 });
