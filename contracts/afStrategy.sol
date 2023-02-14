@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/IAfETH.sol";
 import "./interfaces/frax/IFrxETHMinter.sol";
+import "./interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/uniswap/ISwapRouter.sol";
 import "./interfaces/curve/ICrvEthPool.sol";
@@ -85,7 +86,8 @@ contract AfStrategy is Ownable {
         Vault(vaults[rETH]).deposit(rEthMinted, address(this));
 
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
-        Vault(vaults[sfrax]).deposit(sfraxMinted, address(this));
+        // TODO: sfrxETH is a 4626 vault.  We should check to see how in depth or Vault contract gets and if it stays standard remove this
+        Vault(vaults[sfrxEthAddress]).deposit(sfraxMinted, address(this));
 
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
         //uint256 balLpAmount = depositBalTokens(wstEthMinted);
@@ -178,6 +180,19 @@ contract AfStrategy is Ownable {
         return (wstEthAmount);
     }
 
+    function depositSfrax(uint256 amount) public payable returns (uint256) {
+        address frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
+        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        frxETHMinterContract.submitAndDeposit{value: amount}(address(this));
+        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        return sfrxBalancePost - sfrxBalancePre;
+    }
+
     function depositREth(uint256 amount)
         public
         payable
@@ -253,17 +268,15 @@ contract AfStrategy is Ownable {
     }
 
     function withdrawREth() public {
-        address rocketTokenRETHAddress = rocketStorage.getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
+        uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
+            address(this)
         );
-        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-            rocketTokenRETHAddress
+        uint256 amount = positions[msg.sender].rocketBalances;
+        positions[msg.sender].rocketBalances = 0;
+        RocketTokenRETHInterface(rETH).burn(amount);
+        uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
+            address(this)
         );
-        uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-        uint256 amount = positions[msg.sender].rEthBalance;
-        positions[msg.sender].rEthBalance = 0;
-        rocketTokenRETH.burn(amount);
-        uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
         require(rethBalance1 > rethBalance2, "No rETH was burned");
         uint256 rethBurned = rethBalance1 - rethBalance2;
     }
@@ -277,6 +290,15 @@ contract AfStrategy is Ownable {
         console.log("Eth before swapping steth to eth:", address(this).balance);
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
         console.log("Eth after swapping steth to eth:", address(this).balance);
+    }
+
+    function withdrawSfrax(uint256 amount) public {
+        IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
+        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
+        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+        // TODO figure out if we want a min receive amount and what it should be
+        // Currently set to 0. It "works" but may not be ideal long term
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
     }
 
     function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
@@ -318,8 +340,19 @@ contract AfStrategy is Ownable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        TOKEN METHODS
+                        HELPER METHODS
     //////////////////////////////////////////////////////////////*/
+
+    // eth per sfrxEth (wei)
+    function sfrxEthPrice(uint256 amount) public view returns (uint256) {
+        uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
+        return ICrvEthPool(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
+    }
+
+    // eth per reth (wei)
+    function rethPrice(uint256 amount) public view returns (uint256) {
+        return RocketTokenRETHInterface(rETH).getEthValue(amount);
+    }
 
     /// @notice get ETH price data from Chainlink, may not be needed if we can get ratio from contracts for rETH and sfrxETH
     function getEthPriceData() public view returns (uint256) {
