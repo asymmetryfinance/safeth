@@ -203,7 +203,7 @@ describe("Asymmetry Finance Strategy", function () {
 
 // calling beforeEach in the above tests fails after so many tests are added
 // I didnt have time to debug existing tests so I added this additional section to get around it
-describe("Asymmetry Finance Strategy (Tests Part2)", function () {
+describe("Asymmetry Finance Strategy (Part 2)", function () {
   let strategy: AsymmetryStrategy;
   let accounts: SignerWithAddress[];
 
