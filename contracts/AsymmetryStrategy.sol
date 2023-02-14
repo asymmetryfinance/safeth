@@ -311,6 +311,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return sfrxBalancePost - sfrxBalancePre;
     }
 
+    // eth per reth (wei)
+    function rethPrice(uint amount) public view returns (uint256) {
+        return RocketTokenRETHInterface(rETH).getEthValue(amount);
+    }
+
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
     // send ETH and bypass stETH, recieve wstETH for BAL pool
     function depositWstEth(
@@ -346,17 +351,9 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             );
             return amountSwapped;
         } else {
-            address rocketTokenRETHAddress = rocketStorage.getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketTokenRETH")
-                )
-            );
-            RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-                rocketTokenRETHAddress
-            );
-            uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+            uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
             rocketDepositPool.deposit{value: amount}();
-            uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+            uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
             require(rethBalance2 > rethBalance1, "No rETH was minted");
             uint256 rethMinted = rethBalance2 - rethBalance1;
             //rocketBalances[currentDepositor] += rethMinted;
@@ -396,17 +393,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function withdrawREth() public {
-        address rocketTokenRETHAddress = rocketStorage.getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
-        );
-        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-            rocketTokenRETHAddress
-        );
-        uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+        uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
         uint256 amount = positions[msg.sender].rocketBalances;
         positions[msg.sender].rocketBalances = 0;
-        rocketTokenRETH.burn(amount);
-        uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+        RocketTokenRETHInterface(rETH).burn(amount);
+        uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
         require(rethBalance1 > rethBalance2, "No rETH was burned");
         uint256 rethBurned = rethBalance1 - rethBalance2;
     }
