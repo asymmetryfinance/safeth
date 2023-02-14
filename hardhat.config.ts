@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1,
       allowUnlimitedContractSize: true,
+      blockGasLimit: 100000429720, // whatever you want here
       accounts: {
         mnemonic: process.env.MNEMONIC,
       },

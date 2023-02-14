@@ -43,12 +43,11 @@ contract AfStrategy is Ownable {
     mapping(address => Position) public positions;
     uint256 private currentPositionId;
 
-    AggregatorV3Interface constant chainLinkEthFeed =
+    AggregatorV3Interface constant private CHAIN_LINK_ETH_FEED =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-
-    RocketStorageInterface rocketStorage;
-
-    ISwapRouter constant swapRouter =
+    RocketStorageInterface constant private ROCKET_STORAGE =
+        RocketStorageInterface(rocketStorageAddress);
+    ISwapRouter constant private SWAP_ROUTER =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address public afETH;
@@ -65,8 +64,7 @@ contract AfStrategy is Ownable {
     bool public pauseStaking = false;
     bool public pauseUnstaking = false;
 
-    constructor(address _afETH, address _rocketStorageAddress) {
-        rocketStorage = RocketStorageInterface(_rocketStorageAddress);
+    constructor(address _afETH) {
         afETH = _afETH;
     }
 
@@ -142,7 +140,7 @@ contract AfStrategy is Ownable {
         uint24 poolFee,
         uint256 amountIn
     ) public returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(swapRouter), amountIn);
+        IERC20(tokenIn).approve(address(SWAP_ROUTER), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -153,16 +151,7 @@ contract AfStrategy is Ownable {
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
             });
-        amountOut = swapRouter.exactInputSingle(params);
-    }
-
-    function depositSfrax(uint256 amount) public payable returns (uint256) {
-        address frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
-        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
-        uint256 sfrxBalancePre = IERC20(sfrax).balanceOf(address(this));
-        frxETHMinterContract.submitAndDeposit{value: amount}(address(this));
-        uint256 sfrxBalancePost = IERC20(sfrax).balanceOf(address(this));
-        return sfrxBalancePost - sfrxBalancePre;
+        amountOut = SWAP_ROUTER.exactInputSingle(params);
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
@@ -181,7 +170,6 @@ contract AfStrategy is Ownable {
     }
 
     function depositSfrax(uint256 amount) public payable returns (uint256) {
-        address frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
         uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
             address(this)
@@ -199,7 +187,7 @@ contract AfStrategy is Ownable {
         returns (uint256 rEthAmount)
     {
         // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = rocketStorage.getAddress(
+        address rocketDepositPoolAddress = ROCKET_STORAGE.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
         );
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
@@ -217,7 +205,7 @@ contract AfStrategy is Ownable {
             );
             return amountSwapped;
         } else {
-            address rocketTokenRETHAddress = rocketStorage.getAddress(
+            address rocketTokenRETHAddress = ROCKET_STORAGE.getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
@@ -271,8 +259,8 @@ contract AfStrategy is Ownable {
         uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
         );
-        uint256 amount = positions[msg.sender].rocketBalances;
-        positions[msg.sender].rocketBalances = 0;
+        uint256 amount = positions[msg.sender].rEthBalance;
+        positions[msg.sender].rEthBalance = 0;
         RocketTokenRETHInterface(rETH).burn(amount);
         uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
@@ -356,11 +344,11 @@ contract AfStrategy is Ownable {
 
     /// @notice get ETH price data from Chainlink, may not be needed if we can get ratio from contracts for rETH and sfrxETH
     function getEthPriceData() public view returns (uint256) {
-        (, int256 price, , , ) = chainLinkEthFeed.latestRoundData();
+        (, int256 price, , , ) = CHAIN_LINK_ETH_FEED.latestRoundData();
         if (price < 0) {
             price = 0;
         }
-        uint8 decimals = chainLinkEthFeed.decimals();
+        uint8 decimals = CHAIN_LINK_ETH_FEED.decimals();
         return uint256(price) * 10**(decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 

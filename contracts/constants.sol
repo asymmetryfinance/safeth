@@ -12,3 +12,5 @@ address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
 address constant sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
 address constant frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
 address constant frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+address constant frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
+address constant rocketStorageAddress = 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
