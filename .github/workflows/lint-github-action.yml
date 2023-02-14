@@ -9,7 +9,7 @@ env: # environment variables (available in any part of the action)
 
 jobs: # list of things to do
   linting:
-    name: Linting # job name (unique id)
+    name: Run Tests & Lint # job name (unique id)
     runs-on: ubuntu-latest # on which machine to run
     steps: # list of steps
       - name: Install NodeJS
@@ -24,6 +24,9 @@ jobs: # list of things to do
         env:
           MAINNET_URL: ${{ secrets.MAINNET_URL }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-          MNEMONIC: test test test test test test test test test test test junk
+          MNEMONIC: ${{ secrets.MNEMONIC }}
 
         run: yarn && yarn compile && yarn test
+
+      - name: Lint
+        run: yarn lint
