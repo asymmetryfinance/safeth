@@ -164,6 +164,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         Vault(vaults[rETH]).deposit(rEthMinted, address(this));
 
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
+        // TODO: sfrxETH is a 4626 vault.  We should check to see how in depth or Vault contract gets and if it stays standard remove this
         Vault(vaults[sfrxEthAddress]).deposit(sfraxMinted, address(this));
 
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
