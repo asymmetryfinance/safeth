@@ -299,7 +299,7 @@ describe("Asymmetry Finance Strategy (Part 2)", function () {
 
   describe("Prices", async () => {
     it("Should get rethPrice which is higher than eth price", async () => {
-      const oneReth = BigNumber.from("1000000000000000000"); // 10^18 wei
+      const oneReth =      BigNumber.from("1000000000000000000"); // 10^18 wei
       const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
       const rethPrice = await strategy.rethPrice(oneReth);
       expect(rethPrice.gt(oneEth)).eq(true);
