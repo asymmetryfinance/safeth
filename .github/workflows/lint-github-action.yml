@@ -24,6 +24,6 @@ jobs: # list of things to do
         env:
           MAINNET_URL: ${{ vars.develop.MNEMONIC_URL }}
           ETHERSCAN_API_KEY: ${{ vars.develop.ETHERSCAN_API_KEY }}
-          MNEMONIC: ${{ vars.develop.MNEMONIC }}
+          MNEMONIC: test test test test test test test test test test test junk
 
         run: yarn && yarn compile && yarn test
