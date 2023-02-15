@@ -79,7 +79,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address constant sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
     address constant frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
-    address frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+    address constant frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
