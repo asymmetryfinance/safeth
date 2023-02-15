@@ -64,6 +64,10 @@ contract AfStrategy is Ownable {
     bool public pauseStaking = false;
     bool public pauseUnstaking = false;
 
+    function rethAddress() public view returns(address) {
+        return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
+    }
+
     constructor(address _afETH) {
         afETH = _afETH;
     }
@@ -81,7 +85,7 @@ contract AfStrategy is Ownable {
         Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
 
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        Vault(vaults[rETH]).deposit(rEthMinted, address(this));
+        Vault(vaults[rethAddress()]).deposit(rEthMinted, address(this));
 
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
         // TODO: sfrxETH is a 4626 vault.  We should check to see how in depth or Vault contract gets and if it stays standard remove this
@@ -199,7 +203,7 @@ contract AfStrategy is Ownable {
             IWETH(wETH).deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 wETH,
-                rETH,
+                rethAddress(),
                 500,
                 amount
             );
@@ -256,6 +260,7 @@ contract AfStrategy is Ownable {
     }
 
     function withdrawREth() public {
+        address rETH = rethAddress();
         uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
         );
@@ -339,7 +344,7 @@ contract AfStrategy is Ownable {
 
     // eth per reth (wei)
     function rethPrice(uint256 amount) public view returns (uint256) {
-        return RocketTokenRETHInterface(rETH).getEthValue(amount);
+        return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
     }
 
     /// @notice get ETH price data from Chainlink, may not be needed if we can get ratio from contracts for rETH and sfrxETH
