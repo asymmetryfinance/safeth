@@ -1,0 +1,32 @@
+# .github/workflows/lint.yml
+
+name: Lint and Test # name of the action (displayed in the github interface)
+
+on: [pull_request] # event list
+
+env: # environment variables (available in any part of the action)
+  NODE_VERSION: 16
+
+jobs: # list of things to do
+  linting:
+    name: Run Tests & Lint # job name (unique id)
+    runs-on: ubuntu-latest # on which machine to run
+    steps: # list of steps
+      - name: Install NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Code Checkout
+        uses: actions/checkout@v2
+
+      - name: Run Tests
+        env:
+          MAINNET_URL: ${{ secrets.MAINNET_URL }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          MNEMONIC: ${{ secrets.MNEMONIC }}
+
+        run: yarn && yarn compile && yarn test
+
+      - name: Lint
+        run: yarn lint
