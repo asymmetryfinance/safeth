@@ -12,6 +12,10 @@ import {
 } from "./constants";
 import { AfETH, AfStrategy, Vault } from "../typechain-types";
 import { sfrxEthAbi } from "./abi/sfrxEthAbi";
+import { balWeightedPoolFactoryAbi } from "./abi/balWeightedPoolFactoryAbi";
+import { balWeightedPoolAbi } from "./abi/balWeightedPoolAbi";
+
+const { getContractAddress } = require("@ethersproject/address");
 
 describe("Af Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -165,6 +169,49 @@ describe("Af Strategy", function () {
 
       // We should always receive less sfrx out than eth in because the price is always rising
       expect(sfrxBalance.lt(oneEth)).eq(true);
+    });
+  });
+
+  describe.only("Balancer Deployment Tests", async () => {
+    it("Should create a new weighted balancer pool with sfraxeth, reth and wsteth", async () => {
+      // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
+      const FACTORY_ADDRESS = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
+
+      const RETH_ADDRESS = await strategy.rethAddress();
+
+      const weightedPoolFactory = new ethers.Contract(
+        FACTORY_ADDRESS,
+        balWeightedPoolFactoryAbi,
+        accounts[0]
+      );
+
+      const newPoolAddress = getContractAddress({
+        from: accounts[0].address,
+        nonce: await accounts[0].getTransactionCount(),
+      });
+
+      const txResult = await weightedPoolFactory.create(
+        "Test Pool",
+        "TP",
+        [SFRAXETH_ADDRESS, WSTETH_ADRESS, RETH_ADDRESS],
+        ["3333333333", "3333333333", "3333333334"],
+        [SFRAXETH_ADDRESS, WSTETH_ADRESS, RETH_ADDRESS],
+        "2500000000000000",
+        accounts[0].address
+      );
+
+      console.log("txResult is", txResult);
+
+      console.log("newPoolAddress", newPoolAddress);
+
+      const weightedPool = new ethers.Contract(
+        newPoolAddress,
+        balWeightedPoolAbi,
+        accounts[0]
+      );
+
+      // Not sure why this isnt working.
+      console.log("pool: ", await weightedPool.name());
     });
   });
 });
