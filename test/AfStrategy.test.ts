@@ -59,7 +59,7 @@ describe("Af Strategy", function () {
     await strategy.setVault(WSTETH_ADRESS, wstEthVault.address);
     await strategy.setVault(SFRAXETH_ADDRESS, sfraxEthVault.address);
 
-   await afEth.setMinter(strategy.address);
+    await afEth.setMinter(strategy.address);
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
