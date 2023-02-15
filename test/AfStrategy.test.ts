@@ -187,8 +187,8 @@ describe("Af Strategy", function () {
         accounts[0]
       );
 
-      // Not sure why this isnt working.
-      console.log("pool: ", await weightedPool.name());
+      // Not sure why this isnt working. tx fails
+//      console.log("pool: ", await weightedPool.name());
     });
   });
 });
