@@ -66,7 +66,9 @@ contract AfStrategy is Ownable {
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
-
+        console.log(wstEthMinted);
+        console.log(rEthMinted);
+        console.log(sfraxMinted);
 
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
         //uint256 balLpAmount = depositBalTokens(wstEthMinted);
