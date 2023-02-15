@@ -55,10 +55,6 @@ describe("Af Strategy", function () {
       "sfraxEthVault"
     )) as Vault;
 
-    await strategy.setVault(rethAddress, rEthVault.address);
-    await strategy.setVault(WSTETH_ADRESS, wstEthVault.address);
-    await strategy.setVault(SFRAXETH_ADDRESS, sfraxEthVault.address);
-
     await afEth.initialize(strategy.address);
 
     // initialize derivative contracts
