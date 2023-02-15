@@ -63,7 +63,7 @@ describe("Af Strategy", function () {
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
-    rEth = new ethers.Contract(rethAddressyarn, ERC20.abi, accounts[0]);
+    rEth = new ethers.Contract(rethAddress, ERC20.abi, accounts[0]);
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
