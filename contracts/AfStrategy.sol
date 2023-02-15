@@ -24,24 +24,6 @@ import "hardhat/console.sol";
 contract AfStrategy is Ownable {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
-    event SetVault(address token, address vault);
-
-    struct Position {
-        uint256 positionID;
-        uint256 rEthBalance;
-        uint256 wstEthBalance;
-        uint256 sfraxBalance;
-        uint256 balancerBalance;
-        uint256 afETHBalance;
-        uint256 createdAt;
-    }
-
-    // ERC-4626 Vaults of each derivative (token address => vault address)
-    mapping(address => address) public vaults;
-
-    // map user address to Position struct
-    mapping(address => Position) public positions;
-    uint256 private currentPositionId;
 
     AggregatorV3Interface private constant CHAIN_LINK_ETH_FEED =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
@@ -82,14 +64,11 @@ contract AfStrategy is Ownable {
         uint256 ethAmount = msg.value;
 
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
-
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        Vault(vaults[rethAddress()]).deposit(rEthMinted, address(this));
-
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
-        // TODO: sfrxETH is a 4626 vault.  We should check to see how in depth or Vault contract gets and if it stays standard remove this
-        Vault(vaults[sfrxEthAddress]).deposit(sfraxMinted, address(this));
+        console.log(wstEthMinted);
+        console.log(rEthMinted);
+        console.log(sfraxMinted);
 
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
         //uint256 balLpAmount = depositBalTokens(wstEthMinted);
@@ -102,20 +81,6 @@ contract AfStrategy is Ownable {
         // );
 
         mintAfEth(ethAmount);
-
-        // storage of individual balances associated w/ user deposit
-        // TODO: This calculation doesn't update when afETH is transferred between wallets
-        // TODO: This will not be correct when user stakes multiple times
-        uint256 newPositionID = ++currentPositionId;
-        positions[msg.sender] = Position({
-            positionID: newPositionID,
-            rEthBalance: rEthMinted,
-            wstEthBalance: wstEthMinted,
-            sfraxBalance: sfraxMinted,
-            balancerBalance: 0, // TODO: add bal lp amount
-            afETHBalance: ethAmount,
-            createdAt: block.timestamp
-        });
     }
 
     // must transfer amount out tokens to vault
@@ -260,14 +225,12 @@ contract AfStrategy is Ownable {
         );
     }
 
-    function withdrawREth() public {
+    function withdrawREth(uint256 _amount) public {
         address rETH = rethAddress();
         uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
         );
-        uint256 amount = positions[msg.sender].rEthBalance;
-        positions[msg.sender].rEthBalance = 0;
-        RocketTokenRETHInterface(rETH).burn(amount);
+        RocketTokenRETHInterface(rETH).burn(_amount);
         uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
         );
@@ -275,7 +238,6 @@ contract AfStrategy is Ownable {
     }
 
     function withdrawWstEth(uint256 _amount) public {
-        positions[msg.sender].wstEthBalance = 0;
         IWStETH(wstETH).unwrap(_amount); // TODO: not using right amount of wstETH
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
@@ -296,13 +258,13 @@ contract AfStrategy is Ownable {
 
     function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
         // bal lp amount
-        uint256 amount = positions[msg.sender].balancerBalance;
+        uint256 amount = 0; // TODO: Previous code - positions[msg.sender].balancerBalance;
         address[] memory _assets = new address[](2);
         uint256[] memory _amounts = new uint256[](2);
         _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         _assets[1] = 0x0000000000000000000000000000000000000000;
         // account for slippage from Balancer withdrawal
-        _amounts[0] = (positions[msg.sender].wstEthBalance * 99) / 100;
+        _amounts[0] = 0; // TODO: Previous code - (positions[msg.sender].wstEthBalance * 99) / 100;
         _amounts[1] = 0;
         uint256 exitKind = 0;
         uint256 exitTokenIndex = 0;
@@ -319,7 +281,7 @@ contract AfStrategy is Ownable {
         );
         // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
-        positions[msg.sender].balancerBalance = 0;
+
         IVault(afBalancerPool).exitPool(
             balPoolId,
             address(this),
@@ -366,21 +328,12 @@ contract AfStrategy is Ownable {
 
     function burnAfEth(uint256 amount) private {
         IAfETH afEthToken = IAfETH(afETH);
-        positions[msg.sender].afETHBalance =
-            positions[msg.sender].afETHBalance -
-            amount;
         afEthToken.burn(address(this), amount);
     }
 
     /*//////////////////////////////////////////////////////////////
                         OWNER METHODS
     //////////////////////////////////////////////////////////////*/
-
-    function setVault(address _token, address _vault) public onlyOwner {
-        vaults[_token] = _vault;
-        emit SetVault(_token, _vault);
-        IERC20(_token).approve(_vault, type(uint256).max);
-    }
 
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
