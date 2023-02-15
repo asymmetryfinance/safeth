@@ -5,7 +5,6 @@ import { BigNumber, Contract, Signer } from "ethers";
 
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
-  RETH_ADDRESS,
   RETH_WHALE,
   SFRAXETH_ADDRESS,
   WSTETH_ADRESS,
@@ -38,9 +37,10 @@ describe("Af Strategy", function () {
     const strategyDeployment = await ethers.getContractFactory("AfStrategy");
     strategy = (await strategyDeployment.deploy(afEth.address)) as AfStrategy;
 
+    const rethAddress = await strategy.rethAddress();
     const VaultDeployment = await ethers.getContractFactory("Vault");
     rEthVault = (await VaultDeployment.deploy(
-      RETH_ADDRESS,
+      rethAddress,
       "Asymmetry Rocket Pool Vault",
       "afrEthVault"
     )) as Vault;
@@ -55,7 +55,7 @@ describe("Af Strategy", function () {
       "sfraxEthVault"
     )) as Vault;
 
-    await strategy.setVault(RETH_ADDRESS, rEthVault.address);
+    await strategy.setVault(rethAddress, rEthVault.address);
     await strategy.setVault(WSTETH_ADRESS, wstEthVault.address);
     await strategy.setVault(SFRAXETH_ADDRESS, sfraxEthVault.address);
 
@@ -63,7 +63,7 @@ describe("Af Strategy", function () {
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
-    rEth = new ethers.Contract(RETH_ADDRESS, ERC20.abi, accounts[0]);
+    rEth = new ethers.Contract(rethAddress, ERC20.abi, accounts[0]);
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
