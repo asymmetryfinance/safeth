@@ -55,7 +55,7 @@ contract AfStrategy is Ownable {
 
     // balancer pool things
     address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
-    bytes32 balPoolId =
+    bytes32 public balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
     address private balancerHelpers =
         0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
@@ -162,6 +162,7 @@ contract AfStrategy is Ownable {
         returns (uint256 wstEthMintAmount)
     {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
+          // solhint-disable-next-line
         (bool sent, ) = wstETH.call{value: amount}("");
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
@@ -266,7 +267,6 @@ contract AfStrategy is Ownable {
             address(this)
         );
         require(rethBalance1 > rethBalance2, "No rETH was burned");
-        uint256 rethBurned = rethBalance1 - rethBalance2;
     }
 
     function withdrawWstEth(uint256 _amount) public {
