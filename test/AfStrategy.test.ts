@@ -55,7 +55,7 @@ describe("Af Strategy", function () {
       "sfraxEthVault"
     )) as Vault;
 
-    await afEth.initialize(strategy.address);
+    await afEth.setMinter(strategy.address);
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
