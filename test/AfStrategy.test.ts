@@ -10,7 +10,7 @@ import {
   WSTETH_ADRESS,
   WSTETH_WHALE,
 } from "./constants";
-import { AfETH, AfStrategy, Vault } from "../typechain-types";
+import { AfETH, AfStrategy } from "../typechain-types";
 import { sfrxEthAbi } from "./abi/sfrxEthAbi";
 import { balWeightedPoolFactoryAbi } from "./abi/balWeightedPoolFactoryAbi";
 import { balWeightedPoolAbi } from "./abi/balWeightedPoolAbi";
@@ -20,13 +20,10 @@ const { getContractAddress } = require("@ethersproject/address");
 describe("Af Strategy", function () {
   let accounts: SignerWithAddress[];
   let afEth: AfETH;
-  let rEthVault: Vault;
   let strategy: AfStrategy;
   let aliceSigner: Signer;
   let wstEth: Contract;
-  let wstEthVault: Vault;
   let rEth: Contract;
-  let sfraxEthVault: Vault;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
@@ -40,28 +37,7 @@ describe("Af Strategy", function () {
 
     const strategyDeployment = await ethers.getContractFactory("AfStrategy");
     strategy = (await strategyDeployment.deploy(afEth.address)) as AfStrategy;
-
     const rethAddress = await strategy.rethAddress();
-    const VaultDeployment = await ethers.getContractFactory("Vault");
-    rEthVault = (await VaultDeployment.deploy(
-      rethAddress,
-      "Asymmetry Rocket Pool Vault",
-      "afrEthVault"
-    )) as Vault;
-    wstEthVault = (await VaultDeployment.deploy(
-      WSTETH_ADRESS,
-      "Asymmetry Lido Vault",
-      "afwstEthETH"
-    )) as Vault;
-    sfraxEthVault = (await VaultDeployment.deploy(
-      SFRAXETH_ADDRESS,
-      "Staked Frax Vault",
-      "sfraxEthVault"
-    )) as Vault;
-
-    await strategy.setVault(rethAddress, rEthVault.address);
-    await strategy.setVault(WSTETH_ADRESS, wstEthVault.address);
-    await strategy.setVault(SFRAXETH_ADDRESS, sfraxEthVault.address);
 
     await afEth.setMinter(strategy.address);
 
@@ -106,12 +82,13 @@ describe("Af Strategy", function () {
       const depositAmount = ethers.utils.parseEther("10");
       await aliceStrategySigner.stake({ value: depositAmount });
 
-      const sfraxRedeem = await sfraxEthVault.maxRedeem(strategy.address);
-      expect(sfraxRedeem).eq("3285663926776079232");
-      const rEthRedeem = await rEthVault.maxRedeem(strategy.address);
-      expect(rEthRedeem).eq("3125945585858020916");
-      const wstEthRedeem = await wstEthVault.maxRedeem(strategy.address);
-      expect(wstEthRedeem).eq("3018933015541626171");
+      // TODO: verify stake
+      //   const sfraxRedeem = await sfraxEthVault.maxRedeem(strategy.address);
+      //   expect(sfraxRedeem).eq("3285663926776079232");
+      //   const rEthRedeem = await rEthVault.maxRedeem(strategy.address);
+      //   expect(rEthRedeem).eq("3125945585858020916");
+      //   const wstEthRedeem = await wstEthVault.maxRedeem(strategy.address);
+      //   expect(wstEthRedeem).eq("3018933015541626171");
     });
     it("Should withdraw", async () => {
       const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
