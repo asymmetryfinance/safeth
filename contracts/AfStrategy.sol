@@ -349,7 +349,9 @@ contract AfStrategy is Ownable {
             price = 0;
         }
         uint8 decimals = CHAIN_LINK_ETH_FEED.decimals();
-        return uint256(price) * 10**(decimals + 2); // Need to remove decimals and send price with the precision including decimals
+        // 10**(decimals) gives the number in dollar form $10.03
+        // because solidity is only integers we need to add two to get price data including cents
+        return uint256(price) * 10**(decimals + 2);
     }
 
     function mintAfEth(uint256 amount) private {
