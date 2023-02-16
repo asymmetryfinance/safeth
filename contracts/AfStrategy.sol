@@ -36,7 +36,7 @@ contract AfStrategy is Ownable {
     uint256 private numberOfDerivatives = 3;
 
     // balancer pool things
-    address private afBalancerPool = 0xBA12222222228d8Ba445958a75a0704d566BF2C8; // Temporarily using wstETH pool
+    address private balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
     bytes32 public balPoolId =
         0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
     address private balancerHelpers =
@@ -211,8 +211,8 @@ contract AfStrategy is Ownable {
             userDataEncoded,
             false
         );
-        IWStETH(wstETH).approve(afBalancerPool, amount);
-        IVault(afBalancerPool).joinPool(
+        IWStETH(wstETH).approve(balancerVault, amount);
+        IVault(balancerVault).joinPool(
             balPoolId,
             address(this),
             address(this),
@@ -282,7 +282,7 @@ contract AfStrategy is Ownable {
         // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
 
-        IVault(afBalancerPool).exitPool(
+        IVault(balancerVault).exitPool(
             balPoolId,
             address(this),
             address(this),
