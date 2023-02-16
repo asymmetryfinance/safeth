@@ -1,7 +1,7 @@
 import { ethers, getNamedAccounts, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, Contract, Signer, utils } from "ethers";
+import { BigNumber, Contract, Signer } from "ethers";
 
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
@@ -163,32 +163,130 @@ describe("Af Strategy", function () {
     });
   });
 
-  describe.only("Balancer Deployment Tests", async () => {
-    it("Should create a new weighted balancer pool with sfraxeth, reth and wsteth and deposit to that pool. also do a deposit", async () => {
-      // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
-      const FACTORY_ADDRESS = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
-      const BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
+  describe("Balancer Deployment Tests", async () => {
+    // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
+    const factoryAddress = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
+    const balancerVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
-      const RETH_ADDRESS = await strategy.rethAddress();
+    let weightedPoolFactory: Contract;
+    let balancerVault: Contract;
 
-      const weightedPoolFactory = new ethers.Contract(
-        FACTORY_ADDRESS,
+    beforeEach(async () => {
+      weightedPoolFactory = new ethers.Contract(
+        factoryAddress,
         balWeightedPoolFactoryAbi,
         accounts[0]
       );
 
+      await rEth.approve(
+        balancerVaultAddress,
+        ethers.utils.parseEther("999999999999999999999999999999")
+      );
+      await wstEth.approve(
+        balancerVaultAddress,
+        ethers.utils.parseEther("999999999999999999999999999999")
+      );
+      await sfrxeth.approve(
+        balancerVaultAddress,
+        ethers.utils.parseEther("999999999999999999999999999999")
+      );
+
+      balancerVault = new ethers.Contract(
+        balancerVaultAddress,
+        balVaultAbi,
+        accounts[0]
+      );
+    });
+
+    it("Should create a new pool and validate balances when adding and removing tokens", async () => {
+      const equalWeightedPool = await createEqualWeightedPool();
+      const poolId = await equalWeightedPool.getPoolId();
+      await initJoinPool(poolId, ["1", "1", "1"]);
+      await joinExistingPool(poolId, ["1", "1", "1"]);
+      // TODO validate pool and user balances when joining & exiting pool with various amounts
+    });
+
+    const joinExistingPool = async (poolId: string, amounts: string[]) => {
+      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+
+      const amountsIn = [
+        ethers.utils.parseEther(amounts[0]),
+        ethers.utils.parseEther(amounts[1]),
+        ethers.utils.parseEther(amounts[2]),
+      ];
+
+      const result = await balancerVault.joinPool(
+        poolId,
+        accounts[0].address,
+        accounts[0].address,
+        {
+          assets,
+          maxAmountsIn: amountsIn,
+          userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(
+            amountsIn,
+            "0" // This is the min bpt to receive. we probably need to determine a safe value to use here
+          ),
+          fromInternalBalance: false,
+        }
+      );
+      return result.hash;
+    };
+
+    const initJoinPool = async (poolId: string, amounts: string[]) => {
+      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+
+      const amountsIn = [
+        ethers.utils.parseEther(amounts[0]),
+        ethers.utils.parseEther(amounts[1]),
+        ethers.utils.parseEther(amounts[2]),
+      ];
+
+      const result = await balancerVault.joinPool(
+        poolId,
+        accounts[0].address,
+        accounts[0].address,
+        {
+          assets,
+          maxAmountsIn: amountsIn,
+          userData: WeightedPoolEncoder.joinInit(amountsIn),
+          fromInternalBalance: false,
+        }
+      );
+
+      return result.hash;
+    };
+
+    const createEqualWeightedPool = async () => {
+      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+
+      // these must be sorted by address
+      // must add up to 10^18
+      const weights = [
+        "333333333333333333",
+        "333333333333333333",
+        "333333333333333334",
+      ];
+      const name = "Test Pool";
+      const symbol = "TP";
+
+      // TODO figure this out
+      const priceFeeds = [
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+      ];
+
+      // 0.05%
+      const swapFeePercentage = "500000000000000";
+
       const txResult = await weightedPoolFactory.create(
-        "Test Pool", // name
-        "TP", // symbol
-        [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS], // these must be in sorted order
-        ["333333333333333333", "333333333333333333", "333333333333333334"], // weights
-        [
-          "0x0000000000000000000000000000000000000000",
-          "0x0000000000000000000000000000000000000000",
-          "0x0000000000000000000000000000000000000000",
-        ],
-        "2500000000000000", // fee. I think this is 0.25%
-        accounts[0].address // owner
+        name,
+        symbol,
+        assets,
+        weights,
+        priceFeeds,
+        swapFeePercentage,
+        accounts[0].address
       );
 
       const txReceipt = await (
@@ -196,76 +294,14 @@ describe("Af Strategy", function () {
       ).provider.getTransactionReceipt(txResult.hash);
 
       const topic = txReceipt.logs[6].topics[1];
+
       const newPoolAddress =
         "0x" + topic.slice(topic.length - 40, topic.length);
-
-      const weightedPool = new ethers.Contract(
+      return new ethers.Contract(
         newPoolAddress,
         balWeightedPoolAbi,
         accounts[0]
       );
-
-      const poolId = await weightedPool.getPoolId();
-
-      console.log("poolId: ", poolId);
-
-      const balancerVault = new ethers.Contract(
-        BALANCER_VAULT,
-        balVaultAbi,
-        accounts[0]
-      );
-
-      const amountsIn = [
-        ethers.utils.parseEther("5"),
-        ethers.utils.parseEther("5"),
-        ethers.utils.parseEther("5"),
-      ];
-
-      const params = WeightedPoolEncoder.joinInit(amountsIn);
-
-      console.log("params", params);
-
-      await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-      await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-
-      await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-
-      console.log("rEth balance", await rEth.balanceOf(accounts[0].address));
-      console.log(
-        "wstEth balance",
-        await wstEth.balanceOf(accounts[0].address)
-      );
-      console.log(
-        "sfrxeth balance",
-        await sfrxeth.balanceOf(accounts[0].address)
-      );
-
-      const poolParams = {
-        assets: [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
-        maxAmountsIn: [
-          ethers.utils.parseEther("500"),
-          ethers.utils.parseEther("500"),
-          ethers.utils.parseEther("500"),
-        ],
-        userData: params,
-        fromInternalBalance: true,
-      };
-
-      console.log(
-        "Join Pool Params",
-        poolId,
-        accounts[0].address,
-        accounts[0].address,
-        poolParams
-      );
-      const result = await balancerVault.joinPool(
-        poolId,
-        accounts[0].address,
-        accounts[0].address,
-        poolParams
-      );
-
-      console.log("result join result is", result);
-    });
+    };
   });
 });
