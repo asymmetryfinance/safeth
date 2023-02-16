@@ -17,6 +17,8 @@ import { balWeightedPoolFactoryAbi } from "./abi/balWeightedPoolFactoryAbi";
 import { balWeightedPoolAbi } from "./abi/balWeightedPoolAbi";
 import { balVaultAbi } from "./abi/balVaultAbi";
 
+import { WeightedPoolEncoder } from "@balancer-labs/balancer-js";
+
 describe("Af Strategy", function () {
   let accounts: SignerWithAddress[];
   let afEth: AfETH;
@@ -214,21 +216,35 @@ describe("Af Strategy", function () {
       // ***********
       // I think this is whats wrong. I cant get this function to generate the same params as other txs I see on chain
       // ***********
+      // const params = abi.encode(
+      //   ["uint", "uint256[]"],
+      //   ["1", ["0", "82500000000000000"]]
+      // );
+
+      const amountsIn = [ethers.utils.parseEther("50"), ethers.utils.parseEther("50"), ethers.utils.parseEther("50")];
+
+      const params2 = WeightedPoolEncoder.joinInit(amountsIn);
+
+      console.log('params2', params2)
+
       const params = abi.encode(
-        ["uint256", "uint256", "uint256"],
+        ["uint256", "uint256[]"],
         [
-          ethers.utils.parseEther("50"),
-          ethers.utils.parseEther("50"),
-          ethers.utils.parseEther("50"),
+          1,
+          [
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+          ],
         ]
       );
 
       console.log("params is", params);
 
-      await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-      await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      // await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      // await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
 
-      await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      // await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
 
       console.log("rEth balance", await rEth.balanceOf(accounts[0].address));
       console.log(
@@ -238,6 +254,23 @@ describe("Af Strategy", function () {
       console.log(
         "sfrxeth balance",
         await sfrxeth.balanceOf(accounts[0].address)
+      );
+
+      console.log(
+        "Join Pool Params",
+        poolId,
+        accounts[0].address,
+        accounts[0].address,
+        {
+          assets: [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
+          maxAmountsIn: [
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+          ],
+          userData: params,
+          fromInternalBalance: false,
+        }
       );
       const result = await balancerVault.joinPool(
         poolId,
