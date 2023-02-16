@@ -1,7 +1,7 @@
 import { ethers, getNamedAccounts, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, Contract, Signer } from "ethers";
+import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
@@ -163,7 +163,7 @@ describe("Af Strategy", function () {
     });
   });
 
-  describe("Balancer Deployment Tests", async () => {
+  describe("Balancer Deployment Tests (Equal Weights)", async () => {
     // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
     const factoryAddress = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
     const balancerVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
@@ -201,23 +201,98 @@ describe("Af Strategy", function () {
       equalWeightedPool = await createEqualWeightedPool();
     });
 
-    it("Should validate balances when joining and exiting the pool", async () => {
-      // get user token balances, & bpt balance for each step
+    it("Should update balances correctly when joining and exiting a pool", async () => {
+      // Test1: initJoinPool(). User to receive approx 3 bpt tokens. Pool to receive 1 of each derivative
+      // Total user balance should now be 3 bpt tokens and pool holds 1 of each derivative
+      await initJoinPool([
+        ethers.utils.parseEther("1"),
+        ethers.utils.parseEther("1"),
+        ethers.utils.parseEther("1"),
+      ]);
+      const postTest1Balances = await getBalances();
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("3"),
+          postTest1Balances.userBalances.bpt
+        )
+      ).eq(true);
+      expect(ethers.utils.parseEther("1")).eq(
+        postTest1Balances.poolBalances.wstEth
+      );
+      expect(ethers.utils.parseEther("1")).eq(
+        postTest1Balances.poolBalances.rEth
+      );
+      expect(ethers.utils.parseEther("1")).eq(
+        postTest1Balances.poolBalances.sfrxEth
+      );
 
-      console.log("balances", await getBalances());
-      await initJoinPool(["1", "1", "1"]);
-      console.log("balances", await getBalances());
+      // Test2: joinPool(). User to receive approx 6 bpt tokens. Pool to receive 2 of each derivative
+      // Total user balance should now be 9 bpt tokens and pool holds 3 of each derivative
       await joinPool(["2", "2", "2"]);
-      console.log("balances", await getBalances());
-      await exitPool("1");
-      console.log("balances", await getBalances());
+      const postTest2Balances = await getBalances();
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("9"),
+          postTest2Balances.userBalances.bpt
+        )
+      ).eq(true);
+      expect(ethers.utils.parseEther("3")).eq(
+        postTest2Balances.poolBalances.wstEth
+      );
+      expect(ethers.utils.parseEther("3")).eq(
+        postTest2Balances.poolBalances.rEth
+      );
+      expect(ethers.utils.parseEther("3")).eq(
+        postTest2Balances.poolBalances.sfrxEth
+      );
+
+      // Test3: exitPool(). user to burn 3 bpt tokens. Pool to send user approx 1 of each derivative
+      // Total user balance should now be approx 6 bpt tokens and pool holds approx 2 of each derivative
+      await exitPool("3");
+      const postTest3Balances = await getBalances();
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("6"),
+          postTest3Balances.userBalances.bpt
+        )
+      ).eq(true);
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("2"),
+          postTest3Balances.poolBalances.wstEth
+        )
+      ).eq(true);
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("2"),
+          postTest3Balances.poolBalances.rEth
+        )
+      ).eq(true);
+      expect(
+        approxEqual(
+          ethers.utils.parseEther("2"),
+          postTest3Balances.poolBalances.sfrxEth
+        )
+      ).eq(true);
     });
 
+    // End of pool balancer tests. Helper functions below:
+
+    // Verify that 2 numbers are within 0.00001% of each other
+    const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
+      if (amount1.eq(amount2)) return true;
+      const difference = amount1.gt(amount2)
+        ? amount1.sub(amount2)
+        : amount2.sub(amount1);
+      const differenceRatio = amount1.div(difference);
+      return differenceRatio.gt("100000");
+    };
+
+    // Gets user and pool balances. Useful in tests
     const getBalances = async () => {
       const poolTokens = await balancerVault.getPoolTokens(
         await equalWeightedPool.getPoolId()
       );
-
       return {
         userBalances: {
           wstEth: await wstEth.balanceOf(accounts[0].getAddress()),
@@ -232,8 +307,6 @@ describe("Af Strategy", function () {
         },
       };
     };
-
-    // End of pool balancer tests. Helper functions below:
 
     const exitPool = async (bptAmount: string) => {
       const assets = [wstEth.address, sfrxeth.address, rEth.address];
@@ -279,14 +352,10 @@ describe("Af Strategy", function () {
       return result.hash;
     };
 
-    const initJoinPool = async (amounts: string[]) => {
+    const initJoinPool = async (amounts: BigNumberish[]) => {
       const assets = [wstEth.address, sfrxeth.address, rEth.address];
 
-      const amountsIn = [
-        ethers.utils.parseEther(amounts[0]),
-        ethers.utils.parseEther(amounts[1]),
-        ethers.utils.parseEther(amounts[2]),
-      ];
+      const amountsIn = [amounts[0], amounts[1], amounts[2]];
 
       const result = await balancerVault.joinPool(
         await equalWeightedPool.getPoolId(),
@@ -316,6 +385,7 @@ describe("Af Strategy", function () {
       const name = "Test Pool";
       const symbol = "TP";
 
+      // TODO verify that these are solid
       const priceFeeds = [
         "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
         "0x302013E7936a39c358d07A3Df55dc94EC417E3a1",
