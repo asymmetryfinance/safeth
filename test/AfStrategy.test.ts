@@ -271,9 +271,9 @@ describe("Af Strategy", function () {
 
       // TODO figure this out
       const priceFeeds = [
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000",
+        "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
+        "0x302013E7936a39c358d07A3Df55dc94EC417E3a1",
+        "0x1a8F81c256aee9C640e14bB0453ce247ea0DFE6F",
       ];
 
       // 0.05%
