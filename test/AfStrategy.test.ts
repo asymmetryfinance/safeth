@@ -170,6 +170,7 @@ describe("Af Strategy", function () {
 
     let weightedPoolFactory: Contract;
     let balancerVault: Contract;
+    let equalWeightedPool: Contract;
 
     beforeEach(async () => {
       weightedPoolFactory = new ethers.Contract(
@@ -196,17 +197,63 @@ describe("Af Strategy", function () {
         balVaultAbi,
         accounts[0]
       );
+
+      equalWeightedPool = await createEqualWeightedPool();
     });
 
-    it("Should create a new pool and validate balances when adding and removing tokens", async () => {
-      const equalWeightedPool = await createEqualWeightedPool();
-      const poolId = await equalWeightedPool.getPoolId();
-      await initJoinPool(poolId, ["1", "1", "1"]);
-      await joinExistingPool(poolId, ["1", "1", "1"]);
-      // TODO validate pool and user balances when joining & exiting pool with various amounts
+    it("Should validate balances when joining and exiting the pool", async () => {
+      // get user token balances, & bpt balance for each step
+
+      console.log("balances", await getBalances());
+      await initJoinPool(["1", "1", "1"]);
+      console.log("balances", await getBalances());
+      await joinPool(["2", "2", "2"]);
+      console.log("balances", await getBalances());
+      await exitPool("1");
+      console.log("balances", await getBalances());
     });
 
-    const joinExistingPool = async (poolId: string, amounts: string[]) => {
+    const getBalances = async () => {
+      const poolTokens = await balancerVault.getPoolTokens(
+        await equalWeightedPool.getPoolId()
+      );
+
+      return {
+        userBalances: {
+          wstEth: await wstEth.balanceOf(accounts[0].getAddress()),
+          sfrxEth: await sfrxeth.balanceOf(accounts[0].getAddress()),
+          rEth: await rEth.balanceOf(accounts[0].getAddress()),
+          bpt: await equalWeightedPool.balanceOf(accounts[0].getAddress()),
+        },
+        poolBalances: {
+          wstEth: poolTokens[1][0],
+          sfrxEth: poolTokens[1][1],
+          rEth: poolTokens[1][2],
+        },
+      };
+    };
+
+    // End of pool balancer tests. Helper functions below:
+
+    const exitPool = async (bptAmount: string) => {
+      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+      const result = await balancerVault.exitPool(
+        await equalWeightedPool.getPoolId(),
+        accounts[0].address,
+        accounts[0].address,
+        {
+          assets,
+          minAmountsOut: ["0", "0", "0"], // these are minimum amounts out. we should look into good values here to be safe
+          userData: WeightedPoolEncoder.exitExactBPTInForTokensOut(
+            ethers.utils.parseEther(bptAmount)
+          ),
+          fromInternalBalance: false,
+        }
+      );
+      return result.hash;
+    };
+
+    const joinPool = async (amounts: string[]) => {
       const assets = [wstEth.address, sfrxeth.address, rEth.address];
 
       const amountsIn = [
@@ -216,7 +263,7 @@ describe("Af Strategy", function () {
       ];
 
       const result = await balancerVault.joinPool(
-        poolId,
+        await equalWeightedPool.getPoolId(),
         accounts[0].address,
         accounts[0].address,
         {
@@ -232,7 +279,7 @@ describe("Af Strategy", function () {
       return result.hash;
     };
 
-    const initJoinPool = async (poolId: string, amounts: string[]) => {
+    const initJoinPool = async (amounts: string[]) => {
       const assets = [wstEth.address, sfrxeth.address, rEth.address];
 
       const amountsIn = [
@@ -242,7 +289,7 @@ describe("Af Strategy", function () {
       ];
 
       const result = await balancerVault.joinPool(
-        poolId,
+        await equalWeightedPool.getPoolId(),
         accounts[0].address,
         accounts[0].address,
         {
