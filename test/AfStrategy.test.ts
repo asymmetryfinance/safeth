@@ -77,7 +77,7 @@ describe("Af Strategy", function () {
     const rEthBalance = await rEth.balanceOf(admin);
     expect(BigNumber.from(rEthBalance)).gte(transferAmount);
 
-    // Send rETH derivative to admin
+    // Send sfrxeth derivative to admin
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [SFRAXETH_WHALE],

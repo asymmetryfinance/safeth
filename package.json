@@ -74,7 +74,6 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.5.1",
-    "@ethersproject/address": "^5.7.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@openzeppelin/contracts": "^4.8.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
