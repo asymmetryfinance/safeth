@@ -269,7 +269,6 @@ describe("Af Strategy", function () {
       const name = "Test Pool";
       const symbol = "TP";
 
-      // TODO figure this out
       const priceFeeds = [
         "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
         "0x302013E7936a39c358d07A3Df55dc94EC417E3a1",
