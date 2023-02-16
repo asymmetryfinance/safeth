@@ -1,12 +1,13 @@
 import { ethers, getNamedAccounts, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, Contract, Signer } from "ethers";
+import { BigNumber, Contract, Signer, utils } from "ethers";
 
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
   RETH_WHALE,
   SFRAXETH_ADDRESS,
+  SFRAXETH_WHALE,
   WSTETH_ADRESS,
   WSTETH_WHALE,
 } from "./constants";
@@ -14,8 +15,7 @@ import { AfETH, AfStrategy } from "../typechain-types";
 import { sfrxEthAbi } from "./abi/sfrxEthAbi";
 import { balWeightedPoolFactoryAbi } from "./abi/balWeightedPoolFactoryAbi";
 import { balWeightedPoolAbi } from "./abi/balWeightedPoolAbi";
-
-const { getContractAddress } = require("@ethersproject/address");
+import { balVaultAbi } from "./abi/balVaultAbi";
 
 describe("Af Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -24,6 +24,7 @@ describe("Af Strategy", function () {
   let aliceSigner: Signer;
   let wstEth: Contract;
   let rEth: Contract;
+  let sfrxeth: Contract;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
@@ -44,6 +45,7 @@ describe("Af Strategy", function () {
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
     rEth = new ethers.Contract(rethAddress, ERC20.abi, accounts[0]);
+    sfrxeth = new ethers.Contract(SFRAXETH_ADDRESS, ERC20.abi, accounts[0]);
 
     // signing defaults to admin, use this to sign for other wallets
     // you can add and name wallets in hardhat.config.ts
@@ -74,6 +76,16 @@ describe("Af Strategy", function () {
     await rEthWhale.transfer(admin, transferAmount);
     const rEthBalance = await rEth.balanceOf(admin);
     expect(BigNumber.from(rEthBalance)).gte(transferAmount);
+
+    // Send rETH derivative to admin
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [SFRAXETH_WHALE],
+    });
+    transferAmount = ethers.utils.parseEther("50");
+    whaleSigner = await ethers.getSigner(SFRAXETH_WHALE);
+    const sfrxethWhale = sfrxeth.connect(whaleSigner);
+    await sfrxethWhale.transfer(admin, transferAmount);
   });
 
   describe("Deposit/Withdraw", function () {
@@ -150,9 +162,10 @@ describe("Af Strategy", function () {
   });
 
   describe.only("Balancer Deployment Tests", async () => {
-    it("Should create a new weighted balancer pool with sfraxeth, reth and wsteth", async () => {
+    it("Should create a new weighted balancer pool with sfraxeth, reth and wsteth and deposit to that pool. also do a deposit", async () => {
       // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
       const FACTORY_ADDRESS = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
+      const BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
       const RETH_ADDRESS = await strategy.rethAddress();
 
@@ -162,24 +175,23 @@ describe("Af Strategy", function () {
         accounts[0]
       );
 
-      const newPoolAddress = getContractAddress({
-        from: accounts[0].address,
-        nonce: await accounts[0].getTransactionCount(),
-      });
-
       const txResult = await weightedPoolFactory.create(
-        "Test Pool",
-        "TP",
-        [SFRAXETH_ADDRESS, WSTETH_ADRESS, RETH_ADDRESS],
-        ["3333333333", "3333333333", "3333333334"],
-        [SFRAXETH_ADDRESS, WSTETH_ADRESS, RETH_ADDRESS],
-        "2500000000000000",
-        accounts[0].address
+        "Test Pool", // name
+        "TP", // symbol
+        [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS], // these must be in sorted order
+        ["333333333333333333", "333333333333333333", "333333333333333334"], // weights
+        [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
+        "2500000000000000", // fee. I think this is 0.25%
+        accounts[0].address // owner
       );
 
-      console.log("txResult is", txResult);
+      const txReceipt = await (
+        accounts[0] as any
+      ).provider.getTransactionReceipt(txResult.hash);
 
-      console.log("newPoolAddress", newPoolAddress);
+      const topic = txReceipt.logs[6].topics[1];
+      const newPoolAddress =
+        "0x" + topic.slice(topic.length - 40, topic.length);
 
       const weightedPool = new ethers.Contract(
         newPoolAddress,
@@ -187,8 +199,63 @@ describe("Af Strategy", function () {
         accounts[0]
       );
 
-      // Not sure why this isnt working. tx fails
-//      console.log("pool: ", await weightedPool.name());
+      const poolId = await weightedPool.getPoolId();
+
+      console.log("poolId: ", poolId);
+
+      const balancerVault = new ethers.Contract(
+        BALANCER_VAULT,
+        balVaultAbi,
+        accounts[0]
+      );
+
+      const abi = ethers.utils.defaultAbiCoder;
+
+      // ***********
+      // I think this is whats wrong. I cant get this function to generate the same params as other txs I see on chain
+      // ***********
+      const params = abi.encode(
+        ["uint256", "uint256", "uint256"],
+        [
+          ethers.utils.parseEther("50"),
+          ethers.utils.parseEther("50"),
+          ethers.utils.parseEther("50"),
+        ]
+      );
+
+      console.log("params is", params);
+
+      await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+
+      await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+
+      console.log("rEth balance", await rEth.balanceOf(accounts[0].address));
+      console.log(
+        "wstEth balance",
+        await wstEth.balanceOf(accounts[0].address)
+      );
+      console.log(
+        "sfrxeth balance",
+        await sfrxeth.balanceOf(accounts[0].address)
+      );
+      const result = await balancerVault.joinPool(
+        poolId,
+        accounts[0].address,
+        accounts[0].address,
+        [
+          [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
+          [
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+            ethers.utils.parseEther("50"),
+          ],
+          params,
+          false,
+        ]
+      );
+
+      console.log("result is", result);
     });
   });
 });
