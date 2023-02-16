@@ -166,7 +166,7 @@ describe("Af Strategy", function () {
   describe.only("Balancer Deployment Tests", async () => {
     it("Should create a new weighted balancer pool with sfraxeth, reth and wsteth and deposit to that pool. also do a deposit", async () => {
       // https://docs.balancer.fi/reference/contracts/deployment-addresses/mainnet.html
-      const FACTORY_ADDRESS = "0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b";
+      const FACTORY_ADDRESS = "0x8e9aa87e45e92bad84d5f8dd1bff34fb92637de9";
       const BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
       const RETH_ADDRESS = await strategy.rethAddress();
@@ -182,7 +182,6 @@ describe("Af Strategy", function () {
         "TP", // symbol
         [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS], // these must be in sorted order
         ["333333333333333333", "333333333333333333", "333333333333333334"], // weights
-        [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
         "2500000000000000", // fee. I think this is 0.25%
         accounts[0].address // owner
       );
@@ -191,7 +190,9 @@ describe("Af Strategy", function () {
         accounts[0] as any
       ).provider.getTransactionReceipt(txResult.hash);
 
-      const topic = txReceipt.logs[6].topics[1];
+      console.log('txReceipt', txReceipt)
+
+      const topic = txReceipt.logs[3].topics[1];
       const newPoolAddress =
         "0x" + topic.slice(topic.length - 40, topic.length);
 
@@ -211,40 +212,20 @@ describe("Af Strategy", function () {
         accounts[0]
       );
 
-      const abi = ethers.utils.defaultAbiCoder;
+      const amountsIn = [
+        ethers.utils.parseEther("5"),
+        ethers.utils.parseEther("5"),
+        ethers.utils.parseEther("5"),
+      ];
 
-      // ***********
-      // I think this is whats wrong. I cant get this function to generate the same params as other txs I see on chain
-      // ***********
-      // const params = abi.encode(
-      //   ["uint", "uint256[]"],
-      //   ["1", ["0", "82500000000000000"]]
-      // );
+      const params = WeightedPoolEncoder.joinInit(amountsIn);
 
-      const amountsIn = [ethers.utils.parseEther("50"), ethers.utils.parseEther("50"), ethers.utils.parseEther("50")];
+      console.log("params", params);
 
-      const params2 = WeightedPoolEncoder.joinInit(amountsIn);
+      await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
 
-      console.log('params2', params2)
-
-      const params = abi.encode(
-        ["uint256", "uint256[]"],
-        [
-          1,
-          [
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-          ],
-        ]
-      );
-
-      console.log("params is", params);
-
-      // await rEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-      // await wstEth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
-
-      // await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
+      await sfrxeth.approve(BALANCER_VAULT, ethers.utils.parseEther("50"));
 
       console.log("rEth balance", await rEth.balanceOf(accounts[0].address));
       console.log(
@@ -256,39 +237,32 @@ describe("Af Strategy", function () {
         await sfrxeth.balanceOf(accounts[0].address)
       );
 
+      const poolParams = {
+        assets: [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
+        maxAmountsIn: [
+          ethers.utils.parseEther("500"),
+          ethers.utils.parseEther("500"),
+          ethers.utils.parseEther("500"),
+        ],
+        userData: params,
+        fromInternalBalance: true,
+      };
+
       console.log(
         "Join Pool Params",
         poolId,
         accounts[0].address,
         accounts[0].address,
-        {
-          assets: [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
-          maxAmountsIn: [
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-          ],
-          userData: params,
-          fromInternalBalance: false,
-        }
+        poolParams
       );
       const result = await balancerVault.joinPool(
         poolId,
         accounts[0].address,
         accounts[0].address,
-        [
-          [WSTETH_ADRESS, SFRAXETH_ADDRESS, RETH_ADDRESS],
-          [
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-            ethers.utils.parseEther("50"),
-          ],
-          params,
-          false,
-        ]
+        poolParams
       );
 
-      console.log("result is", result);
+      console.log("result join result is", result);
     });
   });
 });

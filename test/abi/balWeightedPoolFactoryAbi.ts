@@ -2,18 +2,10 @@ export const balWeightedPoolFactoryAbi = [
   {
     inputs: [
       { internalType: "contract IVault", name: "vault", type: "address" },
-      {
-        internalType: "contract IProtocolFeePercentagesProvider",
-        name: "protocolFeeProvider",
-        type: "address",
-      },
-      { internalType: "string", name: "factoryVersion", type: "string" },
-      { internalType: "string", name: "poolVersion", type: "string" },
     ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
-  { anonymous: false, inputs: [], name: "FactoryDisabled", type: "event" },
   {
     anonymous: false,
     inputs: [
@@ -27,62 +19,13 @@ export const balWeightedPoolFactoryAbi = [
       { internalType: "string", name: "name", type: "string" },
       { internalType: "string", name: "symbol", type: "string" },
       { internalType: "contract IERC20[]", name: "tokens", type: "address[]" },
-      {
-        internalType: "uint256[]",
-        name: "normalizedWeights",
-        type: "uint256[]",
-      },
-      {
-        internalType: "contract IRateProvider[]",
-        name: "rateProviders",
-        type: "address[]",
-      },
+      { internalType: "uint256[]", name: "weights", type: "uint256[]" },
       { internalType: "uint256", name: "swapFeePercentage", type: "uint256" },
       { internalType: "address", name: "owner", type: "address" },
     ],
     name: "create",
     outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "disable",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "bytes4", name: "selector", type: "bytes4" }],
-    name: "getActionId",
-    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getAuthorizer",
-    outputs: [
-      { internalType: "contract IAuthorizer", name: "", type: "address" },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCreationCode",
-    outputs: [{ internalType: "bytes", name: "", type: "bytes" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCreationCodeContracts",
-    outputs: [
-      { internalType: "address", name: "contractA", type: "address" },
-      { internalType: "address", name: "contractB", type: "address" },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {
@@ -101,35 +44,8 @@ export const balWeightedPoolFactoryAbi = [
   },
   {
     inputs: [],
-    name: "getPoolVersion",
-    outputs: [{ internalType: "string", name: "", type: "string" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getProtocolFeePercentagesProvider",
-    outputs: [
-      {
-        internalType: "contract IProtocolFeePercentagesProvider",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "getVault",
     outputs: [{ internalType: "contract IVault", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "isDisabled",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
@@ -137,13 +53,6 @@ export const balWeightedPoolFactoryAbi = [
     inputs: [{ internalType: "address", name: "pool", type: "address" }],
     name: "isPoolFromFactory",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "version",
-    outputs: [{ internalType: "string", name: "", type: "string" }],
     stateMutability: "view",
     type: "function",
   },
