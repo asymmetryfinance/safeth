@@ -31,7 +31,7 @@ import "./interfaces/lido/IWStETH.sol";
 import "./interfaces/lido/IstETH.sol";
 // Balancer
 // balancer Vault interface: https://github.com/balancer-labs/balancer-v2-monorepo/blob/weighted-deployment/contracts/vault/interfaces/IVault.sol
-import "./interfaces/balancer/IVault.sol";
+import "./interfaces/balancer/IBalancerVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 
 import "./Vault.sol";
@@ -391,14 +391,14 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         _amounts[1] = 0;
         uint256 joinKind = 1;
         bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
-        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
+        IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest(
             _assets,
             _amounts,
             userDataEncoded,
             false
         );
         IWStETH(wstETH).approve(afBalancerPool, amount);
-        IVault(afBalancerPool).joinPool(
+        IBalancerVault(afBalancerPool).joinPool(
             balPoolId,
             address(this),
             address(this),
@@ -473,7 +473,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             amount,
             exitTokenIndex
         );
-        IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest(
+        IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest(
             _assets,
             _amounts,
             userDataEncoded,
@@ -482,7 +482,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
         positions[msg.sender].balancerBalances = 0;
-        IVault(afBalancerPool).exitPool(
+        IBalancerVault(afBalancerPool).exitPool(
             balPoolId,
             address(this),
             address(this),

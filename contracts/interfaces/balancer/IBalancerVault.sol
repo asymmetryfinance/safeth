@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-interface IVault {
+interface IBalancerVault {
     /*
     function getPool(bytes32 poolId) external view returns (address);
 

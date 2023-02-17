@@ -14,7 +14,7 @@ import "./interfaces/rocketpool/RocketStorageInterface.sol";
 import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "./interfaces/lido/IWStETH.sol";
 import "./interfaces/lido/IstETH.sol";
-import "./interfaces/balancer/IVault.sol";
+import "./interfaces/balancer/IBalancerVault.sol";
 import "./interfaces/balancer/IBalancerHelpers.sol";
 import "./Vault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
@@ -33,25 +33,17 @@ contract AfStrategy is Ownable {
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address public afETH;
-    uint256 private numberOfDerivatives = 3;
+    uint256 internal numberOfDerivatives = 3;
 
-    // balancer pool things
-    address private balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    bytes32 public balPoolId =
-        0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
-    address private balancerHelpers =
-        0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
+    bytes32 public balPoolId;
 
     uint256 private constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
     bool public pauseStaking = false;
     bool public pauseUnstaking = false;
 
-    function rethAddress() public view returns(address) {
-        return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
-    }
-
-    constructor(address _afETH) {
+    constructor(address _afETH, bytes32 _balPoolId) {
         afETH = _afETH;
+        balPoolId = _balPoolId;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -66,21 +58,13 @@ contract AfStrategy is Ownable {
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
-        console.log(wstEthMinted);
-        console.log(rEthMinted);
-        console.log(sfraxMinted);
 
-        // TODO: Deploy and deposit balancer tokens of the 4626 vaults
-        //uint256 balLpAmount = depositBalTokens(wstEthMinted);
-
-        // TODO: After depositing to the balancer pool, mint a bundle NFT
-        // uint256 bundleNftId = mintBundleNft(
-        //     currentCvxNftId,
-        //     amountCvxLocked,
-        //     balLpAmount
-        // );
-
-        mintAfEth(ethAmount);
+        uint256 balLpAmount = depositBalTokens(
+            wstEthMinted,
+            sfraxMinted,
+            rEthMinted
+        );
+        mintAfEth(balLpAmount);
     }
 
     // must transfer amount out tokens to vault
@@ -131,7 +115,7 @@ contract AfStrategy is Ownable {
         returns (uint256 wstEthMintAmount)
     {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
-          // solhint-disable-next-line
+        // solhint-disable-next-line
         (bool sent, ) = wstETH.call{value: amount}("");
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
@@ -169,7 +153,7 @@ contract AfStrategy is Ownable {
             IWETH(wETH).deposit{value: amount}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 wETH,
-                rethAddress(),
+                getRETHAddress(),
                 500,
                 amount
             );
@@ -193,26 +177,32 @@ contract AfStrategy is Ownable {
         }
     }
 
-    function depositBalTokens(uint256 amount)
-        public
-        returns (uint256 lpAmount)
-    {
-        address[] memory _assets = new address[](2);
-        uint256[] memory _amounts = new uint256[](2);
-        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        _assets[1] = 0x0000000000000000000000000000000000000000;
-        _amounts[0] = amount;
-        _amounts[1] = 0;
+    function depositBalTokens(
+        uint256 _wstEthAmount,
+        uint256 _sFraxEthAmount,
+        uint256 _rEthAmount
+    ) internal returns (uint256 lpAmount) {
+        address[] memory _assets = new address[](3);
+        uint256[] memory _amounts = new uint256[](3);
+        address rEthAddress = getRETHAddress();
+
+        _assets[0] = wstETH;
+        _assets[1] = sfrxEthAddress;
+        _assets[2] = rEthAddress;
+        _amounts[0] = _wstEthAmount;
+        _amounts[1] = _sFraxEthAmount;
+        _amounts[2] = _rEthAmount;
+
         uint256 joinKind = 1;
         bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
-        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
-        IWStETH(wstETH).approve(balancerVault, amount);
-        IVault(balancerVault).joinPool(
+        IBalancerVault.JoinPoolRequest memory request = IBalancerVault
+            .JoinPoolRequest(_assets, _amounts, userDataEncoded, false);
+
+        IWStETH(wstETH).approve(balancerVault, _wstEthAmount);
+        IsFrxEth(sfrxEthAddress).approve(balancerVault, _sFraxEthAmount);
+        IERC20(rEthAddress).approve(balancerVault, _rEthAmount);
+
+        IBalancerVault(balancerVault).joinPool(
             balPoolId,
             address(this),
             address(this),
@@ -226,7 +216,7 @@ contract AfStrategy is Ownable {
     }
 
     function withdrawREth(uint256 _amount) public {
-        address rETH = rethAddress();
+        address rETH = getRETHAddress();
         uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
             address(this)
         );
@@ -273,16 +263,12 @@ contract AfStrategy is Ownable {
             amount,
             exitTokenIndex
         );
-        IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
+        IBalancerVault.ExitPoolRequest memory request = IBalancerVault
+            .ExitPoolRequest(_assets, _amounts, userDataEncoded, false);
         // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
         uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
 
-        IVault(balancerVault).exitPool(
+        IBalancerVault(balancerVault).exitPool(
             balPoolId,
             address(this),
             address(this),
@@ -298,6 +284,15 @@ contract AfStrategy is Ownable {
                         HELPER METHODS
     //////////////////////////////////////////////////////////////*/
 
+    function getRETHAddress() public view returns (address) {
+        return
+            ROCKET_STORAGE.getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
+    }
+
     // eth per sfrxEth (wei)
     function sfrxEthPrice(uint256 amount) public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
@@ -306,7 +301,7 @@ contract AfStrategy is Ownable {
 
     // eth per reth (wei)
     function rethPrice(uint256 amount) public view returns (uint256) {
-        return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
+        return RocketTokenRETHInterface(getRETHAddress()).getEthValue(amount);
     }
 
     /// @notice get ETH price data from Chainlink, may not be needed if we can get ratio from contracts for rETH and sfrxETH
