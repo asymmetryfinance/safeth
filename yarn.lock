@@ -30,6 +30,25 @@
   dependencies:
     regenerator-runtime "^0.13.10"
 
+"@balancer-labs/balancer-js@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@balancer-labs/balancer-js/-/balancer-js-2.0.0.tgz#16c532c4d2a4ae166f22951263e6471f9402588a"
+  integrity sha512-QFoLW4hQh/6W0XaCM8WEIWkNGrvUeKZkJyUTrJBfuyaK38y3BsTDzYyLujyDH6/CgmAmKw9h+YAt5/JRLeOirw==
+  dependencies:
+    "@balancer-labs/typechain" "1.0.0"
+    "@ethersproject/abi" "^5.7.0"
+    "@ethersproject/abstract-signer" "^5.7.0"
+    "@ethersproject/address" "^5.7.0"
+    "@ethersproject/bignumber" "^5.7.0"
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/constants" "^5.7.0"
+    "@ethersproject/contracts" "^5.7.0"
+
+"@balancer-labs/typechain@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@balancer-labs/typechain/-/typechain-1.0.0.tgz#823eb13b9e166f7b50334c9d70d9ade81344f5c9"
+  integrity sha512-/fWxh4UgmHxtRt5e1anVeF8COo6FBNF28X8bd0/55SIdRDyaW7TMC7K4Jbuy58IcaERmEqi089lABlEgoeiWTQ==
+
 "@chainlink/contracts@^0.5.1":
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/@chainlink/contracts/-/contracts-0.5.1.tgz#68e7447ba8c1eccfbb760bacc93aced2eef60945"
