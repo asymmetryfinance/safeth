@@ -47,9 +47,9 @@ contract AfStrategy is Ownable {
 
     // Eth value of all derivatives in this contract if they were redeemed
     function underlyingValue() public view returns(uint) {
-        uint totalSfrxEthValue = ethPerSfrxAmount(10 ** 18) * IERC20(sfrxEthAddress).balanceOf(address(this)) / (10 ** 18);
-        uint totalRethValue = ethPerRethAmount(10 ** 18) * IERC20(rethAddress()).balanceOf(address(this)) / (10 ** 18);
-        uint totalWstEthValue = ethPerWstAmount(10 ** 18) * IERC20(wstETH).balanceOf(address(this)) / (10 ** 18);
+        uint totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
+        uint totalRethValue = ethPerRethAmount(IERC20(rethAddress()).balanceOf(address(this)));
+        uint totalWstEthValue = ethPerWstAmount(IERC20(wstETH).balanceOf(address(this)));
         return totalSfrxEthValue + totalRethValue + totalWstEthValue;
     }
 
@@ -60,13 +60,13 @@ contract AfStrategy is Ownable {
     function price() public view returns(uint) {
         uint totalSupply = IAfETH(afETH).totalSupply();
 
+        // before the first deposit theres no existing values for underlyingValue and totalSupply
         if(totalSupply == 0) {
             uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
             uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
             uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
             uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
             uint fakeTotalSupply = 3 * 10 ** 18;
-            console.log('shit price');
             return ((fakeUnderlyingValue * 10 ** 18) / fakeTotalSupply);
         }
 
@@ -84,7 +84,7 @@ contract AfStrategy is Ownable {
 
         uint ethPerDerivative = msg.value / numberOfDerivatives;
 
-        uint preDepositUv = underlyingValue();
+        uint preDepositUnderlyingValue = underlyingValue();
         uint sfrxAmount = depositSfrax(ethPerDerivative);
         uint rethAmount = depositREth(ethPerDerivative);
         uint wstAmount = depositWstEth(ethPerDerivative);
@@ -94,7 +94,7 @@ contract AfStrategy is Ownable {
         uint mintAmount;
 
         // first time depositing theres no existing values for underlyingValue and totalSupply
-        if(preDepositUv == 0) {
+        if(preDepositUnderlyingValue == 0) {
             uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
             uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
             uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
@@ -102,7 +102,7 @@ contract AfStrategy is Ownable {
             uint fakeTotalSupply = 3 * 10 ** 18;
             mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
         } else {
-            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(preDepositUv, IERC20(afETH).totalSupply());
+            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(preDepositUnderlyingValue, IERC20(afETH).totalSupply());
         }
 
         IAfETH(afETH).mint(msg.sender, mintAmount);
@@ -250,39 +250,26 @@ contract AfStrategy is Ownable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        HELPER METHODS
+                        PRICE HELPER METHODS
     //////////////////////////////////////////////////////////////*/
 
     // how much eth to receive for a given amount of sfrx (wei)
     function ethPerSfrxAmount(uint256 amount) public view returns (uint256) {
+        if(amount == 0) return 0;
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
         return ICrvEthPool(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
     }
 
-    // inverse of ethPerSfrxAmount
-    function sfrxPerEthAmount(uint256 ethAmount) public view returns (uint256) {
-        uint frxAmount = ICrvEthPool(frxEthCrvPoolAddress).get_dy(1, 0, ethAmount);
-        return IsFrxEth(sfrxEthAddress).convertToShares(frxAmount);
-    }
-
     // how much eth to receive for a given amount of reth (wei)
     function ethPerRethAmount(uint256 amount) public view returns (uint256) {
+        if(amount == 0) return 0;
         return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
-    }
-
-    // inverse of ethPerRethAmount
-    function rethPerEthAmount(uint256 ethAmount) public view returns (uint256) {
-        return RocketTokenRETHInterface(rethAddress()).getRethValue(ethAmount);
     }
 
     // eth per wstEth (wei)
     function ethPerWstAmount(uint256 amount) public view returns (uint256) {
+        if(amount == 0) return 0;
         return IWStETH(wstETH).getStETHByWstETH(amount);
-    }
-
-    // inverse of ethPerWstAmount
-    function wstPerEthAmount(uint256 ethAmount) public view returns (uint256) {
-        return IWStETH(wstETH).getWstETHByStETH(ethAmount);
     }
 
     /*//////////////////////////////////////////////////////////////

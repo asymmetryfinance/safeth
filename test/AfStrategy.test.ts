@@ -86,7 +86,7 @@ describe.only("Af Strategy", function () {
     await sfrxethWhale.transfer(admin, transferAmount);
   });
 
-  describe.only("Deposit/Withdraw", function () {
+  describe("Deposit/Withdraw", function () {
     it("Should deposit without changing the underlying price by a significant amount", async () => {
       const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
 
@@ -106,7 +106,7 @@ describe.only("Af Strategy", function () {
       const price3 = await aliceStrategySigner.price();
       expect(approxEqual(price2, price3)).eq(true);
     });
-    it.only("Should withdraw without changing the underlying price by a significant amount", async () => {
+    it("Should withdraw without changing the underlying price by a significant amount", async () => {
       const { alice } = await getNamedAccounts();
 
       const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
