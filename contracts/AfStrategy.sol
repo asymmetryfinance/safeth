@@ -46,29 +46,29 @@ contract AfStrategy is Ownable {
     }
 
     // Eth value of all derivatives in this contract if they were redeemed
-    function underlyingValue() public view returns(uint) {
-        uint totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
-        uint totalRethValue = ethPerRethAmount(IERC20(rethAddress()).balanceOf(address(this)));
-        uint totalWstEthValue = ethPerWstAmount(IERC20(wstETH).balanceOf(address(this)));
+    function underlyingValue() public view returns(uint256) {
+        uint256 totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
+        uint256 totalRethValue = ethPerRethAmount(IERC20(rethAddress()).balanceOf(address(this)));
+        uint256 totalWstEthValue = ethPerWstAmount(IERC20(wstETH).balanceOf(address(this)));
         return totalSfrxEthValue + totalRethValue + totalWstEthValue;
     }
 
-    function calculatePrice(uint uv, uint totalSupply) public pure returns(uint) {
+    function calculatePrice(uint256 uv, uint256 totalSupply) public pure returns(uint256) {
         return  ( 10 ** 18 * uv / totalSupply);
     }
 
     // special case for getting a price estimate before a deposit has been made
-    function startingPrice() public view returns (uint) {
-        uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
-        uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
-        uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
-        uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
-        uint fakeTotalSupply = 3 * 10 ** 18;
+    function startingPrice() public view returns (uint256) {
+        uint256 fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
+        uint256 fakeTotalRethValue = ethPerRethAmount(10 ** 18);
+        uint256 fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
+        uint256 fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
+        uint256 fakeTotalSupply = 3 * 10 ** 18;
         return calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
     }
 
-    function price() public view returns(uint) {
-        uint totalSupply = IAfETH(afETH).totalSupply();
+    function price() public view returns(uint256) {
+        uint256 totalSupply = IAfETH(afETH).totalSupply();
         if(totalSupply == 0) return startingPrice();
         return calculatePrice(underlyingValue(), totalSupply);
     }
@@ -80,17 +80,17 @@ contract AfStrategy is Ownable {
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
 
-        uint ethPerDerivative = msg.value / numberOfDerivatives;
+        uint256 ethPerDerivative = msg.value / numberOfDerivatives;
 
-        uint preDepositPrice = price();
+        uint256 preDepositPrice = price();
 
-        uint sfrxAmount = depositSfrax(ethPerDerivative);
-        uint rethAmount = depositREth(ethPerDerivative);
-        uint wstAmount = depositWstEth(ethPerDerivative);
+        uint256 sfrxAmount = depositSfrax(ethPerDerivative);
+        uint256 rethAmount = depositREth(ethPerDerivative);
+        uint256 wstAmount = depositWstEth(ethPerDerivative);
 
-        uint totalStakeValueEth = ethPerSfrxAmount(sfrxAmount) + ethPerRethAmount(rethAmount) + ethPerWstAmount(wstAmount);
+        uint256 totalStakeValueEth = ethPerSfrxAmount(sfrxAmount) + ethPerRethAmount(rethAmount) + ethPerWstAmount(wstAmount);
 
-        uint mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
 
         IAfETH(afETH).mint(msg.sender, mintAmount);
     }
@@ -98,26 +98,26 @@ contract AfStrategy is Ownable {
     function unstake(uint256 safEthAmount) public {
         require(pauseUnstaking == false, "unstaking is paused");
 
-        uint sfrxBalance = IERC20(sfrxEthAddress).balanceOf(address(this));
-        uint rethBalance = IERC20(rethAddress()).balanceOf(address(this));
-        uint wstBalance = IERC20(wstETH).balanceOf(address(this));
+        uint256 sfrxBalance = IERC20(sfrxEthAddress).balanceOf(address(this));
+        uint256 rethBalance = IERC20(rethAddress()).balanceOf(address(this));
+        uint256 wstBalance = IERC20(wstETH).balanceOf(address(this));
 
-        uint safEthTotalSupply = IAfETH(afETH).totalSupply();
+        uint256 safEthTotalSupply = IAfETH(afETH).totalSupply();
 
         // unstake percent of pool that user owns equally from all derivatives
-        uint sfrxAmount = (sfrxBalance * safEthAmount) / safEthTotalSupply;
-        uint rethAmount = (rethBalance * safEthAmount) / safEthTotalSupply;
-        uint wstAmount = (wstBalance * safEthAmount) / safEthTotalSupply;
+        uint256 sfrxAmount = (sfrxBalance * safEthAmount) / safEthTotalSupply;
+        uint256 rethAmount = (rethBalance * safEthAmount) / safEthTotalSupply;
+        uint256 wstAmount = (wstBalance * safEthAmount) / safEthTotalSupply;
 
-        uint ethAmountBefore = address(this).balance;
+        uint256 ethAmountBefore = address(this).balance;
 
         withdrawREth(rethAmount);
         withdrawWstEth(wstAmount);
         withdrawSfrax(sfrxAmount);
         IAfETH(afETH).burn(msg.sender, safEthAmount);
 
-        uint ethAmountAfter = address(this).balance;
-        uint ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        uint256 ethAmountAfter = address(this).balance;
+        uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
         address(msg.sender).call{value: ethAmountToWithdraw}("");
     }
