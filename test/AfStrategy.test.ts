@@ -16,7 +16,6 @@ import { deployV1 } from "../upgrade_helpers/deployV1";
 import { afEthAbi } from "./abi/afEthAbi";
 import { upgradeToV2 } from "../upgrade_helpers/upgradeToV2";
 import { getLatestContract } from "../upgrade_helpers/getLatestContract";
-import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 
 describe.only("Af Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -26,7 +25,6 @@ describe.only("Af Strategy", function () {
   let wstEth: Contract;
   let rEth: Contract;
   let sfrxeth: Contract;
-  let snapshot: any;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
@@ -83,8 +81,6 @@ describe.only("Af Strategy", function () {
     whaleSigner = await ethers.getSigner(SFRAXETH_WHALE);
     const sfrxethWhale = sfrxeth.connect(whaleSigner);
     await sfrxethWhale.transfer(admin, transferAmount);
-
-    snapshot = await takeSnapshot();
   });
 
   describe("Deposit/Withdraw", function () {
@@ -151,14 +147,10 @@ describe.only("Af Strategy", function () {
       const sfrxPrice = await strategyProxy.ethPerSfrxAmount(oneSfrxEth);
       expect(sfrxPrice.gt(oneEth)).eq(true);
     });
+    // TODO add price test for wsteth
   });
 
-  describe.only("Upgrades", async () => {
-    // so we dont have to worry about state of previous tests
-    beforeEach(async () => {
-      await snapshot.restore();
-    });
-
+  describe("Upgrades", async () => {
     it("Should have the same proxy address before and after upgrading", async () => {
       const addressBefore = strategyProxy.address;
       const strategy2 = await upgradeToV2(strategyProxy.address);
@@ -177,7 +169,7 @@ describe.only("Af Strategy", function () {
       await strategy2.newFunction();
       expect(await strategy2.newFunctionCalled()).eq(true);
     });
-    it("Should get latest version of an already upgraded contract and use its functionality", async () => {
+    it("Should get latest version of an already upgraded contract and use new functionality", async () => {
       await upgradeToV2(strategyProxy.address);
       const latestContract = await getLatestContract(
         strategyProxy.address,

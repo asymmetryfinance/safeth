@@ -53,11 +53,17 @@ contract AfStrategyV2 is OwnableUpgradeable {
         newFunctionCalled = true;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function rethAddress() public view returns(address) {
         return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
     }
 
-    function initialize(address _afETH) public initializer {
+    // this is separate from initialize because initialize is not called on upgrades
+    function setValues(address _afETH) public onlyOwner {
         wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
         veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
@@ -79,6 +85,14 @@ contract AfStrategyV2 is OwnableUpgradeable {
         ROCKET_POOL_LIMIT = 5000000000000000000000;
         newFunctionCalled = false;
     }
+
+    // This replaces the constructor for upgradeable contracts
+    // it is only be called once when the first contract is deployed
+    function initialize(address _afETH) public initializer {
+        _transferOwnership(msg.sender);
+        setValues(_afETH);
+    }
+
 
     function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
         return  ( 10 ** 18 * underlyingValue / totalSupply);
