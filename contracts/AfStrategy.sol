@@ -57,23 +57,21 @@ contract AfStrategy is Ownable {
         return  ( 10 ** 18 * uv / totalSupply);
     }
 
-    function price() public view returns(uint) {
-        uint totalSupply = IAfETH(afETH).totalSupply();
-
-        // before the first deposit theres no existing values for underlyingValue and totalSupply
-        if(totalSupply == 0) {
-            uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
-            uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
-            uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
-            uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
-            uint fakeTotalSupply = 3 * 10 ** 18;
-            return ((fakeUnderlyingValue * 10 ** 18) / fakeTotalSupply);
-        }
-
-        uint uv = underlyingValue();
-        return calculatePrice(uv, totalSupply);
+    // special case for getting a price estimate before a deposit has been made
+    function startingPrice() public view returns (uint) {
+        uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
+        uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
+        uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
+        uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
+        uint fakeTotalSupply = 3 * 10 ** 18;
+        return calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
     }
 
+    function price() public view returns(uint) {
+        uint totalSupply = IAfETH(afETH).totalSupply();
+        if(totalSupply == 0) return startingPrice();
+        return calculatePrice(underlyingValue(), totalSupply);
+    }
 
     /*//////////////////////////////////////////////////////////////
                         OPEN/CLOSE POSITION LOGIC
@@ -84,26 +82,15 @@ contract AfStrategy is Ownable {
 
         uint ethPerDerivative = msg.value / numberOfDerivatives;
 
-        uint preDepositUnderlyingValue = underlyingValue();
+        uint preDepositPrice = price();
+
         uint sfrxAmount = depositSfrax(ethPerDerivative);
         uint rethAmount = depositREth(ethPerDerivative);
         uint wstAmount = depositWstEth(ethPerDerivative);
 
         uint totalStakeValueEth = ethPerSfrxAmount(sfrxAmount) + ethPerRethAmount(rethAmount) + ethPerWstAmount(wstAmount);
 
-        uint mintAmount;
-
-        // first time depositing theres no existing values for underlyingValue and totalSupply
-        if(preDepositUnderlyingValue == 0) {
-            uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
-            uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
-            uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
-            uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
-            uint fakeTotalSupply = 3 * 10 ** 18;
-            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
-        } else {
-            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(preDepositUnderlyingValue, IERC20(afETH).totalSupply());
-        }
+        uint mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
 
         IAfETH(afETH).mint(msg.sender, mintAmount);
     }
