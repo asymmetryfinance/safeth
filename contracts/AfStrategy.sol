@@ -14,8 +14,6 @@ import "./interfaces/rocketpool/RocketStorageInterface.sol";
 import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "./interfaces/lido/IWStETH.sol";
 import "./interfaces/lido/IstETH.sol";
-import "./interfaces/balancer/IVault.sol";
-import "./interfaces/balancer/IBalancerHelpers.sol";
 import "./Vault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./constants.sol";
@@ -35,13 +33,6 @@ contract AfStrategy is Ownable {
     address public afETH;
     uint256 private numberOfDerivatives = 3;
 
-    // balancer pool things
-    address private balancerVault = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
-    bytes32 public balPoolId =
-        0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
-    address private balancerHelpers =
-        0x5aDDCCa35b7A0D07C74063c48700C8590E87864E;
-
     uint256 private constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
     bool public pauseStaking = false;
     bool public pauseUnstaking = false;
@@ -54,6 +45,36 @@ contract AfStrategy is Ownable {
         afETH = _afETH;
     }
 
+    // Eth value of all derivatives in this contract if they were redeemed
+    function underlyingValue() public view returns(uint) {
+        uint totalSfrxEthValue = ethPerSfrxAmount(10 ** 18) * IERC20(sfrxEthAddress).balanceOf(address(this)) / (10 ** 18);
+        uint totalRethValue = ethPerRethAmount(10 ** 18) * IERC20(rethAddress()).balanceOf(address(this)) / (10 ** 18);
+        uint totalWstEthValue = ethPerWstAmount(10 ** 18) * IERC20(wstETH).balanceOf(address(this)) / (10 ** 18);
+        return totalSfrxEthValue + totalRethValue + totalWstEthValue;
+    }
+
+    function calculatePrice(uint uv, uint totalSupply) public pure returns(uint) {
+        return  ( 10 ** 18 * uv / totalSupply);
+    }
+
+    function price() public view returns(uint) {
+        uint totalSupply = IAfETH(afETH).totalSupply();
+
+        if(totalSupply == 0) {
+            uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
+            uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
+            uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
+            uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
+            uint fakeTotalSupply = 3 * 10 ** 18;
+            console.log('shit price');
+            return ((fakeUnderlyingValue * 10 ** 18) / fakeTotalSupply);
+        }
+
+        uint uv = underlyingValue();
+        return calculatePrice(uv, totalSupply);
+    }
+
+
     /*//////////////////////////////////////////////////////////////
                         OPEN/CLOSE POSITION LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -61,42 +82,56 @@ contract AfStrategy is Ownable {
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
 
-        uint256 ethAmount = msg.value;
+        uint ethPerDerivative = msg.value / numberOfDerivatives;
 
-        uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
-        console.log(wstEthMinted);
-        console.log(rEthMinted);
-        console.log(sfraxMinted);
+        uint preDepositUv = underlyingValue();
+        uint sfrxAmount = depositSfrax(ethPerDerivative);
+        uint rethAmount = depositREth(ethPerDerivative);
+        uint wstAmount = depositWstEth(ethPerDerivative);
 
-        // TODO: Deploy and deposit balancer tokens of the 4626 vaults
-        //uint256 balLpAmount = depositBalTokens(wstEthMinted);
+        uint totalStakeValueEth = ethPerSfrxAmount(sfrxAmount) + ethPerRethAmount(rethAmount) + ethPerWstAmount(wstAmount);
 
-        // TODO: After depositing to the balancer pool, mint a bundle NFT
-        // uint256 bundleNftId = mintBundleNft(
-        //     currentCvxNftId,
-        //     amountCvxLocked,
-        //     balLpAmount
-        // );
+        uint mintAmount;
 
-        mintAfEth(ethAmount);
+        // first time depositing theres no existing values for underlyingValue and totalSupply
+        if(preDepositUv == 0) {
+            uint fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
+            uint fakeTotalRethValue = ethPerRethAmount(10 ** 18);
+            uint fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
+            uint fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
+            uint fakeTotalSupply = 3 * 10 ** 18;
+            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
+        } else {
+            mintAmount = (totalStakeValueEth * 10 ** 18) / calculatePrice(preDepositUv, IERC20(afETH).totalSupply());
+        }
+
+        IAfETH(afETH).mint(msg.sender, mintAmount);
     }
 
-    // must transfer amount out tokens to vault
-    function unstake() public {
+    function unstake(uint256 safEthAmount) public {
         require(pauseUnstaking == false, "unstaking is paused");
 
-        // TODO: add option to not unstake all
-        uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
-        burnAfEth(afEthBalance);
+        uint sfrxBalance = IERC20(sfrxEthAddress).balanceOf(address(this));
+        uint rethBalance = IERC20(rethAddress()).balanceOf(address(this));
+        uint wstBalance = IERC20(wstETH).balanceOf(address(this));
 
-        // TODO: Reintegrate Balancer with 4626 vaults
-        // burnBundleNFT(msg.sender);
-        // uint256 wstETH2Unwrap = withdrawBalTokens();
-        // withdrawREth();
-        // withdrawWstEth(wstETH2Unwrap);
-        IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken don't give random users the balance of this contract
+        uint safEthTotalSupply = IAfETH(afETH).totalSupply();
+
+        // unstake percent of pool that user owns equally from all derivatives
+        uint sfrxAmount = (sfrxBalance * safEthAmount) / safEthTotalSupply;
+        uint rethAmount = (rethBalance * safEthAmount) / safEthTotalSupply;
+        uint wstAmount = (wstBalance * safEthAmount) / safEthTotalSupply;
+
+        uint ethAmountBefore = address(this).balance;
+
+        withdrawREth(rethAmount);
+        withdrawWstEth(wstAmount);
+        withdrawSfrax(sfrxAmount);
+        IAfETH(afETH).burn(msg.sender, safEthAmount);
+
+        uint ethAmountAfter = address(this).balance;
+        uint ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        address(msg.sender).call{value: ethAmountToWithdraw}("");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -188,53 +223,13 @@ contract AfStrategy is Ownable {
             uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
             require(rethBalance2 > rethBalance1, "No rETH was minted");
             uint256 rethMinted = rethBalance2 - rethBalance1;
-            //rocketBalances[currentDepositor] += rethMinted;
             return (rethMinted);
         }
     }
 
-    function depositBalTokens(uint256 amount)
-        public
-        returns (uint256 lpAmount)
-    {
-        address[] memory _assets = new address[](2);
-        uint256[] memory _amounts = new uint256[](2);
-        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        _assets[1] = 0x0000000000000000000000000000000000000000;
-        _amounts[0] = amount;
-        _amounts[1] = 0;
-        uint256 joinKind = 1;
-        bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
-        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
-        IWStETH(wstETH).approve(balancerVault, amount);
-        IVault(balancerVault).joinPool(
-            balPoolId,
-            address(this),
-            address(this),
-            request
-        );
-        return (
-            ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230).balanceOf(
-                address(this)
-            )
-        );
-    }
-
     function withdrawREth(uint256 _amount) public {
         address rETH = rethAddress();
-        uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
-            address(this)
-        );
         RocketTokenRETHInterface(rETH).burn(_amount);
-        uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
-            address(this)
-        );
-        require(rethBalance1 > rethBalance2, "No rETH was burned");
     }
 
     function withdrawWstEth(uint256 _amount) public {
@@ -242,9 +237,7 @@ contract AfStrategy is Ownable {
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         // convert stETH to ETH
-        console.log("Eth before swapping steth to eth:", address(this).balance);
-        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
-        console.log("Eth after swapping steth to eth:", address(this).balance);
+        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);        
     }
 
     function withdrawSfrax(uint256 amount) public {
@@ -256,79 +249,40 @@ contract AfStrategy is Ownable {
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
     }
 
-    function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
-        // bal lp amount
-        uint256 amount = 0; // TODO: Previous code - positions[msg.sender].balancerBalance;
-        address[] memory _assets = new address[](2);
-        uint256[] memory _amounts = new uint256[](2);
-        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        _assets[1] = 0x0000000000000000000000000000000000000000;
-        // account for slippage from Balancer withdrawal
-        _amounts[0] = 0; // TODO: Previous code - (positions[msg.sender].wstEthBalance * 99) / 100;
-        _amounts[1] = 0;
-        uint256 exitKind = 0;
-        uint256 exitTokenIndex = 0;
-        bytes memory userDataEncoded = abi.encode(
-            exitKind,
-            amount,
-            exitTokenIndex
-        );
-        IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
-        // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
-        uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
-
-        IVault(balancerVault).exitPool(
-            balPoolId,
-            address(this),
-            address(this),
-            request
-        );
-        uint256 wBalance2 = IWStETH(wstETH).balanceOf(address(this));
-        require(wBalance2 > wBalance1, "No wstETH was withdrawn");
-        uint256 wstETHWithdrawn = wBalance2 - wBalance1;
-        return (wstETHWithdrawn);
-    }
-
     /*//////////////////////////////////////////////////////////////
                         HELPER METHODS
     //////////////////////////////////////////////////////////////*/
 
-    // eth per sfrxEth (wei)
-    function sfrxEthPrice(uint256 amount) public view returns (uint256) {
+    // how much eth to receive for a given amount of sfrx (wei)
+    function ethPerSfrxAmount(uint256 amount) public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
         return ICrvEthPool(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
     }
 
-    // eth per reth (wei)
-    function rethPrice(uint256 amount) public view returns (uint256) {
+    // inverse of ethPerSfrxAmount
+    function sfrxPerEthAmount(uint256 ethAmount) public view returns (uint256) {
+        uint frxAmount = ICrvEthPool(frxEthCrvPoolAddress).get_dy(1, 0, ethAmount);
+        return IsFrxEth(sfrxEthAddress).convertToShares(frxAmount);
+    }
+
+    // how much eth to receive for a given amount of reth (wei)
+    function ethPerRethAmount(uint256 amount) public view returns (uint256) {
         return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
     }
 
-    /// @notice get ETH price data from Chainlink, may not be needed if we can get ratio from contracts for rETH and sfrxETH
-    function getEthPriceData() public view returns (uint256) {
-        (, int256 price, , , ) = CHAIN_LINK_ETH_FEED.latestRoundData();
-        if (price < 0) {
-            price = 0;
-        }
-        uint8 decimals = CHAIN_LINK_ETH_FEED.decimals();
-        // 10**(decimals) gives the number in dollar form $10.03
-        // because solidity is only integers we need to add two to get price data including cents
-        return uint256(price) * 10**(decimals + 2);
+    // inverse of ethPerRethAmount
+    function rethPerEthAmount(uint256 ethAmount) public view returns (uint256) {
+        return RocketTokenRETHInterface(rethAddress()).getRethValue(ethAmount);
     }
 
-    function mintAfEth(uint256 amount) private {
-        IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.mint(address(this), amount);
+    // eth per wstEth (wei)
+    function ethPerWstAmount(uint256 amount) public view returns (uint256) {
+        return IWStETH(wstETH).getStETHByWstETH(amount);
     }
 
-    function burnAfEth(uint256 amount) private {
-        IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.burn(address(this), amount);
+    // inverse of ethPerWstAmount
+    function wstPerEthAmount(uint256 ethAmount) public view returns (uint256) {
+        return IWStETH(wstETH).getWstETHByStETH(ethAmount);
     }
 
     /*//////////////////////////////////////////////////////////////

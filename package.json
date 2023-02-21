@@ -76,6 +76,7 @@
     "@balancer-labs/balancer-js": "^2.0.0",
     "@chainlink/contracts": "^0.5.1",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@openzeppelin/contracts": "^4.8.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@openzeppelin/hardhat-upgrades": "^1.17.0",
