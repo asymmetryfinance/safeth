@@ -45,16 +45,9 @@ contract AfStrategy is Ownable {
         afETH = _afETH;
     }
 
-    // Eth value of all derivatives in this contract if they were redeemed
-    function underlyingValue() public view returns(uint256) {
-        uint256 totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
-        uint256 totalRethValue = ethPerRethAmount(IERC20(rethAddress()).balanceOf(address(this)));
-        uint256 totalWstEthValue = ethPerWstAmount(IERC20(wstETH).balanceOf(address(this)));
-        return totalSfrxEthValue + totalRethValue + totalWstEthValue;
-    }
 
-    function calculatePrice(uint256 uv, uint256 totalSupply) public pure returns(uint256) {
-        return  ( 10 ** 18 * uv / totalSupply);
+    function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
+        return  ( 10 ** 18 * underlyingValue / totalSupply);
     }
 
     // special case for getting a price estimate before a deposit has been made
@@ -68,9 +61,15 @@ contract AfStrategy is Ownable {
     }
 
     function price() public view returns(uint256) {
+        // get underlying value
+        uint256 totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
+        uint256 totalRethValue = ethPerRethAmount(IERC20(rethAddress()).balanceOf(address(this)));
+        uint256 totalWstEthValue = ethPerWstAmount(IERC20(wstETH).balanceOf(address(this)));
+        uint256 underlyingValue = totalSfrxEthValue + totalRethValue + totalWstEthValue;
+
         uint256 totalSupply = IAfETH(afETH).totalSupply();
         if(totalSupply == 0) return startingPrice();
-        return calculatePrice(underlyingValue(), totalSupply);
+        return calculatePrice(underlyingValue, totalSupply);
     }
 
     /*//////////////////////////////////////////////////////////////
