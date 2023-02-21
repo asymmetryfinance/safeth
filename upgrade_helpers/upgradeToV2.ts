@@ -1,4 +1,3 @@
-// scripts/create-box.js
 import { ethers, upgrades } from "hardhat";
 export const upgradeToV2 = async function (proxyAddress: string) {
   const AfStrategyV2 = await ethers.getContractFactory("AfStrategyV2");

@@ -1,4 +1,3 @@
-// scripts/create-box.js
 import { ethers, upgrades } from "hardhat";
 import { AfETH } from "../typechain-types";
 

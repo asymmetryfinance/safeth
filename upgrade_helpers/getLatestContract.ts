@@ -1,4 +1,3 @@
-// scripts/create-box.js
 import { ethers, upgrades } from "hardhat";
 
 export const getLatestContract = async function (

@@ -7,7 +7,7 @@
     "compile": "yarn hardhat compile",
     "console": "yarn hardhat console",
     "coverage": "yarn hardhat coverage",
-    "deploy": "yarn hardhat run scripts/deployV1.ts",
+    "deploy": "yarn hardhat run scripts/example_deploy.ts",
     "lint": "yarn lint:ts && yarn lint:solidity",
     "lint:ts": "yarn eslint '**/*.{js,ts}'",
     "lint:solidity": "yarn solhint -w 0 **/*.sol",
