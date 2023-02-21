@@ -34,7 +34,8 @@ describe.only("Af Strategy", function () {
     )) as AfETH;
 
     const strategyDeployment = await ethers.getContractFactory("AfStrategy");
-    strategy = (await strategyDeployment.deploy(afEth.address)) as AfStrategy;
+    strategy = (await strategyDeployment.deploy()) as AfStrategy;
+    await strategy.initialize(afEth.address);
     const rethAddress = await strategy.rethAddress();
 
     await afEth.setMinter(strategy.address);

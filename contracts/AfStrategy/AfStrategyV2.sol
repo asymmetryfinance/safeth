@@ -2,49 +2,50 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IWETH.sol";
-import "./interfaces/IAfETH.sol";
-import "./interfaces/frax/IFrxETHMinter.sol";
-import "./interfaces/frax/IsFrxEth.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/IAfETH.sol";
+import "../interfaces/frax/IFrxETHMinter.sol";
+import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/uniswap/ISwapRouter.sol";
-import "./interfaces/curve/ICrvEthPool.sol";
-import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "./interfaces/rocketpool/RocketStorageInterface.sol";
-import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "./interfaces/lido/IWStETH.sol";
-import "./interfaces/lido/IstETH.sol";
-import "./Vault.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./constants.sol";
+import "../interfaces/uniswap/ISwapRouter.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../interfaces/rocketpool/RocketStorageInterface.sol";
+import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
+import "../interfaces/lido/IWStETH.sol";
+import "../interfaces/lido/IstETH.sol";
+import "../constants.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract AfStrategy is Ownable {
+contract AfStrategyV2 is OwnableUpgradeable {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
 
-    AggregatorV3Interface private constant CHAIN_LINK_ETH_FEED =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
     RocketStorageInterface private constant ROCKET_STORAGE =
         RocketStorageInterface(rocketStorageAddress);
     ISwapRouter private constant SWAP_ROUTER =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     address public afETH;
-    uint256 private numberOfDerivatives = 3;
+    uint256 private constant numberOfDerivatives = 3;
 
     uint256 private constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
-    bool public pauseStaking = false;
-    bool public pauseUnstaking = false;
+    bool public pauseStaking;
+    bool public pauseUnstaking;
+    bool public newFunctionCalled;
+
+    function newFunction() public {
+        newFunctionCalled = true;
+    }
 
     function rethAddress() public view returns(address) {
         return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
     }
 
-    constructor(address _afETH) {
+    function initialize(address _afETH) public initializer {
         afETH = _afETH;
     }
-
 
     function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
         return  ( 10 ** 18 * underlyingValue / totalSupply);
