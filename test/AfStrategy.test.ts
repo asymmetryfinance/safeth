@@ -195,4 +195,11 @@ describe.only("Af Strategy", function () {
       expect(sfrxBalance.lt(oneEth)).eq(true);
     });
   });
+
+  describe("Upgrades", async () => {
+    it("Should have expected values and functionality before and after upgrading contract versions", async () => {
+      // TODO
+      expect(true).eq(true);
+    });
+  });
 });
