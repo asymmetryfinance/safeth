@@ -131,6 +131,7 @@ contract AfStrategy is Ownable {
 
         uint ethAmountAfter = address(this).balance;
         uint ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        // solhint-disable-next-line
         address(msg.sender).call{value: ethAmountToWithdraw}("");
     }
 
