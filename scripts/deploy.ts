@@ -1,7 +1,7 @@
 import { deployV1 } from "../upgrade_helpers/deployV1";
 import { upgradeToV2 } from "../upgrade_helpers/upgradeToV2";
 
-// This deploy script is currently unused but has some example usage for deploying & upgrading.
+// This deploy script is currently unused but has some example usage for deploying & upgrading outside of tests.
 async function main() {
   const v1Contract = await deployV1();
 

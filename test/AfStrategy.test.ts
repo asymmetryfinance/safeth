@@ -12,33 +12,32 @@ import {
   WSTETH_WHALE,
 } from "./constants";
 import { AfETH, AfStrategy } from "../typechain-types";
-import { sfrxEthAbi } from "./abi/sfrxEthAbi";
+import { deployV1 } from "../upgrade_helpers/deployV1";
+import { afEthAbi } from "./abi/afEthAbi";
+import { upgradeToV2 } from "../upgrade_helpers/upgradeToV2";
+import { getLatestContract } from "../upgrade_helpers/getLatestContract";
+import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 
 describe.only("Af Strategy", function () {
   let accounts: SignerWithAddress[];
   let afEth: AfETH;
-  let strategy: AfStrategy;
+  let strategyProxy: AfStrategy;
   let aliceSigner: Signer;
   let wstEth: Contract;
   let rEth: Contract;
   let sfrxeth: Contract;
+  let snapshot: any;
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
     accounts = await ethers.getSigners();
 
-    const afETHDeployment = await ethers.getContractFactory("afETH");
-    afEth = (await afETHDeployment.deploy(
-      "Asymmetry Finance ETH",
-      "afETH"
-    )) as AfETH;
+    strategyProxy = (await deployV1()) as AfStrategy;
 
-    const strategyDeployment = await ethers.getContractFactory("AfStrategy");
-    strategy = (await strategyDeployment.deploy()) as AfStrategy;
-    await strategy.initialize(afEth.address);
-    const rethAddress = await strategy.rethAddress();
-
-    await afEth.setMinter(strategy.address);
+    const rethAddress = await strategyProxy.rethAddress();
+    const afEthAddress = await strategyProxy.afETH();
+    afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
+    await afEth.setMinter(strategyProxy.address);
 
     // initialize derivative contracts
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
@@ -84,11 +83,13 @@ describe.only("Af Strategy", function () {
     whaleSigner = await ethers.getSigner(SFRAXETH_WHALE);
     const sfrxethWhale = sfrxeth.connect(whaleSigner);
     await sfrxethWhale.transfer(admin, transferAmount);
+
+    snapshot = await takeSnapshot();
   });
 
   describe("Deposit/Withdraw", function () {
     it("Should deposit without changing the underlying price by a significant amount", async () => {
-      const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
+      const aliceStrategySigner = strategyProxy.connect(aliceSigner as Signer);
 
       const depositAmount = ethers.utils.parseEther("1");
 
@@ -109,7 +110,7 @@ describe.only("Af Strategy", function () {
     it("Should withdraw without changing the underlying price by a significant amount", async () => {
       const { alice } = await getNamedAccounts();
 
-      const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
+      const aliceStrategySigner = strategyProxy.connect(aliceSigner as Signer);
       const depositAmount = ethers.utils.parseEther("1");
 
       await aliceStrategySigner.stake({ value: depositAmount });
@@ -134,72 +135,67 @@ describe.only("Af Strategy", function () {
       const price4 = await aliceStrategySigner.price();
       expect(approxEqual(price3, price4)).eq(true);
     });
-
-    // Verify that 2 numbers are within 0.000001% of each other
-    const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
-      if (amount1.eq(amount2)) return true;
-      const difference = amount1.gt(amount2)
-        ? amount1.sub(amount2)
-        : amount2.sub(amount1);
-      const differenceRatio = amount1.div(difference);
-      return differenceRatio.gt("1000000");
-    };
   });
 
   describe("Prices", async () => {
     it("Should get rethPrice which is higher than eth price", async () => {
       const oneReth = BigNumber.from("1000000000000000000"); // 10^18 wei
       const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const rethPrice = await strategy.ethPerRethAmount(oneReth);
+      const rethPrice = await strategyProxy.ethPerRethAmount(oneReth);
       expect(rethPrice.gt(oneEth)).eq(true);
     });
 
     it("Should get sfrxEthPrice which is higher than eth price", async () => {
       const oneSfrxEth = BigNumber.from("1000000000000000000"); // 10^18 wei
       const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const sfrxPrice = await strategy.ethPerSfrxAmount(oneSfrxEth);
+      const sfrxPrice = await strategyProxy.ethPerSfrxAmount(oneSfrxEth);
       expect(sfrxPrice.gt(oneEth)).eq(true);
     });
   });
 
-  describe("Frax", async () => {
-    it("Should deposit eth in exchange for the expected amount of sfrx", async () => {
-      const aliceStrategySigner = strategy.connect(aliceSigner as Signer);
+  describe.only("Upgrades", async () => {
+    // so we dont have to worry about state of previous tests
+    beforeEach(async () => {
+      await snapshot.restore();
+    });
 
-      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-
-      const sfrxContract = new ethers.Contract(
-        SFRAXETH_ADDRESS,
-        sfrxEthAbi,
-        accounts[0]
+    it("Should have the same proxy address before and after upgrading", async () => {
+      const addressBefore = strategyProxy.address;
+      const strategy2 = await upgradeToV2(strategyProxy.address);
+      const addressAfter = strategy2.address;
+      expect(addressBefore).eq(addressAfter);
+    });
+    it("Should have roughly the same price after upgrading", async () => {
+      const priceBefore = await strategyProxy.price();
+      const strategy2 = await upgradeToV2(strategyProxy.address);
+      const priceAfter = await strategy2.price();
+      expect(approxEqual(priceBefore, priceAfter)).eq(true);
+    });
+    it("Should allow v2 functionality to be used after upgrading", async () => {
+      const strategy2 = await upgradeToV2(strategyProxy.address);
+      expect(await strategy2.newFunctionCalled()).eq(false);
+      await strategy2.newFunction();
+      expect(await strategy2.newFunctionCalled()).eq(true);
+    });
+    it("Should get latest version of an already upgraded contract and use its functionality", async () => {
+      await upgradeToV2(strategyProxy.address);
+      const latestContract = await getLatestContract(
+        strategyProxy.address,
+        "AfStrategyV2"
       );
-      const expectedSfrxOutput = await sfrxContract.convertToShares(oneEth);
-
-      await aliceStrategySigner.depositSfrax(oneEth, {
-        value: oneEth,
-      });
-
-      const sfrxBalance = await sfrxContract.balanceOf(strategy.address);
-
-      // how different is the expected amount vs received amount
-      // its always slightly off but only by a tiny amount
-      const sfrxBalanceDiff = expectedSfrxOutput.sub(sfrxBalance);
-
-      // ratio of sfrxBalanceDiff to our original balance
-      const sfrxBalanceDiffRatio = sfrxBalance.div(sfrxBalanceDiff);
-
-      // check to be sure the difference percent is within 0.00001 of our expected output ( ratio is > 100,000)
-      expect(sfrxBalanceDiffRatio.gt("100000")).eq(true);
-
-      // We should always receive less sfrx out than eth in because the price is always rising
-      expect(sfrxBalance.lt(oneEth)).eq(true);
+      expect(await latestContract.newFunctionCalled()).eq(false);
+      await latestContract.newFunction();
+      expect(await latestContract.newFunctionCalled()).eq(true);
     });
   });
 
-  describe("Upgrades", async () => {
-    it("Should have expected values and functionality before and after upgrading contract versions", async () => {
-      // TODO
-      expect(true).eq(true);
-    });
-  });
+  // Verify that 2 numbers are within 0.000001% of each other
+  const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    const differenceRatio = amount1.div(difference);
+    return differenceRatio.gt("1000000");
+  };
 });

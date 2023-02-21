@@ -2,24 +2,33 @@
   "manifestVersion": "3.2",
   "admin": {
     "address": "0x8f119cd256a0FfFeed643E830ADCD9767a1d517F",
-    "txHash": "0x5577cb7c56e00178cdf86a6268eabae582a6e67e24e1c3679d2a214c47cf0862"
+    "txHash": "0xe886b7cb3459fb09c2cb9bd02c8c0f64767fb4be1be6a61f6714b5d89ece50e2"
   },
   "proxies": [
     {
-      "address": "0x8f119cd256a0FfFeed643E830ADCD9767a1d517F",
-      "txHash": "0x1237502b956e18fc1c7ff2a4ba2a2de5987a1db1a91ee9e243fbfc64dfffc45b",
+      "address": "0xe14058B1c3def306e2cb37535647A04De03Db092",
+      "txHash": "0x0733974035ea225fb610579da4e81bb8826ca1085a3841f7aea2c2be24b15480",
       "kind": "transparent"
     },
     {
-      "address": "0xe14058B1c3def306e2cb37535647A04De03Db092",
-      "txHash": "0x681059221ce6b79879ed17f2015ba13ce5f9dd2d7cd9c975e4e66f7e079424a7",
+      "address": "0x73C68f1f41e4890D06Ba3e71b9E9DfA555f1fb46",
+      "txHash": "0x0e80b0dfcaa79ce1671aee7712fcc1651576948c9f80e10ddebe89152755e0f7",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+      "txHash": "0x08a0320fc8bb9fc0f8c82fc881a5329e79868d1114b098a8a897094e5ff36708",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x773330693cb7d5D233348E25809770A32483A940",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "137588a2515961388c8aa12e8fd0e5bb04be253631878642cade5b372828ba01": {
+    "83295f8f9fdb83a908ddbcd6c3cf78a3d3d124085ae2642fcf8c20590c707b15": {
       "address": "0x4f42528B7bF8Da96516bECb22c1c6f53a8Ac7312",
-      "txHash": "0xd71df80541673fba47a39a93112d25af2b13d8c9ae75618947133745a51a82fd",
+      "txHash": "0x08ae48b9160552ad6a6fc8013a3ffebe80040dac24969c775ec9fa85be779aa0",
       "layout": {
         "solcVersion": "0.8.13",
         "storage": [
@@ -65,28 +74,164 @@
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
           },
           {
-            "label": "afETH",
+            "label": "ROCKET_STORAGE",
             "offset": 0,
             "slot": "101",
+            "type": "t_contract(RocketStorageInterface)3984",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:26"
+          },
+          {
+            "label": "SWAP_ROUTER",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_contract(ISwapRouter)4064",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:27"
+          },
+          {
+            "label": "afETH",
+            "offset": 0,
+            "slot": "103",
             "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:29"
+          },
+          {
+            "label": "numberOfDerivatives",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_uint256",
             "contract": "AfStrategy",
             "src": "contracts/AfStrategy/AfStrategy.sol:30"
           },
           {
+            "label": "ROCKET_POOL_LIMIT",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_uint256",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:32"
+          },
+          {
             "label": "pauseStaking",
-            "offset": 20,
-            "slot": "101",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_bool",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:33"
+          },
+          {
+            "label": "pauseUnstaking",
+            "offset": 1,
+            "slot": "106",
             "type": "t_bool",
             "contract": "AfStrategy",
             "src": "contracts/AfStrategy/AfStrategy.sol:34"
           },
           {
-            "label": "pauseUnstaking",
-            "offset": 21,
-            "slot": "101",
-            "type": "t_bool",
+            "label": "wETH",
+            "offset": 2,
+            "slot": "106",
+            "type": "t_address",
             "contract": "AfStrategy",
-            "src": "contracts/AfStrategy/AfStrategy.sol:35"
+            "src": "contracts/AfStrategy/AfStrategy.sol:36"
+          },
+          {
+            "label": "CVX",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:37"
+          },
+          {
+            "label": "veCRV",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:38"
+          },
+          {
+            "label": "vlCVX",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:39"
+          },
+          {
+            "label": "wstETH",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:40"
+          },
+          {
+            "label": "stEthToken",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:41"
+          },
+          {
+            "label": "lidoCrvPool",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:42"
+          },
+          {
+            "label": "sfrxEthAddress",
+            "offset": 0,
+            "slot": "113",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:43"
+          },
+          {
+            "label": "frxEthAddress",
+            "offset": 0,
+            "slot": "114",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:44"
+          },
+          {
+            "label": "frxEthCrvPoolAddress",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:45"
+          },
+          {
+            "label": "frxEthMinterAddress",
+            "offset": 0,
+            "slot": "116",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:46"
+          },
+          {
+            "label": "rocketStorageAddress",
+            "offset": 0,
+            "slot": "117",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:47"
+          },
+          {
+            "label": "uniswapRouter",
+            "offset": 0,
+            "slot": "118",
+            "type": "t_address",
+            "contract": "AfStrategy",
+            "src": "contracts/AfStrategy/AfStrategy.sol:48"
           }
         ],
         "types": {
@@ -105,6 +250,14 @@
           "t_bool": {
             "label": "bool",
             "numberOfBytes": "1"
+          },
+          "t_contract(ISwapRouter)4064": {
+            "label": "contract ISwapRouter",
+            "numberOfBytes": "20"
+          },
+          "t_contract(RocketStorageInterface)3984": {
+            "label": "contract RocketStorageInterface",
+            "numberOfBytes": "20"
           },
           "t_uint256": {
             "label": "uint256",
@@ -117,9 +270,8 @@
         }
       }
     },
-    "59ba2f99bfa538b752f591cca5620a53fdbb3595fd804ca65a1f685cb6f9bf7d": {
-      "address": "0x74ef2B06A1D2035C33244A4a263FF00B84504865",
-      "txHash": "0xc18f4d4fdc42fb79da00995699055043b408b23959703da2770cc2d3b3371882",
+    "f74b9155249818b3df23446454b79fcf606cb020781ca6f76f19a975fcf9f523": {
+      "address": "0xF5b81Fe0B6F378f9E6A3fb6A6cD1921FCeA11799",
       "layout": {
         "solcVersion": "0.8.13",
         "storage": [
@@ -165,36 +317,172 @@
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
           },
           {
-            "label": "afETH",
+            "label": "ROCKET_STORAGE",
             "offset": 0,
             "slot": "101",
+            "type": "t_contract(RocketStorageInterface)2947",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:26"
+          },
+          {
+            "label": "SWAP_ROUTER",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_contract(ISwapRouter)3027",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:27"
+          },
+          {
+            "label": "afETH",
+            "offset": 0,
+            "slot": "103",
             "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:29"
+          },
+          {
+            "label": "numberOfDerivatives",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_uint256",
             "contract": "AfStrategyV2",
             "src": "contracts/AfStrategy/AfStrategyV2.sol:30"
           },
           {
+            "label": "ROCKET_POOL_LIMIT",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_uint256",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:32"
+          },
+          {
             "label": "pauseStaking",
-            "offset": 20,
-            "slot": "101",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_bool",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:33"
+          },
+          {
+            "label": "pauseUnstaking",
+            "offset": 1,
+            "slot": "106",
             "type": "t_bool",
             "contract": "AfStrategyV2",
             "src": "contracts/AfStrategy/AfStrategyV2.sol:34"
           },
           {
-            "label": "pauseUnstaking",
-            "offset": 21,
-            "slot": "101",
-            "type": "t_bool",
+            "label": "wETH",
+            "offset": 2,
+            "slot": "106",
+            "type": "t_address",
             "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:35"
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:36"
+          },
+          {
+            "label": "CVX",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:37"
+          },
+          {
+            "label": "veCRV",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:38"
+          },
+          {
+            "label": "vlCVX",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:39"
+          },
+          {
+            "label": "wstETH",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:40"
+          },
+          {
+            "label": "stEthToken",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:41"
+          },
+          {
+            "label": "lidoCrvPool",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:42"
+          },
+          {
+            "label": "sfrxEthAddress",
+            "offset": 0,
+            "slot": "113",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:43"
+          },
+          {
+            "label": "frxEthAddress",
+            "offset": 0,
+            "slot": "114",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:44"
+          },
+          {
+            "label": "frxEthCrvPoolAddress",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:45"
+          },
+          {
+            "label": "frxEthMinterAddress",
+            "offset": 0,
+            "slot": "116",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:46"
+          },
+          {
+            "label": "rocketStorageAddress",
+            "offset": 0,
+            "slot": "117",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:47"
+          },
+          {
+            "label": "uniswapRouter",
+            "offset": 0,
+            "slot": "118",
+            "type": "t_address",
+            "contract": "AfStrategyV2",
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:48"
           },
           {
             "label": "newFunctionCalled",
-            "offset": 22,
-            "slot": "101",
+            "offset": 20,
+            "slot": "118",
             "type": "t_bool",
             "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:36"
+            "src": "contracts/AfStrategy/AfStrategyV2.sol:50"
           }
         ],
         "types": {
@@ -213,6 +501,14 @@
           "t_bool": {
             "label": "bool",
             "numberOfBytes": "1"
+          },
+          "t_contract(ISwapRouter)3027": {
+            "label": "contract ISwapRouter",
+            "numberOfBytes": "20"
+          },
+          "t_contract(RocketStorageInterface)2947": {
+            "label": "contract RocketStorageInterface",
+            "numberOfBytes": "20"
           },
           "t_uint256": {
             "label": "uint256",

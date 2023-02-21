@@ -10,7 +10,6 @@ import "hardhat-deploy";
 import "solidity-coverage";
 import "@openzeppelin/hardhat-upgrades";
 import { HardhatUserConfig } from "hardhat/types";
-
 dotenv.config();
 
 // You need to export an object to set up your config
