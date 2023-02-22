@@ -2,62 +2,40 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IWETH.sol";
-import "./interfaces/IAfETH.sol";
-import "./interfaces/frax/IFrxETHMinter.sol";
-import "./interfaces/frax/IsFrxEth.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/uniswap/ISwapRouter.sol";
-import "./interfaces/curve/ICrvEthPool.sol";
-import "./interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "./interfaces/rocketpool/RocketStorageInterface.sol";
-import "./interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "./interfaces/lido/IWStETH.sol";
-import "./interfaces/lido/IstETH.sol";
-import "./Vault.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./constants.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/IAfETH.sol";
+import "../interfaces/frax/IFrxETHMinter.sol";
+import "../interfaces/frax/IsFrxEth.sol";
+import "../interfaces/uniswap/ISwapRouter.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../interfaces/rocketpool/RocketStorageInterface.sol";
+import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
+import "../interfaces/lido/IWStETH.sol";
+import "../interfaces/lido/IstETH.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./AfStrategyStorage.sol";
 
-contract AfStrategy is Ownable {
+contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
 
-    AggregatorV3Interface private constant CHAIN_LINK_ETH_FEED =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-    RocketStorageInterface private constant ROCKET_STORAGE =
-        RocketStorageInterface(rocketStorageAddress);
-    ISwapRouter private constant SWAP_ROUTER =
-        ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-
-    address public afETH;
-    uint256 private numberOfDerivatives = 3;
-
-    uint256 private constant ROCKET_POOL_LIMIT = 5000000000000000000000; // TODO: make changeable by owner
-    bool public pauseStaking = false;
-    bool public pauseUnstaking = false;
-
-    function rethAddress() public view returns(address) {
-        return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
-    constructor(address _afETH) {
+    // This replaces the constructor for upgradeable contracts
+    // it is only be called once when the first contract is deployed (not on upogrades)
+    function initialize(address _afETH) public initializer {
+        _transferOwnership(msg.sender);
         afETH = _afETH;
     }
 
-
-    function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
-        return  ( 10 ** 18 * underlyingValue / totalSupply);
-    }
-
-    // special case for getting a price estimate before a deposit has been made
-    function startingPrice() public view returns (uint256) {
-        uint256 fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
-        uint256 fakeTotalRethValue = ethPerRethAmount(10 ** 18);
-        uint256 fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
-        uint256 fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
-        uint256 fakeTotalSupply = 3 * 10 ** 18;
-        return calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
+    function rethAddress() public view returns(address) {
+        return RocketStorageInterface(rocketStorageAddress).getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
     }
 
     function price() public view returns(uint256) {
@@ -68,8 +46,8 @@ contract AfStrategy is Ownable {
         uint256 underlyingValue = totalSfrxEthValue + totalRethValue + totalWstEthValue;
 
         uint256 totalSupply = IAfETH(afETH).totalSupply();
-        if(totalSupply == 0) return startingPrice();
-        return calculatePrice(underlyingValue, totalSupply);
+        if(totalSupply == 0) return 10 ** 18;
+        return 10 ** 18 * underlyingValue / totalSupply;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -131,7 +109,7 @@ contract AfStrategy is Ownable {
         uint24 poolFee,
         uint256 amountIn
     ) public returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(SWAP_ROUTER), amountIn);
+        IERC20(tokenIn).approve(uniswapRouter, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -142,14 +120,12 @@ contract AfStrategy is Ownable {
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
             });
-        amountOut = SWAP_ROUTER.exactInputSingle(params);
+        amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
     // send ETH and bypass stETH, recieve wstETH for BAL pool
-    function depositWstEth(uint256 amount)
-        public
-        payable
+    function depositWstEth(uint256 amount) private
         returns (uint256 wstEthMintAmount)
     {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
@@ -161,7 +137,7 @@ contract AfStrategy is Ownable {
         return (wstEthAmount);
     }
 
-    function depositSfrax(uint256 amount) public payable returns (uint256) {
+    function depositSfrax(uint256 amount) private returns (uint256) {
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
         uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
             address(this)
@@ -174,12 +150,11 @@ contract AfStrategy is Ownable {
     }
 
     function depositREth(uint256 amount)
-        public
-        payable
+        private
         returns (uint256 rEthAmount)
     {
         // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = ROCKET_STORAGE.getAddress(
+        address rocketDepositPoolAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
         );
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
@@ -197,7 +172,7 @@ contract AfStrategy is Ownable {
             );
             return amountSwapped;
         } else {
-            address rocketTokenRETHAddress = ROCKET_STORAGE.getAddress(
+            address rocketTokenRETHAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
@@ -219,15 +194,16 @@ contract AfStrategy is Ownable {
         RocketTokenRETHInterface(rETH).burn(_amount);
     }
 
-    function withdrawWstEth(uint256 _amount) public {
-        IWStETH(wstETH).unwrap(_amount); // TODO: not using right amount of wstETH
+    function withdrawWstEth(uint256 _amount) private {
+        IWStETH(wstETH).unwrap(_amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
-        // convert stETH to ETH
+        // TODO figure out if we want a min receive amount and what it should be
+        // Currently set to 0. It "works" but may not be ideal long term
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);        
     }
 
-    function withdrawSfrax(uint256 amount) public {
+    function withdrawSfrax(uint256 amount) private {
         IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
         uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
