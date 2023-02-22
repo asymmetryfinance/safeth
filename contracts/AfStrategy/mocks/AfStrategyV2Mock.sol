@@ -2,24 +2,24 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/IWETH.sol";
-import "../interfaces/IAfETH.sol";
-import "../interfaces/frax/IFrxETHMinter.sol";
-import "../interfaces/frax/IsFrxEth.sol";
+import "../../interfaces/IWETH.sol";
+import "../../interfaces/IAfETH.sol";
+import "../../interfaces/frax/IFrxETHMinter.sol";
+import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../interfaces/uniswap/ISwapRouter.sol";
-import "../interfaces/curve/ICrvEthPool.sol";
-import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "../interfaces/rocketpool/RocketStorageInterface.sol";
-import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "../interfaces/lido/IWStETH.sol";
-import "../interfaces/lido/IstETH.sol";
+import "../../interfaces/uniswap/ISwapRouter.sol";
+import "../../interfaces/curve/ICrvEthPool.sol";
+import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../../interfaces/rocketpool/RocketStorageInterface.sol";
+import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
+import "../../interfaces/lido/IWStETH.sol";
+import "../../interfaces/lido/IstETH.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 // This is an ugradeable contract - variable order matters
 // https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-contract AfStrategyV2 is OwnableUpgradeable {
+contract AfStrategyV2Mock is OwnableUpgradeable {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
 

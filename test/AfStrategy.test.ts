@@ -5,7 +5,7 @@ import { BigNumber, Signer } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { deployV1 } from "../upgrade_helpers/deployV1";
 import { afEthAbi } from "./abi/afEthAbi";
-import { upgradeToV2 } from "../upgrade_helpers/upgradeToV2";
+import { upgrade } from "../upgrade_helpers/upgrade";
 import { getLatestContract } from "../upgrade_helpers/getLatestContract";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -114,27 +114,36 @@ describe.only("Af Strategy", function () {
   describe("Upgrades", async () => {
     it("Should have the same proxy address before and after upgrading", async () => {
       const addressBefore = strategyProxy.address;
-      const strategy2 = await upgradeToV2(strategyProxy.address);
+      const strategy2 = await upgrade(
+        strategyProxy.address,
+        "AfStrategyV2Mock"
+      );
       const addressAfter = strategy2.address;
       expect(addressBefore).eq(addressAfter);
     });
     it("Should have roughly the same price after upgrading", async () => {
       const priceBefore = await strategyProxy.price();
-      const strategy2 = await upgradeToV2(strategyProxy.address);
+      const strategy2 = await upgrade(
+        strategyProxy.address,
+        "AfStrategyV2Mock"
+      );
       const priceAfter = await strategy2.price();
       expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
     it("Should allow v2 functionality to be used after upgrading", async () => {
-      const strategy2 = await upgradeToV2(strategyProxy.address);
+      const strategy2 = await upgrade(
+        strategyProxy.address,
+        "AfStrategyV2Mock"
+      );
       expect(await strategy2.newFunctionCalled()).eq(false);
       await strategy2.newFunction();
       expect(await strategy2.newFunctionCalled()).eq(true);
     });
     it("Should get latest version of an already upgraded contract and use new functionality", async () => {
-      await upgradeToV2(strategyProxy.address);
+      await upgrade(strategyProxy.address, "AfStrategyV2Mock");
       const latestContract = await getLatestContract(
         strategyProxy.address,
-        "AfStrategyV2"
+        "AfStrategyV2Mock"
       );
       expect(await latestContract.newFunctionCalled()).eq(false);
       await latestContract.newFunction();

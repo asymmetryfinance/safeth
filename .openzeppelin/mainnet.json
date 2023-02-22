@@ -358,169 +358,169 @@
             "label": "ROCKET_STORAGE",
             "offset": 0,
             "slot": "101",
-            "type": "t_contract(RocketStorageInterface)10641",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:26"
+            "type": "t_contract(RocketStorageInterface)2972",
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:26"
           },
           {
             "label": "SWAP_ROUTER",
             "offset": 0,
             "slot": "102",
-            "type": "t_contract(ISwapRouter)10721",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:27"
+            "type": "t_contract(ISwapRouter)3052",
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:27"
           },
           {
             "label": "afETH",
             "offset": 0,
             "slot": "103",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:29"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:29"
           },
           {
             "label": "numberOfDerivatives",
             "offset": 0,
             "slot": "104",
             "type": "t_uint256",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:30"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:30"
           },
           {
             "label": "ROCKET_POOL_LIMIT",
             "offset": 0,
             "slot": "105",
             "type": "t_uint256",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:32"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:32"
           },
           {
             "label": "pauseStaking",
             "offset": 0,
             "slot": "106",
             "type": "t_bool",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:33"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:33"
           },
           {
             "label": "pauseUnstaking",
             "offset": 1,
             "slot": "106",
             "type": "t_bool",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:34"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:34"
           },
           {
             "label": "wETH",
             "offset": 2,
             "slot": "106",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:36"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:36"
           },
           {
             "label": "CVX",
             "offset": 0,
             "slot": "107",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:37"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:37"
           },
           {
             "label": "veCRV",
             "offset": 0,
             "slot": "108",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:38"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:38"
           },
           {
             "label": "vlCVX",
             "offset": 0,
             "slot": "109",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:39"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:39"
           },
           {
             "label": "wstETH",
             "offset": 0,
             "slot": "110",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:40"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:40"
           },
           {
             "label": "stEthToken",
             "offset": 0,
             "slot": "111",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:41"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:41"
           },
           {
             "label": "lidoCrvPool",
             "offset": 0,
             "slot": "112",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:42"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:42"
           },
           {
             "label": "sfrxEthAddress",
             "offset": 0,
             "slot": "113",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:43"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:43"
           },
           {
             "label": "frxEthAddress",
             "offset": 0,
             "slot": "114",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:44"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:44"
           },
           {
             "label": "frxEthCrvPoolAddress",
             "offset": 0,
             "slot": "115",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:45"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:45"
           },
           {
             "label": "frxEthMinterAddress",
             "offset": 0,
             "slot": "116",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:46"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:46"
           },
           {
             "label": "rocketStorageAddress",
             "offset": 0,
             "slot": "117",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:47"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:47"
           },
           {
             "label": "uniswapRouter",
             "offset": 0,
             "slot": "118",
             "type": "t_address",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:48"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:48"
           },
           {
             "label": "newFunctionCalled",
             "offset": 20,
             "slot": "118",
             "type": "t_bool",
-            "contract": "AfStrategyV2",
-            "src": "contracts/AfStrategy/AfStrategyV2.sol:50"
+            "contract": "AfStrategyV2Mock",
+            "src": "contracts/AfStrategy/mocks/AfStrategyV2Mock.sol:50"
           }
         ],
         "types": {
@@ -540,11 +540,11 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(ISwapRouter)10721": {
+          "t_contract(ISwapRouter)3052": {
             "label": "contract ISwapRouter",
             "numberOfBytes": "20"
           },
-          "t_contract(RocketStorageInterface)10641": {
+          "t_contract(RocketStorageInterface)2972": {
             "label": "contract RocketStorageInterface",
             "numberOfBytes": "20"
           },
