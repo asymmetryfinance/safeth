@@ -9,8 +9,8 @@ import "../interfaces/uniswap/ISwapRouter.sol";
 // DO NOT change order of variables
 // DO NOT remove any variables
 // ONLY add new variables at the end
+// Constant values CAN be modified on upgrade
 contract AfStrategyStorage {
-    // Constant values CAN be modified on upgrade
     uint256 public constant numberOfDerivatives = 3;
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;

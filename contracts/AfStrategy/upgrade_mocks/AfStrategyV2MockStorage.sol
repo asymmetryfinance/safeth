@@ -25,7 +25,7 @@ contract AfStrategyV2MockStorage {
     address public constant frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
     address public constant rocketStorageAddress = 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
     address public constant uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    uint256 public constant ROCKET_POOL_LIMIT = 5000000000000000000000;
+    uint256 public constant ROCKET_POOL_LIMIT = 6000000000000000000000;
 
     address public afETH;
     bool public pauseStaking;
