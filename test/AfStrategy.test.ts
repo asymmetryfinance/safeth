@@ -174,20 +174,6 @@ describe.only("Af Strategy", function () {
       expect(await strategy2.newFunctionCalled()).eq(true);
     });
 
-    // TODo redo this one
-    // it("Should allow modifying constants on upgrade", async () => {
-    //   const rocketPoolLimitBefore = await strategyProxy.ROCKET_POOL_LIMIT();
-    //   const strategy2 = await upgrade(
-    //     strategyProxy.address,
-    //     "AfStrategyV2Mock"
-    //   );
-    //   const rocketPoolLimitAfter = await strategy2.ROCKET_POOL_LIMIT();
-
-    //   expect(rocketPoolLimitBefore).eq(
-    //     BigNumber.from("5000000000000000000000")
-    //   );
-    //   expect(rocketPoolLimitAfter).eq(BigNumber.from("6000000000000000000000"));
-    // });
     it("Should get latest version of an already upgraded contract and use new functionality", async () => {
       await upgrade(strategyProxy.address, "AfStrategyV2Mock");
       const latestContract = await getLatestContract(
