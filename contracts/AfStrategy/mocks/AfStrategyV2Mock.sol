@@ -36,16 +36,11 @@ contract AfStrategyV2Mock is OwnableUpgradeable, AfStrategyV2MockStorage {
     // it is only be called once when the first contract is deployed (not on upogrades)
     function initialize(address _afETH) public initializer {
         _transferOwnership(msg.sender);
-        setValues(_afETH);
+        afETH = _afETH;
     }
 
     function rethAddress() public view returns(address) {
         return RocketStorageInterface(rocketStorageAddress).getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
-    }
-
-    // this is separate from initialize because initialize is not called on upgrades
-    function setValues(address _afETH) public onlyOwner {
-        afETH = _afETH;
     }
 
     function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
