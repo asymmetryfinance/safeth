@@ -90,16 +90,6 @@ contract AfStrategy is OwnableUpgradeable {
         return  ( 10 ** 18 * underlyingValue / totalSupply);
     }
 
-    // special case for getting a price estimate before a deposit has been made
-    function startingPrice() public view returns (uint256) {
-        uint256 fakeTotalSfrxEthValue = ethPerSfrxAmount(10 ** 18);
-        uint256 fakeTotalRethValue = ethPerRethAmount(10 ** 18);
-        uint256 fakeTotalSstEthValue = ethPerWstAmount(10 ** 18);
-        uint256 fakeUnderlyingValue = fakeTotalSfrxEthValue + fakeTotalRethValue + fakeTotalSstEthValue;
-        uint256 fakeTotalSupply = 3 * 10 ** 18;
-        return calculatePrice(fakeUnderlyingValue, fakeTotalSupply);
-    }
-
     function price() public view returns(uint256) {
         // get underlying value
         uint256 totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
@@ -108,7 +98,7 @@ contract AfStrategy is OwnableUpgradeable {
         uint256 underlyingValue = totalSfrxEthValue + totalRethValue + totalWstEthValue;
 
         uint256 totalSupply = IAfETH(afETH).totalSupply();
-        if(totalSupply == 0) return startingPrice();
+        if(totalSupply == 0) return 10 ** 18;
         return calculatePrice(underlyingValue, totalSupply);
     }
 
