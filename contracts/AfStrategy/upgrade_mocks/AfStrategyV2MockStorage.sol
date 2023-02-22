@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "../../interfaces/Iderivative.sol";
 // Upgradeability Rules:
 // DO NOT change existing variable names or types
 // DO NOT change order of variables
@@ -8,7 +9,6 @@ pragma solidity ^0.8.13;
 // ONLY add new variables at the end
 contract AfStrategyV2MockStorage {
     // Constant values CAN be modified on upgrade
-    uint256 public constant numberOfDerivatives = 3;
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address public constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
@@ -29,4 +29,8 @@ contract AfStrategyV2MockStorage {
     bool public pauseUnstaking;
 
     bool public newFunctionCalled; // new variable to demonstrate adding new state on upgrade
+
+    uint256 public derivativeCount;
+    mapping(uint => IDERIVATIVE) public derivatives;
+    mapping(uint => uint) public weights;
 }

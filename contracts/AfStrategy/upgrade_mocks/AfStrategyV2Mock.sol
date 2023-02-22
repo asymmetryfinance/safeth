@@ -36,6 +36,7 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
     function initialize(address _afETH) public initializer {
         _transferOwnership(msg.sender);
         afETH = _afETH;
+        derivativeCount = 3;
     }
 
     function rethAddress() public view returns(address) {
@@ -61,7 +62,7 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
 
-        uint256 ethPerDerivative = msg.value / numberOfDerivatives;
+        uint256 ethPerDerivative = msg.value / derivativeCount;
 
         uint256 preDepositPrice = price();
 

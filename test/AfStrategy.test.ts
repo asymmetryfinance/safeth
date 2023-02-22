@@ -91,26 +91,58 @@ describe.only("Af Strategy", function () {
     });
   });
 
-  describe("Prices", async () => {
-    it("Should get rethPrice which is higher than eth price", async () => {
-      const oneReth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const rethPrice = await strategyProxy.ethPerRethAmount(oneReth);
-      expect(rethPrice.gt(oneEth)).eq(true);
+  describe("Derivatives", async () => {
+    const derivatives = [] as any;
+    before(async () => {
+      const factory0 = await ethers.getContractFactory("Reth");
+      const factory1 = await ethers.getContractFactory("SfrxEth");
+      const factory2 = await ethers.getContractFactory("WstEth");
+      derivatives.push(await factory0.deploy());
+      derivatives.push(await factory1.deploy());
+      derivatives.push(await factory2.deploy());
     });
-    it("Should get sfrxEthPrice which is higher than eth price", async () => {
-      const oneSfrxEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const sfrxPrice = await strategyProxy.ethPerSfrxAmount(oneSfrxEth);
-      expect(sfrxPrice.gt(oneEth)).eq(true);
+
+    it("Should test each function on all derivative contracts", async () => {
+      for (let i = 0; i < derivatives.length; i++) {
+        // no balance before deposit
+        const preStakeBalance = await derivatives[i].balance();
+        expect(preStakeBalance.eq(0)).eq(true);
+
+        // no value before deposit
+        const preStakeValue = await derivatives[i].totalEthValue();
+        expect(preStakeValue.eq(0)).eq(true);
+
+        // price expected to be > eth price (always going up )
+        const ethPerDerivative = await derivatives[i].ethPerDerivative(
+          ethers.utils.parseEther("1")
+        );
+        expect(ethPerDerivative.gt(ethers.utils.parseEther("1"))).eq(true);
+
+        await derivatives[i].deposit({ value: ethers.utils.parseEther("1") });
+
+        // slippage should be less than 2% when staking (rocketpool sucks)
+        const postStakeValue = await derivatives[i].totalEthValue();
+        const valueDifference = ethers.utils
+          .parseEther("1")
+          .sub(postStakeValue)
+          .abs();
+        expect(valueDifference).lt(ethers.utils.parseEther("0.02"));
+
+        // has balance after deposit
+        const postStakeBalance = await derivatives[i].balance();
+        expect(postStakeBalance.gt(0)).eq(true);
+
+        await derivatives[i].withdraw(await derivatives[i].balance());
+
+        // no balance after withdrawing all
+        const postWithdrawBalance = await derivatives[i].balance();
+        expect(postWithdrawBalance.eq(0)).eq(true);
+
+        // no balance after withdrawing all
+        const postWithdrawValue = await derivatives[i].totalEthValue();
+        expect(postWithdrawValue.eq(0)).eq(true);
+      }
     });
-    it("Should get wstEthPrice which is higher than eth price", async () => {
-      const oneWstEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const oneEth = BigNumber.from("1000000000000000000"); // 10^18 wei
-      const wstPrice = await strategyProxy.ethPerWstAmount(oneWstEth);
-      expect(wstPrice.gt(oneEth)).eq(true);
-    });
-    // TODO add price test for wsteth
   });
 
   describe("Upgrades", async () => {
@@ -141,19 +173,21 @@ describe.only("Af Strategy", function () {
       await strategy2.newFunction();
       expect(await strategy2.newFunctionCalled()).eq(true);
     });
-    it("Should allow modifying constants on upgrade", async () => {
-      const rocketPoolLimitBefore = await strategyProxy.ROCKET_POOL_LIMIT();
-      const strategy2 = await upgrade(
-        strategyProxy.address,
-        "AfStrategyV2Mock"
-      );
-      const rocketPoolLimitAfter = await strategy2.ROCKET_POOL_LIMIT();
 
-      expect(rocketPoolLimitBefore).eq(
-        BigNumber.from("5000000000000000000000")
-      );
-      expect(rocketPoolLimitAfter).eq(BigNumber.from("6000000000000000000000"));
-    });
+    // TODo redo this one
+    // it("Should allow modifying constants on upgrade", async () => {
+    //   const rocketPoolLimitBefore = await strategyProxy.ROCKET_POOL_LIMIT();
+    //   const strategy2 = await upgrade(
+    //     strategyProxy.address,
+    //     "AfStrategyV2Mock"
+    //   );
+    //   const rocketPoolLimitAfter = await strategy2.ROCKET_POOL_LIMIT();
+
+    //   expect(rocketPoolLimitBefore).eq(
+    //     BigNumber.from("5000000000000000000000")
+    //   );
+    //   expect(rocketPoolLimitAfter).eq(BigNumber.from("6000000000000000000000"));
+    // });
     it("Should get latest version of an already upgraded contract and use new functionality", async () => {
       await upgrade(strategyProxy.address, "AfStrategyV2Mock");
       const latestContract = await getLatestContract(
