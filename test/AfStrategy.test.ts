@@ -3,10 +3,12 @@ import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Signer } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
-import { deployV1 } from "../upgrade_helpers/deployV1";
 import { afEthAbi } from "./abi/afEthAbi";
-import { upgrade } from "../upgrade_helpers/upgrade";
-import { getLatestContract } from "../upgrade_helpers/getLatestContract";
+import {
+  initialUpgradeableDeploy,
+  upgrade,
+  getLatestContract,
+} from "../helpers/upgradeHelpers";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 
 describe.only("Af Strategy", function () {
@@ -18,7 +20,7 @@ describe.only("Af Strategy", function () {
   let snapshot: any;
 
   before(async () => {
-    strategyProxy = (await deployV1()) as AfStrategy;
+    strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
   });
 
   beforeEach(async () => {
