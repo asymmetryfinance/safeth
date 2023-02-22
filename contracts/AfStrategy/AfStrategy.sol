@@ -48,7 +48,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
     function price() public view returns(uint256) {
         uint256 totalSupply = IAfETH(afETH).totalSupply();
-        uint256 underlyingValue = 0;        
+        uint256 underlyingValue = 0;
         for(uint i=0;i<derivativeCount;i++) underlyingValue += derivatives[i].totalEthValue();
         if(totalSupply == 0) return 10 ** 18;
         return 10 ** 18 * underlyingValue / totalSupply;
