@@ -18,7 +18,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
 
-contract AfStrategy is OwnableUpgradeable, AfStrategyStorage {
+contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
 

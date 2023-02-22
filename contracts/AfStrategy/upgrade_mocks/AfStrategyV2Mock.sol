@@ -18,7 +18,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyV2MockStorage.sol";
 
-contract AfStrategyV2Mock is OwnableUpgradeable, AfStrategyV2MockStorage {
+contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2MockStorage {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
 
