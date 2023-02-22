@@ -31,7 +31,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     // This replaces the constructor for upgradeable contracts
-    // it is only be called once when the first contract is deployed (not on upogrades)
     function initialize(address _afETH) public initializer {
         _transferOwnership(msg.sender);
         afETH = _afETH;
