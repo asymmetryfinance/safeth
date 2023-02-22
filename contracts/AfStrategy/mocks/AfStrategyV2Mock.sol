@@ -16,80 +16,36 @@ import "../../interfaces/lido/IWStETH.sol";
 import "../../interfaces/lido/IstETH.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./AfStrategyV2MockStorage.sol";
 
-// This is an ugradeable contract - variable order matters
-// https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-contract AfStrategyV2Mock is OwnableUpgradeable {
+contract AfStrategyV2Mock is OwnableUpgradeable, AfStrategyV2MockStorage {
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
-
-    RocketStorageInterface private ROCKET_STORAGE;
-    ISwapRouter private SWAP_ROUTER;
-
-    address public afETH;
-    uint256 private numberOfDerivatives;
-
-    uint256 private ROCKET_POOL_LIMIT;
-    bool public pauseStaking;
-    bool public pauseUnstaking;
-
-    address public wETH;
-    address public CVX;
-    address public veCRV;
-    address public vlCVX;
-    address public wstETH;
-    address public stEthToken;
-    address public lidoCrvPool;
-    address public sfrxEthAddress;
-    address public frxEthAddress;
-    address public frxEthCrvPoolAddress;
-    address public frxEthMinterAddress;
-    address public rocketStorageAddress;
-    address public uniswapRouter;
-
-    bool public newFunctionCalled;
 
     function newFunction() public {
         newFunctionCalled = true;
     }
 
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
+    // This replaces the constructor for upgradeable contracts
+    // it is only be called once when the first contract is deployed (not on upogrades)
+    function initialize(address _afETH) public initializer {
+        _transferOwnership(msg.sender);
+        setValues(_afETH);
+    }
+
     function rethAddress() public view returns(address) {
-        return ROCKET_STORAGE.getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
+        return RocketStorageInterface(rocketStorageAddress).getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
     }
 
     // this is separate from initialize because initialize is not called on upgrades
     function setValues(address _afETH) public onlyOwner {
-        wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-        CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-        veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
-        vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
-        wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
-        lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-        sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
-        frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
-        frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
-        frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
-        rocketStorageAddress = 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-        uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
         afETH = _afETH;
-        numberOfDerivatives = 3;
-        SWAP_ROUTER = ISwapRouter(uniswapRouter);
-        ROCKET_STORAGE =
-        RocketStorageInterface(rocketStorageAddress);
-        ROCKET_POOL_LIMIT = 5000000000000000000000;
-    }
-
-    // This replaces the constructor for upgradeable contracts
-    // it is only be called once when the first contract is deployed
-    function initialize(address _afETH) public initializer {
-        _transferOwnership(msg.sender);
-        setValues(_afETH);
     }
 
     function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
@@ -167,7 +123,7 @@ contract AfStrategyV2Mock is OwnableUpgradeable {
         uint24 poolFee,
         uint256 amountIn
     ) public returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(SWAP_ROUTER), amountIn);
+        IERC20(tokenIn).approve(uniswapRouter, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -178,7 +134,7 @@ contract AfStrategyV2Mock is OwnableUpgradeable {
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
             });
-        amountOut = SWAP_ROUTER.exactInputSingle(params);
+        amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
@@ -212,7 +168,7 @@ contract AfStrategyV2Mock is OwnableUpgradeable {
         returns (uint256 rEthAmount)
     {
         // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = ROCKET_STORAGE.getAddress(
+        address rocketDepositPoolAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
         );
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
@@ -230,7 +186,7 @@ contract AfStrategyV2Mock is OwnableUpgradeable {
             );
             return amountSwapped;
         } else {
-            address rocketTokenRETHAddress = ROCKET_STORAGE.getAddress(
+            address rocketTokenRETHAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
