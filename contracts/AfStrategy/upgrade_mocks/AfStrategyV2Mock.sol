@@ -43,10 +43,6 @@ contract AfStrategyV2Mock is OwnableUpgradeable, AfStrategyV2MockStorage {
         return RocketStorageInterface(rocketStorageAddress).getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
     }
 
-    function calculatePrice(uint256 underlyingValue, uint256 totalSupply) public pure returns(uint256) {
-        return  ( 10 ** 18 * underlyingValue / totalSupply);
-    }
-
     function price() public view returns(uint256) {
         // get underlying value
         uint256 totalSfrxEthValue = ethPerSfrxAmount(IERC20(sfrxEthAddress).balanceOf(address(this)));
@@ -56,7 +52,7 @@ contract AfStrategyV2Mock is OwnableUpgradeable, AfStrategyV2MockStorage {
 
         uint256 totalSupply = IAfETH(afETH).totalSupply();
         if(totalSupply == 0) return 10 ** 18;
-        return calculatePrice(underlyingValue, totalSupply);
+        return 10 ** 18 * underlyingValue / totalSupply;
     }
 
     /*//////////////////////////////////////////////////////////////
