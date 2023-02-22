@@ -30,5 +30,4 @@ contract AfStrategyStorage {
     address public afETH;
     bool public pauseStaking;
     bool public pauseUnstaking;
-
 }
