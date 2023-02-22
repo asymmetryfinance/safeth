@@ -68,6 +68,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         }
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
         IAfETH(afETH).mint(msg.sender, mintAmount);
+        emit Staked(msg.sender, msg.value, mintAmount);
     }
 
     function unstake(uint256 safEthAmount) public {
@@ -80,6 +81,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
         address(msg.sender).call{value: ethAmountToWithdraw}("");
+        emit Staked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {
