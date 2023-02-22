@@ -23,6 +23,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event UnstakingPaused(bool paused);
     event Staked(address recipient, uint ethIn, uint safEthOut);
     event Unstaked(address recipient, uint ethOut, uint safEthIn);
+    event WeightChange(uint index, uint weight);
+    event DerivativeAdded(address contractAddress, uint weight, uint index);
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -39,11 +41,13 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
         derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
         weights[derivativeCount] = weight;
+        emit DerivativeAdded(contractAddress, weight, derivativeCount);
         derivativeCount++;
     }
 
     function adjustWeight(uint index, uint weight) public onlyOwner {
         weights[index] = weight;
+        emit WeightChange(index, weight);
     }
 
     function price() public view returns(uint256) {
@@ -81,7 +85,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
         address(msg.sender).call{value: ethAmountToWithdraw}("");
-        emit Staked(msg.sender, ethAmountToWithdraw, safEthAmount);
+        emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {
