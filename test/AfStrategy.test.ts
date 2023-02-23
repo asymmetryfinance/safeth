@@ -190,7 +190,7 @@ describe.only("Af Strategy", function () {
     });
   });
 
-  describe("Rebalance", async () => {
+  describe("Weights & Rebalance", async () => {
     it("Should rebalance the underlying values to current weights", async () => {
       const derivativeCount = (
         await strategyProxy.derivativeCount()
@@ -224,7 +224,7 @@ describe.only("Af Strategy", function () {
           new bigDecimal(underlyingValueBefore.toString()),
           new bigDecimal(0.02)
         )
-      );
+      ).eq(true);
 
       const pricePercentChange = new bigDecimal(priceBefore.toString()).divide(
         new bigDecimal(priceAfter.toString()),
@@ -257,6 +257,45 @@ describe.only("Af Strategy", function () {
         decimalApproxEqual(
           remainingDerivativeValue,
           new bigDecimal((await strategyProxy.derivativeValue(0)).toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
+    });
+
+    it.only("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+
+      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialDeposit = ethers.utils.parseEther("1");
+
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+      }
+      await strategyProxy.stake({ value: initialDeposit });
+
+      const underlyingValueBefore = await strategyProxy.underlyingValue();
+
+      // set derivative 0 to 0, rebalance and stake
+      // This is like 33/33/33 -> 0/50/50
+      await strategyProxy.adjustWeight(0, 0);
+      await strategyProxy.rebalanceToWeights();
+
+      const derivative0ValueAfter = await strategyProxy.derivativeValue(0);
+      // derivative0 should now have 0 value
+      expect(derivative0ValueAfter.toString() === "0").eq(true);
+
+      const underlyingValueAfter = await strategyProxy.underlyingValue();
+
+      // Underlying value is approx the same
+      // 2% tolerance because slippage
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(underlyingValueBefore.toString()),
+          new bigDecimal(underlyingValueAfter.toString()),
           new bigDecimal(0.02)
         )
       ).eq(true);

@@ -63,6 +63,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
+            if(weights[i] == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) / totalWeight;
             totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
         }
