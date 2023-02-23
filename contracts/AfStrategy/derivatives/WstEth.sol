@@ -27,6 +27,7 @@ contract WstEth is IDERIVATIVE, Ownable {
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);      
+        address(msg.sender).call{value: address(this).balance}("");
     }
 
     function deposit() public onlyOwner payable returns (uint256) {

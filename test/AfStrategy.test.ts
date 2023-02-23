@@ -1,15 +1,19 @@
+/* eslint-disable new-cap */
 import { ethers, getNamedAccounts } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Signer } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
+import { derivativeAbi } from "./abi/derivativeAbi";
+
 import {
   initialUpgradeableDeploy,
   upgrade,
   getLatestContract,
 } from "../helpers/upgradeHelpers";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
+import bigDecimal, { divide } from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -186,7 +190,118 @@ describe.only("Af Strategy", function () {
     });
   });
 
-  // Verify that 2 numbers are within 0.000001% of each other
+  describe("Rebalance", async () => {
+    it("Should rebalance the underlying values to current weights", async () => {
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+
+      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialDeposit = ethers.utils.parseEther("1");
+
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+      }
+      await strategyProxy.stake({ value: initialDeposit });
+
+      const underlyingValueBefore = await strategyProxy.underlyingValue();
+      const priceBefore = await strategyProxy.price();
+
+      const derivative0Contract = new ethers.Contract(
+        await strategyProxy.derivatives(0),
+        derivativeAbi,
+        accounts[0]
+      );
+
+      // set weight of derivative0 as equal to the sum of the other weights and rebalance
+      // if there are 3 derivatives this is like going from 33/33/33 -> 50/25/25
+      strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
+      await strategyProxy.rebalanceToWeights();
+
+      const derivative0ValueAfter = await derivative0Contract.totalEthValue();
+
+      const underlyingValueAfter = await strategyProxy.underlyingValue();
+      const priceAfter = await strategyProxy.price();
+
+      // less than 2% difference before and after (because slippage)
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(underlyingValueAfter.toString()),
+          new bigDecimal(underlyingValueBefore.toString()),
+          new bigDecimal(0.02)
+        )
+      );
+
+      const pricePercentChange = new bigDecimal(priceBefore.toString()).divide(
+        new bigDecimal(priceAfter.toString()),
+        18
+      );
+
+      const valuePercentChange = new bigDecimal(
+        underlyingValueBefore.toString()
+      ).divide(new bigDecimal(underlyingValueAfter.toString()), 18);
+
+      // price expected change by almost exactly the same % as value
+      expect(
+        decimalApproxEqual(
+          pricePercentChange,
+          valuePercentChange,
+          new bigDecimal("0.000000001")
+        )
+      ).eq(true);
+
+      let remainingDerivativeValue = new bigDecimal();
+      for (let i = 1; i < derivativeCount; i++) {
+        const derivativeAddress = await strategyProxy.derivatives(i);
+        const derivativeContract = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          accounts[0]
+        );
+        remainingDerivativeValue = remainingDerivativeValue.add(
+          new bigDecimal((await derivativeContract.totalEthValue()).toString())
+        );
+      }
+
+      // value of first derivative should approx equal to the sum of the others (2% tolerance for slippage)
+      expect(
+        decimalApproxEqual(
+          remainingDerivativeValue,
+          new bigDecimal(derivative0ValueAfter.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
+    });
+  });
+
+  // verify that 2 bigDecimals are within a given % of each other
+  const decimalApproxEqual = (
+    amount1: bigDecimal,
+    amount2: bigDecimal,
+    maxDifferencePercent: bigDecimal
+  ) => {
+    if (amount1.compareTo(amount2) === -1) {
+      const differencePercent = new bigDecimal(1).subtract(
+        amount1.divide(amount2, 18)
+      );
+      return (
+        maxDifferencePercent.compareTo(differencePercent) === 1 ||
+        maxDifferencePercent.compareTo(differencePercent) === 0
+      );
+    } else {
+      const differencePercent = new bigDecimal(1).subtract(
+        amount2.divide(amount1, 18)
+      );
+      return (
+        maxDifferencePercent.compareTo(differencePercent) === 1 ||
+        maxDifferencePercent.compareTo(differencePercent) === 0
+      );
+    }
+  };
+
+  // Verify that 2 ethers BigNumbers are within 0.000001% of each other
   const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
     const difference = amount1.gt(amount2)

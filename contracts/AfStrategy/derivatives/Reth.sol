@@ -50,6 +50,7 @@ contract Reth is IDERIVATIVE, Ownable {
 
     function withdraw(uint256 amount) public onlyOwner {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
+        address(msg.sender).call{value: address(this).balance}("");
     }
 
     function deposit() public onlyOwner payable returns (uint256) {

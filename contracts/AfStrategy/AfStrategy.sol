@@ -25,6 +25,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event Unstaked(address recipient, uint ethOut, uint safEthIn);
     event WeightChange(uint index, uint weight);
     event DerivativeAdded(address contractAddress, uint weight, uint index);
+    event Rebalanced(uint ethAmount);
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -50,12 +51,35 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit WeightChange(index, weight);
     }
 
+    function rebalanceToWeights() public onlyOwner {
+        uint256 ethAmountBefore = address(this).balance;
+
+        for(uint i=0;i<derivativeCount;i++) derivatives[i].withdraw(derivatives[i].balance());
+        uint256 ethAmountAfter = address(this).balance;
+        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
+
+        uint totalWeight = 0;
+        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
+
+        uint256 totalStakeValueEth = 0;
+        for(uint i=0;i<derivativeCount;i++) {
+            uint256 ethAmount = (ethAmountToRebalance * weights[i]) / totalWeight;
+            totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+        }
+ 
+        emit Rebalanced(ethAmountToRebalance);
+    }
+
+    function underlyingValue() public view returns (uint256) {
+        uint256 total = 0;
+        for(uint i=0;i<derivativeCount;i++) total += derivatives[i].totalEthValue();
+        return total;
+    }
+
     function price() public view returns(uint256) {
         uint256 totalSupply = IAfETH(afETH).totalSupply();
-        uint256 underlyingValue = 0;
-        for(uint i=0;i<derivativeCount;i++) underlyingValue += derivatives[i].totalEthValue();
         if(totalSupply == 0) return 10 ** 18;
-        return 10 ** 18 * underlyingValue / totalSupply;
+        return 10 ** 18 * underlyingValue() / totalSupply;
     }
 
     function stake() public payable {
