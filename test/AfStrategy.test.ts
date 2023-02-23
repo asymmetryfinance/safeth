@@ -209,18 +209,10 @@ describe.only("Af Strategy", function () {
       const underlyingValueBefore = await strategyProxy.underlyingValue();
       const priceBefore = await strategyProxy.price();
 
-      const derivative0Contract = new ethers.Contract(
-        await strategyProxy.derivatives(0),
-        derivativeAbi,
-        accounts[0]
-      );
-
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // if there are 3 derivatives this is like going from 33/33/33 -> 50/25/25
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await strategyProxy.rebalanceToWeights();
-
-      const derivative0ValueAfter = await derivative0Contract.totalEthValue();
 
       const underlyingValueAfter = await strategyProxy.underlyingValue();
       const priceAfter = await strategyProxy.price();
@@ -252,16 +244,11 @@ describe.only("Af Strategy", function () {
         )
       ).eq(true);
 
+      // value of all derivatives excluding the first
       let remainingDerivativeValue = new bigDecimal();
       for (let i = 1; i < derivativeCount; i++) {
-        const derivativeAddress = await strategyProxy.derivatives(i);
-        const derivativeContract = new ethers.Contract(
-          derivativeAddress,
-          derivativeAbi,
-          accounts[0]
-        );
         remainingDerivativeValue = remainingDerivativeValue.add(
-          new bigDecimal((await derivativeContract.totalEthValue()).toString())
+          new bigDecimal((await strategyProxy.derivativeValue(i)).toString())
         );
       }
 
@@ -269,7 +256,7 @@ describe.only("Af Strategy", function () {
       expect(
         decimalApproxEqual(
           remainingDerivativeValue,
-          new bigDecimal(derivative0ValueAfter.toString()),
+          new bigDecimal((await strategyProxy.derivativeValue(0)).toString()),
           new bigDecimal(0.02)
         )
       ).eq(true);

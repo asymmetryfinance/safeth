@@ -70,6 +70,10 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Rebalanced(ethAmountToRebalance);
     }
 
+    function derivativeValue(uint256 index) public view returns (uint256) {
+        return derivatives[index].totalEthValue();
+    }
+
     function underlyingValue() public view returns (uint256) {
         uint256 total = 0;
         for(uint i=0;i<derivativeCount;i++) total += derivatives[i].totalEthValue();
@@ -91,6 +95,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
+            if(weights[i] == 0) continue;
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
             totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
         }
