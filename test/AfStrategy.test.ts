@@ -1,8 +1,8 @@
 /* eslint-disable new-cap */
-import { ethers, getNamedAccounts } from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, Signer } from "ethers";
+import { BigNumber } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
 
@@ -15,28 +15,21 @@ import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 import bigDecimal from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
-  let accounts: SignerWithAddress[];
+  let adminAccount: SignerWithAddress;
   let afEth: AfETH;
   let strategyProxy: AfStrategy;
-  let aliceSigner: Signer;
-
   let snapshot: any;
 
   before(async () => {
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
-  });
-
-  beforeEach(async () => {
-    const { alice } = await getNamedAccounts();
-    accounts = await ethers.getSigners();
+    const accounts = await ethers.getSigners();
+    adminAccount = accounts[0];
     const afEthAddress = await strategyProxy.afETH();
     afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
     await afEth.setMinter(strategyProxy.address);
-    // signing defaults to admin, use this to sign for other wallets
-    // you can add and name wallets in hardhat.config.ts
-    aliceSigner = accounts.find(
-      (account) => account.address === alice
-    ) as Signer;
+  });
+
+  beforeEach(async () => {
     snapshot = await takeSnapshot();
   });
 
@@ -46,50 +39,47 @@ describe.only("Af Strategy", function () {
 
   describe("Deposit/Withdraw", function () {
     it("Should deposit without changing the underlying price by a significant amount", async () => {
-      const aliceStrategySigner = strategyProxy.connect(aliceSigner as Signer);
-
       const depositAmount = ethers.utils.parseEther("1");
 
-      const price0 = await aliceStrategySigner.price();
+      const price0 = await strategyProxy.price();
 
-      await aliceStrategySigner.stake({ value: depositAmount });
-      const price1 = await aliceStrategySigner.price();
+      await strategyProxy.stake({ value: depositAmount });
+      const price1 = await strategyProxy.price();
       expect(approxEqual(price0, price1)).eq(true);
 
-      await aliceStrategySigner.stake({ value: depositAmount });
-      const price2 = await aliceStrategySigner.price();
+      await strategyProxy.stake({ value: depositAmount });
+      const price2 = await strategyProxy.price();
       expect(approxEqual(price1, price2)).eq(true);
 
-      await aliceStrategySigner.stake({ value: depositAmount });
-      const price3 = await aliceStrategySigner.price();
+      await strategyProxy.stake({ value: depositAmount });
+      const price3 = await strategyProxy.price();
       expect(approxEqual(price2, price3)).eq(true);
     });
     it("Should withdraw without changing the underlying price by a significant amount", async () => {
-      const { alice } = await getNamedAccounts();
-
-      const aliceStrategySigner = strategyProxy.connect(aliceSigner as Signer);
       const depositAmount = ethers.utils.parseEther("1");
 
-      await aliceStrategySigner.stake({ value: depositAmount });
+      await strategyProxy.stake({ value: depositAmount });
 
-      const unstakeAmountPerTx = (await afEth.balanceOf(alice)).div(4);
+      const unstakeAmountPerTx = (
+        await afEth.balanceOf(adminAccount.address)
+      ).div(4);
 
-      const price0 = await aliceStrategySigner.price();
+      const price0 = await strategyProxy.price();
 
-      await aliceStrategySigner.unstake(unstakeAmountPerTx);
-      const price1 = await aliceStrategySigner.price();
+      await strategyProxy.unstake(unstakeAmountPerTx);
+      const price1 = await strategyProxy.price();
       expect(approxEqual(price0, price1)).eq(true);
 
-      await aliceStrategySigner.unstake(unstakeAmountPerTx);
-      const price2 = await aliceStrategySigner.price();
+      await strategyProxy.unstake(unstakeAmountPerTx);
+      const price2 = await strategyProxy.price();
       expect(approxEqual(price1, price2)).eq(true);
 
-      await aliceStrategySigner.unstake(unstakeAmountPerTx);
-      const price3 = await aliceStrategySigner.price();
+      await strategyProxy.unstake(unstakeAmountPerTx);
+      const price3 = await strategyProxy.price();
       expect(approxEqual(price2, price3)).eq(true);
 
-      await aliceStrategySigner.unstake(await afEth.balanceOf(alice));
-      const price4 = await aliceStrategySigner.price();
+      await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
+      const price4 = await strategyProxy.price();
       expect(approxEqual(price3, price4)).eq(true);
     });
   });
@@ -195,7 +185,7 @@ describe.only("Af Strategy", function () {
         await strategyProxy.derivativeCount()
       ).toNumber();
 
-      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialWeight = BigNumber.from("1000000000000000000"); // 10^18
       const initialDeposit = ethers.utils.parseEther("1");
 
       // set all derivatives to the same weight and stake
@@ -261,7 +251,7 @@ describe.only("Af Strategy", function () {
       ).eq(true);
     });
 
-    it.only("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
+    it("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
       const derivativeCount = (
         await strategyProxy.derivativeCount()
       ).toNumber();
@@ -299,7 +289,7 @@ describe.only("Af Strategy", function () {
         )
       ).eq(true);
 
-      await strategyProxy.unstake(await afEth.balanceOf(accounts[0].address));
+      await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
 
       const finalUnderlyingValue = await strategyProxy.underlyingValue();
       // successfully withdrew with a 0 weight
