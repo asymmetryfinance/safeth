@@ -210,7 +210,7 @@ describe.only("Af Strategy", function () {
       const priceBefore = await strategyProxy.price();
 
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
-      // if there are 3 derivatives this is like going from 33/33/33 -> 50/25/25
+      // this is like 33/33/33 -> 50/25/25 (3 derivatives) or 25/25/25/25 -> 50/16.66/16.66/16.66 (4 derivatives)
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await strategyProxy.rebalanceToWeights();
 
