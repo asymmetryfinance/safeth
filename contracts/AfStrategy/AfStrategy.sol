@@ -109,7 +109,11 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         require(pauseUnstaking == false, "unstaking is paused");
         uint256 safEthTotalSupply = IAfETH(afETH).totalSupply();
         uint256 ethAmountBefore = address(this).balance;
-        for(uint i=0;i<derivativeCount;i++) derivatives[i].withdraw((derivatives[i].balance() * safEthAmount) / safEthTotalSupply);
+        for(uint256 i=0;i<derivativeCount;i++) {
+            uint256 derivativeAmount = (derivatives[i].balance() * safEthAmount) / safEthTotalSupply;
+            if(derivativeAmount == 0) continue;
+            derivatives[i].withdraw(derivativeAmount);
+        }
         IAfETH(afETH).burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;

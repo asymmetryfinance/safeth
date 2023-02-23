@@ -5,7 +5,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Signer } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
-import { derivativeAbi } from "./abi/derivativeAbi";
 
 import {
   initialUpgradeableDeploy,
@@ -13,7 +12,7 @@ import {
   getLatestContract,
 } from "../helpers/upgradeHelpers";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
-import bigDecimal, { divide } from "js-big-decimal";
+import bigDecimal from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
   let accounts: SignerWithAddress[];
@@ -299,6 +298,12 @@ describe.only("Af Strategy", function () {
           new bigDecimal(0.02)
         )
       ).eq(true);
+
+      await strategyProxy.unstake(await afEth.balanceOf(accounts[0].address));
+
+      const finalUnderlyingValue = await strategyProxy.underlyingValue();
+      // successfully withdrew with a 0 weight
+      expect(finalUnderlyingValue.toString()).eq("0");
     });
   });
 
