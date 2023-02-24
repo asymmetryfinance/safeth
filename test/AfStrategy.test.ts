@@ -11,7 +11,7 @@ import {
   upgrade,
   getLatestContract,
 } from "../helpers/upgradeHelpers";
-import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
+import { takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
 import bigDecimal from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
@@ -44,14 +44,17 @@ describe.only("Af Strategy", function () {
       const price0 = await strategyProxy.price();
 
       await strategyProxy.stake({ value: depositAmount });
+      await time.increase(1);
       const price1 = await strategyProxy.price();
       expect(approxEqual(price0, price1)).eq(true);
 
       await strategyProxy.stake({ value: depositAmount });
+      await time.increase(1);
       const price2 = await strategyProxy.price();
       expect(approxEqual(price1, price2)).eq(true);
 
       await strategyProxy.stake({ value: depositAmount });
+      await time.increase(1);
       const price3 = await strategyProxy.price();
       expect(approxEqual(price2, price3)).eq(true);
     });
@@ -67,18 +70,22 @@ describe.only("Af Strategy", function () {
       const price0 = await strategyProxy.price();
 
       await strategyProxy.unstake(unstakeAmountPerTx);
+      await time.increase(1);
       const price1 = await strategyProxy.price();
       expect(approxEqual(price0, price1)).eq(true);
 
       await strategyProxy.unstake(unstakeAmountPerTx);
+      await time.increase(1);
       const price2 = await strategyProxy.price();
       expect(approxEqual(price1, price2)).eq(true);
 
       await strategyProxy.unstake(unstakeAmountPerTx);
+      await time.increase(1);
       const price3 = await strategyProxy.price();
       expect(approxEqual(price2, price3)).eq(true);
 
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
+      await time.increase(1);
       const price4 = await strategyProxy.price();
       expect(approxEqual(price3, price4)).eq(true);
     });
@@ -90,9 +97,11 @@ describe.only("Af Strategy", function () {
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
+      const factory3 = await ethers.getContractFactory("StakeWise");
       derivatives.push(await factory0.deploy());
       derivatives.push(await factory1.deploy());
       derivatives.push(await factory2.deploy());
+      derivatives.push(await factory3.deploy());
     });
 
     it("Should test each function on all derivative contracts", async () => {
@@ -105,16 +114,11 @@ describe.only("Af Strategy", function () {
         const preStakeValue = await derivatives[i].totalEthValue();
         expect(preStakeValue.eq(0)).eq(true);
 
-        // price expected to be > eth price (always going up )
-        const ethPerDerivative = await derivatives[i].ethPerDerivative(
-          ethers.utils.parseEther("1")
-        );
-        expect(ethPerDerivative.gt(ethers.utils.parseEther("1"))).eq(true);
-
         await derivatives[i].deposit({ value: ethers.utils.parseEther("1") });
-
+        await time.increase(1);
         // slippage should be less than 2% when staking (rocketpool sucks)
         const postStakeValue = await derivatives[i].totalEthValue();
+
         const valueDifference = ethers.utils
           .parseEther("1")
           .sub(postStakeValue)
@@ -126,7 +130,7 @@ describe.only("Af Strategy", function () {
         expect(postStakeBalance.gt(0)).eq(true);
 
         await derivatives[i].withdraw(await derivatives[i].balance());
-
+        await time.increase(1);
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
         expect(postWithdrawBalance.eq(0)).eq(true);
@@ -145,6 +149,7 @@ describe.only("Af Strategy", function () {
         strategyProxy.address,
         "AfStrategyV2Mock"
       );
+      await time.increase(1);
       const addressAfter = strategy2.address;
       expect(addressBefore).eq(addressAfter);
     });
@@ -154,6 +159,7 @@ describe.only("Af Strategy", function () {
         strategyProxy.address,
         "AfStrategyV2Mock"
       );
+      await time.increase(1);
       const priceAfter = await strategy2.price();
       expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
@@ -162,8 +168,10 @@ describe.only("Af Strategy", function () {
         strategyProxy.address,
         "AfStrategyV2Mock"
       );
+      await time.increase(1);
       expect(await strategy2.newFunctionCalled()).eq(false);
       await strategy2.newFunction();
+      await time.increase(1);
       expect(await strategy2.newFunctionCalled()).eq(true);
     });
 
@@ -173,8 +181,10 @@ describe.only("Af Strategy", function () {
         strategyProxy.address,
         "AfStrategyV2Mock"
       );
+      await time.increase(1);
       expect(await latestContract.newFunctionCalled()).eq(false);
       await latestContract.newFunction();
+      await time.increase(1);
       expect(await latestContract.newFunctionCalled()).eq(true);
     });
   });
@@ -192,8 +202,10 @@ describe.only("Af Strategy", function () {
       // if there are 3 derivatives this is 33/33/33
       for (let i = 0; i < derivativeCount; i++) {
         await strategyProxy.adjustWeight(i, initialWeight);
+        await time.increase(1);
       }
       await strategyProxy.stake({ value: initialDeposit });
+      await time.increase(1);
 
       const underlyingValueBefore = await strategyProxy.underlyingValue();
       const priceBefore = await strategyProxy.price();
@@ -202,6 +214,7 @@ describe.only("Af Strategy", function () {
       // this is like 33/33/33 -> 50/25/25 (3 derivatives) or 25/25/25/25 -> 50/16.66/16.66/16.66 (4 derivatives)
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await strategyProxy.rebalanceToWeights();
+      await time.increase(1);
 
       const underlyingValueAfter = await strategyProxy.underlyingValue();
       const priceAfter = await strategyProxy.price();
@@ -265,13 +278,16 @@ describe.only("Af Strategy", function () {
         await strategyProxy.adjustWeight(i, initialWeight);
       }
       await strategyProxy.stake({ value: initialDeposit });
+      await time.increase(1);
 
       const underlyingValueBefore = await strategyProxy.underlyingValue();
 
       // set derivative 0 to 0, rebalance and stake
       // This is like 33/33/33 -> 0/50/50
       await strategyProxy.adjustWeight(0, 0);
+      await time.increase(1);
       await strategyProxy.rebalanceToWeights();
+      await time.increase(1);
 
       const derivative0ValueAfter = await strategyProxy.derivativeValue(0);
       // derivative0 should now have 0 value

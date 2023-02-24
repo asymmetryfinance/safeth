@@ -97,7 +97,9 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         for(uint i=0;i<derivativeCount;i++) {
             if(weights[i] == 0) continue;
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            // This is slightly less than ethAmount because slippage
+            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            totalStakeValueEth += derivativeReceivedEthValue;
         }
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
         IAfETH(afETH).mint(msg.sender, mintAmount);
