@@ -25,7 +25,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event Unstaked(address recipient, uint ethOut, uint safEthIn);
     event WeightChange(uint index, uint weight);
     event DerivativeAdded(address contractAddress, uint weight, uint index);
-    event Rebalanced(uint ethAmount);
+    event Rebalanced();
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -65,10 +65,9 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         for(uint i=0;i<derivativeCount;i++) {
             if(weights[i] == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            totalStakeValueEth += derivatives[i].deposit{value: ethAmount}();
         }
- 
-        emit Rebalanced(totalStakeValueEth);
+
     }
 
     function derivativeValue(uint256 index) public view returns (uint256) {
