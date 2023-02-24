@@ -12,13 +12,12 @@ import "hardhat/console.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/stakewise/IStakewiseStaker.sol";
-// Stakewise unique features:
-// stake to receive sETH2 (stablecoin)
-// Rewards are accumulated daily in rEth2 (stablecoin)
-// So theres really 2 underlying tokens here.
 
-// There is an "activation period" that applies to larger deposits but the deposit size required is currently HUGE
-// For simplicity we throw if our deposit requires an activation period.
+// Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.
+// both are stable(ish) to eth but you receive rewards in rEth2
+
+// There is also an "activation period" that applies to larger deposits.
+// For simplicity we should throw if our deposit requires an activation period
 // This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
 contract StakeWise is IDERIVATIVE, Ownable {
     using SafeMath for uint256;
@@ -52,6 +51,7 @@ contract StakeWise is IDERIVATIVE, Ownable {
         address(msg.sender).call{value: address(this).balance}("");
     }
 
+    // TODO check and throw if there is an activation period
     function deposit() public payable onlyOwner returns (uint256) {
         uint256 balanceBefore = IERC20(sEth2).balanceOf(address(this));
         IStakewiseStaker(staker).stake{value: msg.value}();
