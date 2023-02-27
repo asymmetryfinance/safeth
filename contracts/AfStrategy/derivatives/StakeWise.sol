@@ -6,7 +6,6 @@ import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
@@ -20,7 +19,6 @@ import "../../interfaces/stakewise/IStakewiseStaker.sol";
 // For simplicity we should throw if our deposit requires an activation period
 // This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
 contract StakeWise is IDERIVATIVE, Ownable {
-    using SafeMath for uint256;
 
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
@@ -113,11 +111,11 @@ contract StakeWise is IDERIVATIVE, Ownable {
 
     function estimatedSellSeth2Output(uint256 amount) public view returns (uint) {
         //IERC20(sEth2).balanceOf(address(this))
-        return uint256(uint256(poolPrice(seth2WethPool)).mul(amount)).div(10 ** 18);
+        return (poolPrice(seth2WethPool) * (amount)) / (10 ** 18);
     }
 
     function estimatedSellReth2Output(uint256 amount) public view returns (uint) {
-        return uint256(uint256(poolPrice(rEth2Seth2Pool)).mul(amount)).div(10 ** 18);
+        return (poolPrice(rEth2Seth2Pool) * (amount)) / (10 ** 18);
     }
 
     // TODO figure out if this price is rEth2/sEth2 or sEth2/rEth2
@@ -129,7 +127,7 @@ contract StakeWise is IDERIVATIVE, Ownable {
     {
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (uint160 sqrtPriceX96,,,,,,) =  pool.slot0();
-        return uint(sqrtPriceX96).mul(uint(sqrtPriceX96)).mul(1e18) >> (96 * 2);
+        return sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18) >> (96 * 2);
     }
 
     receive() external payable {}
