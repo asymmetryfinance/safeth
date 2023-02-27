@@ -11,14 +11,18 @@ import {
   upgrade,
   getLatestContract,
 } from "../helpers/upgradeHelpers";
-import { takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
+import {
+  SnapshotRestorer,
+  takeSnapshot,
+  time,
+} from "@nomicfoundation/hardhat-network-helpers";
 import bigDecimal from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
   let afEth: AfETH;
   let strategyProxy: AfStrategy;
-  let snapshot: any;
+  let snapshot: SnapshotRestorer;
 
   before(async () => {
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
@@ -38,28 +42,51 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Deposit/Withdraw", function () {
-    it("Should deposit without changing the underlying price by a significant amount", async () => {
+    it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
 
-      const price0 = await strategyProxy.price();
+      const price0 = await strategyProxy.valueBySupply();
+
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+      const initialWeight = BigNumber.from("1000000000000000000");
+
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+        await time.increase(1);
+      }
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
-      const price1 = await strategyProxy.price();
+      const price1 = await strategyProxy.valueBySupply();
       expect(approxEqual(price0, price1)).eq(true);
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
-      const price2 = await strategyProxy.price();
+      const price2 = await strategyProxy.valueBySupply();
       expect(approxEqual(price1, price2)).eq(true);
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
-      const price3 = await strategyProxy.price();
+      const price3 = await strategyProxy.valueBySupply();
       expect(approxEqual(price2, price3)).eq(true);
     });
-    it("Should withdraw without changing the underlying price by a significant amount", async () => {
+    it("Should withdraw without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+      const initialWeight = BigNumber.from("1000000000000000000");
+
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+        await time.increase(1);
+      }
 
       await strategyProxy.stake({ value: depositAmount });
 
@@ -67,26 +94,26 @@ describe.only("Af Strategy", function () {
         await afEth.balanceOf(adminAccount.address)
       ).div(4);
 
-      const price0 = await strategyProxy.price();
+      const price0 = await strategyProxy.valueBySupply();
 
       await strategyProxy.unstake(unstakeAmountPerTx);
       await time.increase(1);
-      const price1 = await strategyProxy.price();
+      const price1 = await strategyProxy.valueBySupply();
       expect(approxEqual(price0, price1)).eq(true);
 
       await strategyProxy.unstake(unstakeAmountPerTx);
       await time.increase(1);
-      const price2 = await strategyProxy.price();
+      const price2 = await strategyProxy.valueBySupply();
       expect(approxEqual(price1, price2)).eq(true);
 
       await strategyProxy.unstake(unstakeAmountPerTx);
       await time.increase(1);
-      const price3 = await strategyProxy.price();
+      const price3 = await strategyProxy.valueBySupply();
       expect(approxEqual(price2, price3)).eq(true);
 
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
       await time.increase(1);
-      const price4 = await strategyProxy.price();
+      const price4 = await strategyProxy.valueBySupply();
       expect(approxEqual(price3, price4)).eq(true);
     });
   });
@@ -153,14 +180,14 @@ describe.only("Af Strategy", function () {
       const addressAfter = strategy2.address;
       expect(addressBefore).eq(addressAfter);
     });
-    it("Should have roughly the same price after upgrading", async () => {
-      const priceBefore = await strategyProxy.price();
+    it("Should have roughly the same valueBySupply after upgrading", async () => {
+      const priceBefore = await strategyProxy.valueBySupply();
       const strategy2 = await upgrade(
         strategyProxy.address,
         "AfStrategyV2Mock"
       );
       await time.increase(1);
-      const priceAfter = await strategy2.price();
+      const priceAfter = await strategy2.valueBySupply();
       expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
     it("Should allow v2 functionality to be used after upgrading", async () => {
@@ -208,7 +235,7 @@ describe.only("Af Strategy", function () {
       await time.increase(1);
 
       const underlyingValueBefore = await strategyProxy.underlyingValue();
-      const priceBefore = await strategyProxy.price();
+      const priceBefore = await strategyProxy.valueBySupply();
 
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // this is like 33/33/33 -> 50/25/25 (3 derivatives) or 25/25/25/25 -> 50/16.66/16.66/16.66 (4 derivatives)
@@ -217,7 +244,7 @@ describe.only("Af Strategy", function () {
       await time.increase(1);
 
       const underlyingValueAfter = await strategyProxy.underlyingValue();
-      const priceAfter = await strategyProxy.price();
+      const priceAfter = await strategyProxy.valueBySupply();
 
       // less than 2% difference before and after (because slippage)
       expect(
@@ -237,7 +264,7 @@ describe.only("Af Strategy", function () {
         underlyingValueBefore.toString()
       ).divide(new bigDecimal(underlyingValueAfter.toString()), 18);
 
-      // price expected change by almost exactly the same % as value
+      // valueBySupply expected change by almost exactly the same % as value
       expect(
         decimalApproxEqual(
           pricePercentChange,

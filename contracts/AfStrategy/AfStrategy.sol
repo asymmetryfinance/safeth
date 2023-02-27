@@ -46,8 +46,11 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         derivativeCount++;
     }
 
-    function adjustWeight(uint index, uint weight) public onlyOwner {
+    function adjustWeight(uint256 index, uint256 weight) public onlyOwner {
         weights[index] = weight;
+        uint256 localTotalWeight = 0;
+        for(uint256 i = 0; i < derivativeCount; i++) localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
         emit WeightChange(index, weight);
     }
 
@@ -58,16 +61,13 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
-        uint totalWeight = 0;
-        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
-
-        uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
             if(weights[i] == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].deposit{value: ethAmount}();
+            // Price will change due to slippage
+            derivatives[i].deposit{value: ethAmount}();
         }
-
+        emit Rebalanced();
     }
 
     function derivativeValue(uint256 index) public view returns (uint256) {
@@ -89,9 +89,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
         uint256 preDepositPrice = valueBySupply();
-
-        uint totalWeight =0;
-        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
