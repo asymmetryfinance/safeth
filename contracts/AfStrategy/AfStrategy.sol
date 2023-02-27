@@ -19,12 +19,12 @@ import "./derivatives/Reth.sol";
 import "./derivatives/WstEth.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
-    event StakingPaused(bool paused);
-    event UnstakingPaused(bool paused);
-    event Staked(address recipient, uint ethIn, uint safEthOut);
-    event Unstaked(address recipient, uint ethOut, uint safEthIn);
-    event WeightChange(uint index, uint weight);
-    event DerivativeAdded(address contractAddress, uint weight, uint index);
+    event StakingPaused(bool indexed paused);
+    event UnstakingPaused(bool indexed paused);
+    event Staked(address indexed recipient, uint ethIn, uint safEthOut);
+    event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
+    event WeightChange(uint indexed index, uint weight);
+    event DerivativeAdded(address indexed contractAddress, uint weight, uint index);
     event Rebalanced();
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
