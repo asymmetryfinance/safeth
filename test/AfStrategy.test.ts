@@ -1,5 +1,5 @@
 /* eslint-disable new-cap */
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
@@ -62,7 +62,7 @@ describe.only("Af Strategy", function () {
       const depositAmount = ethers.utils.parseEther("1");
 
       await strategyProxy.stake({ value: depositAmount });
-
+      await time.increase(1);
       const unstakeAmountPerTx = (
         await afEth.balanceOf(adminAccount.address)
       ).div(4);
@@ -98,10 +98,22 @@ describe.only("Af Strategy", function () {
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
       const factory3 = await ethers.getContractFactory("StakeWise");
-      derivatives.push(await factory0.deploy());
-      derivatives.push(await factory1.deploy());
-      derivatives.push(await factory2.deploy());
-      derivatives.push(await factory3.deploy());
+
+      const derivative0 = await upgrades.deployProxy(factory0);
+      await derivative0.deployed();
+      derivatives.push(derivative0);
+
+      const derivative1 = await upgrades.deployProxy(factory1);
+      await derivative1.deployed();
+      derivatives.push(derivative1);
+
+      const derivative2 = await upgrades.deployProxy(factory2);
+      await derivative2.deployed();
+      derivatives.push(derivative2);
+
+      const derivative3 = await upgrades.deployProxy(factory3);
+      await derivative3.deployed();
+      derivatives.push(derivative3);
     });
 
     it("Should test each function on all derivative contracts", async () => {
@@ -139,6 +151,60 @@ describe.only("Af Strategy", function () {
         const postWithdrawValue = await derivatives[i].totalEthValue();
         expect(postWithdrawValue.eq(0)).eq(true);
       }
+    });
+
+    it("Should upgrade a derivative contract and have same values before and after upgrade", async () => {
+      const derivativeToUpgrade = derivatives[0];
+
+      const addressBefore = derivativeToUpgrade.address;
+      const priceBefore = await derivativeToUpgrade.ethPerDerivative(
+        "1000000000000000000"
+      );
+
+      const upgradedDerivative = await upgrade(addressBefore, "DerivativeMock");
+      await upgradedDerivative.deployed();
+
+      const addressAfter = upgradedDerivative.address;
+      const priceAfter = await derivativeToUpgrade.ethPerDerivative(
+        "1000000000000000000"
+      );
+
+      // value same before and after
+      expect(addressBefore).eq(addressAfter);
+      expect(priceBefore).eq(priceAfter);
+    });
+
+    it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
+      const derivativeToUpgrade = derivatives[0];
+
+      const upgradedDerivative = await upgrade(
+        derivativeToUpgrade.address,
+        "DerivativeMock"
+      );
+      await upgradedDerivative.deployed();
+
+      const depositAmount = ethers.utils.parseEther("1");
+
+      await upgradedDerivative.deposit({ value: ethers.utils.parseEther("1") });
+      await time.increase(1);
+
+      const balanceBeforeWithdraw = await adminAccount.getBalance();
+
+      // new functionality
+      await upgradedDerivative.withdrawAll();
+
+      const balanceAfterWithdraw = await adminAccount.getBalance();
+      const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
+
+      // Value in and out approx same
+      // 2% tolerance because slippage
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(depositAmount.toString()),
+          new bigDecimal(withdrawAmount.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
     });
   });
 
@@ -186,6 +252,41 @@ describe.only("Af Strategy", function () {
       await latestContract.newFunction();
       await time.increase(1);
       expect(await latestContract.newFunctionCalled()).eq(true);
+    });
+
+    it("Should be able to upgrade both the strategy contract and its derivatives and still function correctly", async () => {
+      const strategy2 = await upgrade(
+        strategyProxy.address,
+        "AfStrategyV2Mock"
+      );
+
+      const derivativeAddressToUpgrade = await strategy2.derivatives(1);
+
+      const upgradedDerivative = await upgrade(
+        derivativeAddressToUpgrade,
+        "DerivativeMock"
+      );
+      await upgradedDerivative.deployed();
+
+      const depositAmount = ethers.utils.parseEther("1");
+      await strategy2.stake({ value: depositAmount });
+      await time.increase(1);
+
+      const balanceBeforeWithdraw = await adminAccount.getBalance();
+      await strategy2.unstake(await afEth.balanceOf(adminAccount.address));
+      const balanceAfterWithdraw = await adminAccount.getBalance();
+
+      const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
+
+      // Value in and out approx same
+      // 2% tolerance because slippage
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(depositAmount.toString()),
+          new bigDecimal(withdrawAmount.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
     });
   });
 

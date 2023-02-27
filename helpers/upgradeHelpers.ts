@@ -15,22 +15,26 @@ export const initialUpgradeableDeploy = async function () {
   // deploy derivatives and add to strategy
 
   const derivativeFactory0 = await ethers.getContractFactory("Reth");
-  const derivative0 = await derivativeFactory0.deploy();
+  const derivative0 = await upgrades.deployProxy(derivativeFactory0);
+  await derivative0.deployed();
   await derivative0.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(derivative0.address, "1000000000000000000");
 
   const derivativeFactory1 = await ethers.getContractFactory("SfrxEth");
-  const derivative1 = await derivativeFactory1.deploy();
+  const derivative1 = await upgrades.deployProxy(derivativeFactory1);
+  await derivative1.deployed();
   await derivative1.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(derivative1.address, "1000000000000000000");
 
   const derivativeFactory2 = await ethers.getContractFactory("WstEth");
-  const derivative2 = await derivativeFactory2.deploy();
+  const derivative2 = await upgrades.deployProxy(derivativeFactory2);
+  await derivative2.deployed();
   await derivative2.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(derivative2.address, "1000000000000000000");
 
   const derivativeFactory3 = await ethers.getContractFactory("StakeWise");
-  const derivative3 = await derivativeFactory3.deploy();
+  const derivative3 = await upgrades.deployProxy(derivativeFactory3);
+  await derivative3.deployed();
   await derivative3.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(derivative3.address, "1000000000000000000");
   return afStrategy;
