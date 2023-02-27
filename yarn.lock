@@ -7074,6 +7074,11 @@ isstream@~0.1.2:
   resolved "https://registry.yarnpkg.com/isstream/-/isstream-0.1.2.tgz#47e63f7af55afa6f92e1500e690eb8b8529c099a"
   integrity sha512-Yljz7ffyPbrLpLngrMtZ7NduUgVvi6wG9RJ9IUcyCd59YQ911PBJphODUcbOVbqYfxe1wuYf/LJ8PauMRwsM/g==
 
+js-big-decimal@^1.4.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/js-big-decimal/-/js-big-decimal-1.4.1.tgz#e79423a1d06e55a390547d75233ff289c3dd8820"
+  integrity sha512-lEE6kXojqv1/ky/H0nTTg5gi+1g+V6O94T2GPpZTGayXGeYIC6f6PszckNsEa7S2+qgas9ZOEkONMryxXVKWwQ==
+
 js-sdsl@^4.1.4:
   version "4.1.5"
   resolved "https://registry.yarnpkg.com/js-sdsl/-/js-sdsl-4.1.5.tgz#1ff1645e6b4d1b028cd3f862db88c9d887f26e2a"

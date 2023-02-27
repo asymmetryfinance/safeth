@@ -2,8 +2,8 @@ import { ethers, upgrades } from "hardhat";
 import { AfETH } from "../typechain-types";
 
 export const initialUpgradeableDeploy = async function () {
-  const afETHDeployment = await ethers.getContractFactory("afETH");
-  const afEth = (await afETHDeployment.deploy(
+  const afETHFactory = await ethers.getContractFactory("afETH");
+  const afEth = (await afETHFactory.deploy(
     "Asymmetry Finance ETH",
     "afETH"
   )) as AfETH;
@@ -11,6 +11,28 @@ export const initialUpgradeableDeploy = async function () {
   const AfStrategy = await ethers.getContractFactory("AfStrategy");
   const afStrategy = await upgrades.deployProxy(AfStrategy, [afEth.address]);
   await afStrategy.deployed();
+
+  // deploy derivatives and add to strategy
+
+  const derivativeFactory0 = await ethers.getContractFactory("Reth");
+  const derivative0 = await derivativeFactory0.deploy();
+  await derivative0.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(derivative0.address, "1000000000000000000");
+
+  const derivativeFactory1 = await ethers.getContractFactory("SfrxEth");
+  const derivative1 = await derivativeFactory1.deploy();
+  await derivative1.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(derivative1.address, "1000000000000000000");
+
+  const derivativeFactory2 = await ethers.getContractFactory("WstEth");
+  const derivative2 = await derivativeFactory2.deploy();
+  await derivative2.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(derivative2.address, "1000000000000000000");
+
+  const derivativeFactory3 = await ethers.getContractFactory("StakeWise");
+  const derivative3 = await derivativeFactory3.deploy();
+  await derivative3.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(derivative3.address, "1000000000000000000");
   return afStrategy;
 };
 
