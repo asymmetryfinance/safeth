@@ -41,6 +41,33 @@ describe.only("Af Strategy", function () {
     await snapshot.restore();
   });
 
+  describe("Pause", function () {
+    it("Should pause staking / unstaking", async function () {
+      await strategyProxy.setPauseStaking(true);
+      await time.increase(1);
+      const depositAmount = ethers.utils.parseEther("1");
+
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+      const initialWeight = BigNumber.from("1000000000000000000");
+
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+        await time.increase(1);
+      }
+      await expect(
+        strategyProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("staking is paused");
+
+      await strategyProxy.setPauseUnstaking(true);
+
+      await expect(strategyProxy.unstake(1000)).to.be.revertedWith(
+        "unstaking is paused"
+      );
+    });
+  });
+
   describe("Deposit/Withdraw", function () {
     it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
