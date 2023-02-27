@@ -80,7 +80,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         return total;
     }
 
-    function price() public view returns(uint256) {
+    function valueBySupply() public view returns(uint256) {
         uint256 totalSupply = IAfETH(afETH).totalSupply();
         if(totalSupply == 0) return 10 ** 18;
         return 10 ** 18 * underlyingValue() / totalSupply;
@@ -88,7 +88,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        uint256 preDepositPrice = price();
+        uint256 preDepositPrice = valueBySupply();
 
         uint totalWeight =0;
         for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
