@@ -12,7 +12,9 @@ import {
   WSTETH_WHALE,
   BALANCER_FACTORY_ADDRESS,
   BALANCER_VAULT_ADDRESS,
-} from "./constants";
+  createEqualWeightedPool,
+  initJoinPool,
+} from "./helpers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { sfrxEthAbi } from "./abi/sfrxEthAbi";
 import { balWeightedPoolFactoryAbi } from "./abi/balWeightedPoolFactoryAbi";
@@ -28,77 +30,9 @@ describe("Af Strategy", function () {
   let aliceSigner: Signer;
   let wstEth: Contract;
   let rEth: Contract;
-  let sfrxeth: Contract;
+  let sfrxEth: Contract;
   let balancerPool: Contract;
   let balancerVault: Contract;
-
-  const createEqualWeightedPool = async () => {
-    const assets = [wstEth.address, sfrxeth.address, rEth.address];
-
-    // these must be sorted by address
-    // must add up to 10^18
-    const weights = [
-      "333333333333333333",
-      "333333333333333333",
-      "333333333333333334",
-    ];
-    const name = "Test Pool";
-    const symbol = "TP";
-
-    // TODO verify that these are solid
-    const priceFeeds = [
-      "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
-      "0x302013E7936a39c358d07A3Df55dc94EC417E3a1",
-      "0x1a8F81c256aee9C640e14bB0453ce247ea0DFE6F",
-    ];
-
-    // 0.05%
-    const swapFeePercentage = "500000000000000";
-
-    const weightedPoolFactory = new ethers.Contract(
-      BALANCER_FACTORY_ADDRESS,
-      balWeightedPoolFactoryAbi,
-      accounts[0]
-    );
-    const txResult = await weightedPoolFactory.create(
-      name,
-      symbol,
-      assets,
-      weights,
-      priceFeeds,
-      swapFeePercentage,
-      accounts[0].address
-    );
-
-    const txReceipt = await (accounts[0] as any).provider.getTransactionReceipt(
-      txResult.hash
-    );
-
-    const topic = txReceipt.logs[6].topics[1];
-
-    const newPoolAddress = "0x" + topic.slice(topic.length - 40, topic.length);
-    return new ethers.Contract(newPoolAddress, balWeightedPoolAbi, accounts[0]);
-  };
-
-  const initJoinPool = async (amounts: BigNumberish[]) => {
-    const assets = [wstEth.address, sfrxeth.address, rEth.address];
-
-    const amountsIn = [amounts[0], amounts[1], amounts[2]];
-
-    const result = await balancerVault.joinPool(
-      await balancerPool.getPoolId(),
-      accounts[0].address,
-      accounts[0].address,
-      {
-        assets,
-        maxAmountsIn: amountsIn,
-        userData: WeightedPoolEncoder.joinInit(amountsIn),
-        fromInternalBalance: false,
-      }
-    );
-
-    return result.hash;
-  };
 
   beforeEach(async () => {
     const { admin, alice } = await getNamedAccounts();
@@ -108,7 +42,7 @@ describe("Af Strategy", function () {
     const rETHAddress = "0xae78736Cd615f374D3085123A210448E74Fc6393";
     wstEth = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, accounts[0]);
     rEth = new ethers.Contract(rETHAddress, ERC20.abi, accounts[0]);
-    sfrxeth = new ethers.Contract(SFRAXETH_ADDRESS, ERC20.abi, accounts[0]);
+    sfrxEth = new ethers.Contract(SFRAXETH_ADDRESS, ERC20.abi, accounts[0]);
 
     // Send wstETH derivative to admin
     await network.provider.request({
@@ -141,8 +75,8 @@ describe("Af Strategy", function () {
     });
     transferAmount = ethers.utils.parseEther("50");
     whaleSigner = await ethers.getSigner(SFRAXETH_WHALE);
-    const sfrxethWhale = sfrxeth.connect(whaleSigner);
-    await sfrxethWhale.transfer(admin, transferAmount);
+    const sfrxEthWhale = sfrxEth.connect(whaleSigner);
+    await sfrxEthWhale.transfer(admin, transferAmount);
 
     await rEth.approve(
       BALANCER_VAULT_ADDRESS,
@@ -152,7 +86,7 @@ describe("Af Strategy", function () {
       BALANCER_VAULT_ADDRESS,
       ethers.utils.parseEther("999999999999999999999999999999")
     );
-    await sfrxeth.approve(
+    await sfrxEth.approve(
       BALANCER_VAULT_ADDRESS,
       ethers.utils.parseEther("999999999999999999999999999999")
     );
@@ -163,12 +97,25 @@ describe("Af Strategy", function () {
       accounts[0]
     );
 
-    balancerPool = await createEqualWeightedPool();
-    await initJoinPool([
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ]);
+    balancerPool = await createEqualWeightedPool(
+      wstEth,
+      sfrxEth,
+      rEth,
+      accounts
+    );
+    await initJoinPool(
+      wstEth,
+      sfrxEth,
+      rEth,
+      accounts,
+      [
+        ethers.utils.parseEther("1"),
+        ethers.utils.parseEther("1"),
+        ethers.utils.parseEther("1"),
+      ],
+      balancerVault,
+      balancerPool
+    );
 
     const afETHDeployment = await ethers.getContractFactory("afETH");
     afEth = (await afETHDeployment.deploy(
@@ -288,7 +235,7 @@ describe("Af Strategy", function () {
         balancerVaultAddress,
         ethers.utils.parseEther("999999999999999999999999999999")
       );
-      await sfrxeth.approve(
+      await sfrxEth.approve(
         balancerVaultAddress,
         ethers.utils.parseEther("999999999999999999999999999999")
       );
@@ -397,7 +344,7 @@ describe("Af Strategy", function () {
       return {
         userBalances: {
           wstEth: await wstEth.balanceOf(accounts[0].getAddress()),
-          sfrxEth: await sfrxeth.balanceOf(accounts[0].getAddress()),
+          sfrxEth: await sfrxEth.balanceOf(accounts[0].getAddress()),
           rEth: await rEth.balanceOf(accounts[0].getAddress()),
           bpt: await equalWeightedPool.balanceOf(accounts[0].getAddress()),
         },
@@ -410,7 +357,7 @@ describe("Af Strategy", function () {
     };
 
     const exitPool = async (bptAmount: string) => {
-      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+      const assets = [wstEth.address, sfrxEth.address, rEth.address];
       const result = await balancerVault.exitPool(
         await equalWeightedPool.getPoolId(),
         accounts[0].address,
@@ -428,7 +375,7 @@ describe("Af Strategy", function () {
     };
 
     const joinPool = async (amounts: string[]) => {
-      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+      const assets = [wstEth.address, sfrxEth.address, rEth.address];
 
       const amountsIn = [
         ethers.utils.parseEther(amounts[0]),
@@ -454,7 +401,7 @@ describe("Af Strategy", function () {
     };
 
     const initJoinPool = async (amounts: BigNumberish[]) => {
-      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+      const assets = [wstEth.address, sfrxEth.address, rEth.address];
 
       const amountsIn = [amounts[0], amounts[1], amounts[2]];
 
@@ -474,7 +421,7 @@ describe("Af Strategy", function () {
     };
 
     const createEqualWeightedPool = async () => {
-      const assets = [wstEth.address, sfrxeth.address, rEth.address];
+      const assets = [wstEth.address, sfrxEth.address, rEth.address];
 
       // these must be sorted by address
       // must add up to 10^18

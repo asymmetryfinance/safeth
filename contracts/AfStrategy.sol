@@ -70,13 +70,11 @@ contract AfStrategy is Ownable {
     // must transfer amount out tokens to vault
     function unstake() public {
         require(pauseUnstaking == false, "unstaking is paused");
-
         // TODO: add option to not unstake all
+        
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
         burnAfEth(afEthBalance);
 
-        // TODO: Reintegrate Balancer with 4626 vaults
-        // burnBundleNFT(msg.sender);
         // uint256 wstETH2Unwrap = withdrawBalTokens();
         // withdrawREth();
         // withdrawWstEth(wstETH2Unwrap);
