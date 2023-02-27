@@ -19,12 +19,12 @@ import "./derivatives/Reth.sol";
 import "./derivatives/WstEth.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
-    event StakingPaused(bool paused);
-    event UnstakingPaused(bool paused);
-    event Staked(address recipient, uint ethIn, uint safEthOut);
-    event Unstaked(address recipient, uint ethOut, uint safEthIn);
-    event WeightChange(uint index, uint weight);
-    event DerivativeAdded(address contractAddress, uint weight, uint index);
+    event StakingPaused(bool indexed paused);
+    event UnstakingPaused(bool indexed paused);
+    event Staked(address indexed recipient, uint ethIn, uint safEthOut);
+    event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
+    event WeightChange(uint indexed index, uint weight);
+    event DerivativeAdded(address indexed contractAddress, uint weight, uint index);
     event Rebalanced();
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
@@ -46,8 +46,11 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         derivativeCount++;
     }
 
-    function adjustWeight(uint index, uint weight) public onlyOwner {
+    function adjustWeight(uint256 index, uint256 weight) public onlyOwner {
         weights[index] = weight;
+        uint256 localTotalWeight = 0;
+        for(uint256 i = 0; i < derivativeCount; i++) localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
         emit WeightChange(index, weight);
     }
 
@@ -58,16 +61,13 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
-        uint totalWeight = 0;
-        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
-
-        uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
             if(weights[i] == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].deposit{value: ethAmount}();
+            // Price will change due to slippage
+            derivatives[i].deposit{value: ethAmount}();
         }
-
+        emit Rebalanced();
     }
 
     function derivativeValue(uint256 index) public view returns (uint256) {
@@ -80,7 +80,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         return total;
     }
 
-    function price() public view returns(uint256) {
+    function valueBySupply() public view returns(uint256) {
         uint256 totalSupply = IAfETH(afETH).totalSupply();
         if(totalSupply == 0) return 10 ** 18;
         return 10 ** 18 * underlyingValue() / totalSupply;
@@ -88,10 +88,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        uint256 preDepositPrice = price();
-
-        uint totalWeight =0;
-        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
+        uint256 preDepositPrice = valueBySupply();
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
