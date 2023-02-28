@@ -298,7 +298,6 @@ describe.only("Af Strategy", function () {
 
       const stakewise = await upgrades.deployProxy(factory);
       await stakewise.deployed();
-      derivatives.push(stakewise);
 
       const balanceBeforeDeposit = await stakewise.balance();
 
