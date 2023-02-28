@@ -50,11 +50,16 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
         else withdrawAmount = amount;
         uint256 wEthReceived = sellSeth2ForWeth(amount);
         IWETH(wEth).withdraw(wEthReceived);
-        address(msg.sender).call{value: address(this).balance}("");
+        (bool success, ) = address(msg.sender).call{value: address(this).balance}("");
+        require(success, "call failed");
     }
 
-    // TODO check and throw if there is an activation period
     function deposit() public payable onlyOwner returns (uint256) {
+        if(msg.value > IStakewiseStaker(staker).minActivatingDeposit()){ 
+            (bool success, ) = address(msg.sender).call{value: msg.value}("");
+            require(success, "call failed");
+            return 0;
+        }
         uint256 balanceBefore = IERC20(sEth2).balanceOf(address(this));
         IStakewiseStaker(staker).stake{value: msg.value}();
         uint256 balanceAfter = IERC20(sEth2).balanceOf(address(this));
@@ -112,18 +117,16 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     
-
+    // how much weth we expect to get for a given seth2 input amount
     function estimatedSellSeth2Output(uint256 amount) public view returns (uint) {
-        //IERC20(sEth2).balanceOf(address(this))
-        return (poolPrice(seth2WethPool) * (amount)) / (10 ** 18);
+        return (amount * 10 ** 18) / poolPrice(seth2WethPool);
     }
 
+    // how much seth2 we expect to get for a given reth2 input amount
     function estimatedSellReth2Output(uint256 amount) public view returns (uint) {
-        return (poolPrice(rEth2Seth2Pool) * (amount)) / (10 ** 18);
+        return (amount * 10 ** 18) / poolPrice(rEth2Seth2Pool);
     }
 
-    // TODO figure out if this price is rEth2/sEth2 or sEth2/rEth2
-    // Prices are nearly the same so its hard to tell
     function poolPrice(address poolAddress)
         public
         view
@@ -133,6 +136,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
         (uint160 sqrtPriceX96,,,,,,) =  pool.slot0();
         return sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18) >> (96 * 2);
     }
+
 
     receive() external payable {}
 }
