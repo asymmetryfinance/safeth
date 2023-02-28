@@ -1,26 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./IderivativeMock.sol";
 import "../../../interfaces/frax/IsFrxEth.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../interfaces/curve/ICrvEthPool.sol";
 import "../../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
-import "../../../interfaces/rocketpool/RocketStorageInterface.sol";
-import "../../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "../../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "../../../interfaces/IWETH.sol";
-import "../../../interfaces/uniswap/ISwapRouter.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
-    address public constant rocketStorageAddress =
-        0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-    uint256 public constant ROCKET_POOL_LIMIT = 5000000000000000000000;
-    address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant uniswapRouter =
-        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address public constant sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
+    address public constant frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
+    address public constant frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+    address public constant frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -28,117 +22,53 @@ contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    // This replaces the constructor for upgradeable contracts
-    function initialize() public initializer {
-        _transferOwnership(msg.sender);
-    }
-
-    function rethAddress() private view returns (address) {
-        return
-            RocketStorageInterface(rocketStorageAddress).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketTokenRETH")
-                )
-            );
-    }
-
-    function swapExactInputSingleHop(
-        address tokenIn,
-        address tokenOut,
-        uint24 poolFee,
-        uint256 amountIn
-    ) private returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(uniswapRouter, amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: poolFee,
-                recipient: address(this),
-                amountIn: amountIn,
-                amountOutMinimum: 1,
-                sqrtPriceLimitX96: 0
-            });
-        amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
-    }
-
     function withdraw(uint256 amount) public onlyOwner {
-        RocketTokenRETHInterface(rethAddress()).burn(amount);
+        IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
+        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
+        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+        // TODO figure out if we want a min receive amount and what it should be
+        // Currently set to 0. It "works" but may not be ideal long term
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
         address(msg.sender).call{value: address(this).balance}("");
     }
 
     function withdrawAll() public onlyOwner {
-        address rocketTokenRETHAddress = RocketStorageInterface(
-            rocketStorageAddress
-        ).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketTokenRETH")
-                )
-            );
-        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-            rocketTokenRETHAddress
-        );
-        RocketTokenRETHInterface(rethAddress()).burn(
-            rocketTokenRETH.balanceOf(address(this))
-        );
+        IsFrxEth(sfrxEthAddress).redeem(balance(), address(this), address(this));
+        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
+        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+        // TODO figure out if we want a min receive amount and what it should be
+        // Currently set to 0. It "works" but may not be ideal long term
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
         address(msg.sender).call{value: address(this).balance}("");
     }
 
-    function deposit() public payable onlyOwner returns (uint256) {
-        // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = RocketStorageInterface(
-            rocketStorageAddress
-        ).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketDepositPool")
-                )
-            );
-        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-                rocketDepositPoolAddress
-            );
-        bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
-            ROCKET_POOL_LIMIT;
-        if (!canDeposit) {
-            IWETH(wETH).deposit{value: msg.value}();
-            uint256 amountSwapped = swapExactInputSingleHop(
-                wETH,
-                rethAddress(),
-                500,
-                msg.value
-            );
-            return amountSwapped;
-        } else {
-            address rocketTokenRETHAddress = RocketStorageInterface(
-                rocketStorageAddress
-            ).getAddress(
-                    keccak256(
-                        abi.encodePacked("contract.address", "rocketTokenRETH")
-                    )
-                );
-            RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-                rocketTokenRETHAddress
-            );
-            uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
-            rocketDepositPool.deposit{value: msg.value}();
-            uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
-            require(rethBalance2 > rethBalance1, "No rETH was minted");
-            uint256 rethMinted = rethBalance2 - rethBalance1;
-            return (rethMinted);
-        }
+
+    function deposit() public onlyOwner payable returns (uint256) {
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
+        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
+        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        return sfrxBalancePost - sfrxBalancePre;
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (amount == 0) return 0;
-        return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
+        if(amount == 0) return 0;
+        uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
+        return ICrvEthPool(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
     }
 
     function totalEthValue() public view returns (uint256) {
         return ethPerDerivative(balance());
     }
 
-    function balance() public view returns (uint256) {
-       return IERC20(rethAddress()).balanceOf(address(this));
+    function balance() public view returns (uint256){
+       return IERC20(sfrxEthAddress).balanceOf(address(this));
     }
 
     receive() external payable {}
 }
+

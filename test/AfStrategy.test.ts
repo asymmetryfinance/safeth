@@ -25,25 +25,34 @@ describe.only("Af Strategy", function () {
   let strategyProxy: AfStrategy;
   let snapshot: SnapshotRestorer;
 
-  before(async () => {
+  const resetToBlock = async (blockNumber: number) => {
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber,
+          },
+        },
+      ],
+    });
+
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
     const afEthAddress = await strategyProxy.afETH();
     afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
     await afEth.setMinter(strategyProxy.address);
-  });
+  };
 
-  beforeEach(async () => {
-    snapshot = await takeSnapshot();
-  });
-
-  afterEach(async () => {
-    await snapshot.restore();
+  before(async () => {
+    await resetToBlock(16637230);
   });
 
   describe("Pause", function () {
     it("Should pause staking / unstaking", async function () {
+      snapshot = await takeSnapshot();
       await strategyProxy.setPauseStaking(true);
       await time.increase(1);
       const depositAmount = ethers.utils.parseEther("1");
@@ -66,6 +75,9 @@ describe.only("Af Strategy", function () {
       await expect(strategyProxy.unstake(1000)).to.be.revertedWith(
         "unstaking is paused"
       );
+
+      // dont stay paused
+      await snapshot.restore();
     });
   });
 
@@ -147,8 +159,10 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Derivatives", async () => {
-    const derivatives = [] as any;
-    before(async () => {
+    let derivatives = [] as any;
+    beforeEach(async () => {
+      await resetToBlock(16637130);
+      derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
@@ -252,7 +266,7 @@ describe.only("Af Strategy", function () {
       ).eq(true);
     });
 
-    it("Should withdraw the full balance if more than the balance is passed in", async () => {
+    it("Should withdraw the full balance from stakewise if more than the balance is passed in", async () => {
       const stakewise = derivatives[3];
 
       await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
@@ -277,8 +291,32 @@ describe.only("Af Strategy", function () {
         )
       ).eq(true);
     });
+
+    it("Should not deposit if more than the minActivatingDeposit on Stakewise", async () => {
+      await resetToBlock(13637030); // 32 eth min at this block
+      const factory = await ethers.getContractFactory("StakeWise");
+
+      const stakewise = await upgrades.deployProxy(factory);
+      await stakewise.deployed();
+      derivatives.push(stakewise);
+
+      const balanceBeforeDeposit = await stakewise.balance();
+
+      const depositResult = await stakewise.deposit({
+        value: ethers.utils.parseEther("33"),
+      });
+      await depositResult.wait();
+
+      const balanceAfterDeposit = await stakewise.balance();
+
+      // deposit doesnt happen because exceeded minActivatingDeposit at this block
+      expect(balanceBeforeDeposit.toString()).eq(
+        balanceAfterDeposit.toString()
+      );
+    });
+
     it("Should upgrade a derivative contract and have same values before and after upgrade", async () => {
-      const derivativeToUpgrade = derivatives[0];
+      const derivativeToUpgrade = derivatives[1];
 
       const addressBefore = derivativeToUpgrade.address;
       const priceBefore = await derivativeToUpgrade.ethPerDerivative(
@@ -295,7 +333,14 @@ describe.only("Af Strategy", function () {
 
       // value same before and after
       expect(addressBefore).eq(addressAfter);
-      expect(priceBefore).eq(priceAfter);
+      // price shouldnt have changed - maybe a tiny bit because block time
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(priceBefore.toString()),
+          new bigDecimal(priceAfter.toString()),
+          new bigDecimal(0.00000001)
+        )
+      ).eq(true);
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -333,6 +378,13 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Upgrades", async () => {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should have the same proxy address before and after upgrading", async () => {
       const addressBefore = strategyProxy.address;
       const strategy2 = await upgrade(
@@ -415,6 +467,13 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Weights & Rebalance", async () => {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should rebalance the underlying values to current weights", async () => {
       const derivativeCount = (
         await strategyProxy.derivativeCount()
