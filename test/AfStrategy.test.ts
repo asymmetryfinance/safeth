@@ -251,6 +251,32 @@ describe.only("Af Strategy", function () {
         )
       ).eq(true);
     });
+
+    it("Should withdraw the full balance if more than the balance is passed in", async () => {
+      const stakewise = derivatives[3];
+
+      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
+
+      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
+
+      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
+      await stakewise.withdraw((await stakewise.balance()).mul(2));
+      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
+
+      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
+        ethBalanceBeforeWithdraw
+      );
+
+      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
+      // 2% tolerance from slippage
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(balanceWithdrawn.toString()),
+          new bigDecimal(derivativeBalanceBeforeWithdraw.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
+    });
     it("Should upgrade a derivative contract and have same values before and after upgrade", async () => {
       const derivativeToUpgrade = derivatives[0];
 
