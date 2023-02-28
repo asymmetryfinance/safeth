@@ -17,6 +17,7 @@ import "./AfStrategyStorage.sol";
 import "./derivatives/SfrxEth.sol";
 import "./derivatives/Reth.sol";
 import "./derivatives/WstEth.sol";
+import "hardhat/console.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event StakingPaused(bool indexed paused);
@@ -95,13 +96,26 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
+                                console.log("i", i);
+
             if(weights[i] == 0) continue;
+                                            console.log("weights[i]", weights[i]);
+
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
+                                            console.log("ethAmount", ethAmount);
+
             // This is slightly less than ethAmount because slippage
-            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
+            console.log("depositAmount", depositAmount);
+            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(depositAmount);
+            console.log("derivativeReceivedEthValue", derivativeReceivedEthValue);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
+                    console.log("totalStakeValueEth", totalStakeValueEth);
+
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+                            console.log("mintAmount", mintAmount);
+
         IAfETH(afETH).mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, mintAmount);
     }

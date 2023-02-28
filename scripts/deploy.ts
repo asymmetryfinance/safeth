@@ -6,7 +6,7 @@ async function main() {
     "Asymmetry Finance ETH",
     "safETH"
   );
-  await safETH.deployed();
+  //   await safETH.deployed();
 
   await hre.ethernal.push({
     name: "afETH",
@@ -29,11 +29,16 @@ async function main() {
     address: afStrategy.address,
   });
 
+  await safETH.setMinter(afStrategy.address);
+
   // Deploy derivatives
   const rethDeployment = await ethers.getContractFactory("Reth");
   const reth = await rethDeployment.deploy();
-  await reth.deployed();
+  //   await reth.deployed();
   console.log("RETH deployed to:", reth.address);
+  await reth.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(reth.address, "1000000000000000000");
+
   await hre.ethernal.push({
     name: "Reth",
     address: reth.address,
@@ -50,21 +55,19 @@ async function main() {
 
   const WstDeployment = await ethers.getContractFactory("WstEth");
   const wst = await WstDeployment.deploy();
-  await wst.deployed();
+  await wst.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(wst.address, "1000000000000000000");
+  //   await wst.deployed();
   console.log("wst deployed to:", wst.address);
   await hre.ethernal.push({
     name: "WstEth",
     address: wst.address,
   });
 
-  await reth.transferOwnership(afStrategy.address);
-  await afStrategy.addDerivative(reth.address, "1000000000000000000");
-
   //   await sfrx.transferOwnership(afStrategy.address);
   //   await afStrategy.addDerivative(sfrx.address, "1000000000000000000");
 
-  await wst.transferOwnership(afStrategy.address);
-  await afStrategy.addDerivative(wst.address, "1000000000000000000");
+
 }
 
 main()
