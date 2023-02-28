@@ -17,7 +17,6 @@ import "./AfStrategyStorage.sol";
 import "./derivatives/SfrxEth.sol";
 import "./derivatives/Reth.sol";
 import "./derivatives/WstEth.sol";
-import "hardhat/console.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event StakingPaused(bool indexed paused);
@@ -43,11 +42,12 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
         derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
         weights[derivativeCount] = weight;
+        derivativeCount++;
+
         uint256 localTotalWeight = 0;
         for(uint256 i = 0; i < derivativeCount; i++) localTotalWeight += weights[i];
         totalWeight = localTotalWeight;
         emit DerivativeAdded(contractAddress, weight, derivativeCount);
-        derivativeCount++;
     }
 
     function adjustWeight(uint256 index, uint256 weight) public onlyOwner {
@@ -96,26 +96,16 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
         uint256 totalStakeValueEth = 0;
         for(uint i=0;i<derivativeCount;i++) {
-                                console.log("i", i);
-
             if(weights[i] == 0) continue;
-                                            console.log("weights[i]", weights[i]);
-
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
-                                            console.log("ethAmount", ethAmount);
 
             // This is slightly less than ethAmount because slippage
             uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
-            console.log("depositAmount", depositAmount);
             uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(depositAmount);
-            console.log("derivativeReceivedEthValue", derivativeReceivedEthValue);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
-                    console.log("totalStakeValueEth", totalStakeValueEth);
 
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-                            console.log("mintAmount", mintAmount);
-
         IAfETH(afETH).mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, mintAmount);
     }

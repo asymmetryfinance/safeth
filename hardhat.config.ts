@@ -43,7 +43,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      chainId: 43114, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
+      chainId: 1234, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
       allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: process.env.MNEMONIC,
