@@ -44,7 +44,7 @@ contract StakeWise is IDERIVATIVE, Ownable {
         uint256 withdrawAmount;
         if(amount > IERC20(sEth2).balanceOf(address(this))) withdrawAmount = IERC20(sEth2).balanceOf(address(this));
         else withdrawAmount = amount;
-        uint256 wEthReceived = sellSeth2ForWeth(amount);
+        uint256 wEthReceived = sellSeth2ForWeth(withdrawAmount);
         IWETH(wEth).withdraw(wEthReceived);
         address(msg.sender).call{value: address(this).balance}("");
     }

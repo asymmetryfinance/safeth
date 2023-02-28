@@ -213,25 +213,29 @@ describe.only("Af Strategy", function () {
       const whaleSigner = await ethers.getSigner(rEth2WhaleAddress);
       const rEth2Whale = rEth2.connect(whaleSigner);
 
-      const initialDeposit = ethers.utils.parseEther("0.1");
       await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
 
-      const balanceAfterDeposit = await stakewise.balance();
 
       // simulate rEth2 reward accumulation
       await rEth2Whale.transfer(stakewise.address, transferAmount);
 
+      // balance is in sEth2 which stable to eth
+      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
+
       const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
-      await stakewise.withdraw(balanceAfterDeposit);
+      await stakewise.withdraw(await stakewise.balance());
       const ethBalanceAfterWithdraw = await adminAccount.getBalance();
 
       const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
         ethBalanceBeforeWithdraw
       );
+
+      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
+      // 2% tolerance from slippage
       expect(
         decimalApproxEqual(
           new bigDecimal(balanceWithdrawn.toString()),
-          new bigDecimal(initialDeposit.toString()),
+          new bigDecimal(derivativeBalanceBeforeWithdraw.toString()),
           new bigDecimal(0.02)
         )
       ).eq(true);
