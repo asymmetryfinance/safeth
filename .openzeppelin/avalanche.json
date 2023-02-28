@@ -1,0 +1,315 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x8f119cd256a0FfFeed643E830ADCD9767a1d517F",
+    "txHash": "0x59c91c810feb45b0af248eab6a37fde2e7ad37148e57e2770c9004dfde2de1d3"
+  },
+  "proxies": [
+    {
+      "address": "0xe14058B1c3def306e2cb37535647A04De03Db092",
+      "txHash": "0x2ed35cde2483a453ce9fbdc644553858839ae30ce34c3ff740351a10e03b9399",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xF85895D097B2C25946BB95C4d11E2F3c035F8f0C",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "ea53d7e15da286956e2a014bb8926df328f7a1e7b33f1644f91abccf4aba5922": {
+      "address": "0x4f42528B7bF8Da96516bECb22c1c6f53a8Ac7312",
+      "txHash": "0xa54e0309a18a8ca3005a7c3a67cec14e3b60f31e112bf1c3af0dddb32ae67238",
+      "layout": {
+        "solcVersion": "0.8.13",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "afETH",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:13"
+          },
+          {
+            "label": "pauseStaking",
+            "offset": 20,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:14"
+          },
+          {
+            "label": "pauseUnstaking",
+            "offset": 21,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:15"
+          },
+          {
+            "label": "derivativeCount",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_uint256",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:16"
+          },
+          {
+            "label": "totalWeight",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_uint256",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:17"
+          },
+          {
+            "label": "derivatives",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_mapping(t_uint256,t_contract(IDERIVATIVE)10020)",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:18"
+          },
+          {
+            "label": "weights",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "AfStrategyStorage",
+            "src": "contracts/AfStrategy/AfStrategyStorage.sol:19"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDERIVATIVE)10020": {
+            "label": "contract IDERIVATIVE",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_uint256,t_contract(IDERIVATIVE)10020)": {
+            "label": "mapping(uint256 => contract IDERIVATIVE)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "27b92346107a6623e1abef27145e75da4e18ef20df0184c0df7918a2cc777631": {
+      "address": "0xF9c0bF1CFAAB883ADb95fed4cfD60133BffaB18a",
+      "layout": {
+        "solcVersion": "0.8.13",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "afETH",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:13"
+          },
+          {
+            "label": "pauseStaking",
+            "offset": 20,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:14"
+          },
+          {
+            "label": "pauseUnstaking",
+            "offset": 21,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:15"
+          },
+          {
+            "label": "derivativeCount",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_uint256",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:16"
+          },
+          {
+            "label": "totalWeight",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_uint256",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:17"
+          },
+          {
+            "label": "derivatives",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_mapping(t_uint256,t_contract(IDERIVATIVE)10020)",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:18"
+          },
+          {
+            "label": "weights",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:19"
+          },
+          {
+            "label": "newFunctionCalled",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_bool",
+            "contract": "AfStrategyV2MockStorage",
+            "src": "contracts/AfStrategy/upgrade_mocks/AfStrategyV2MockStorage.sol:21"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDERIVATIVE)10020": {
+            "label": "contract IDERIVATIVE",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_uint256,t_contract(IDERIVATIVE)10020)": {
+            "label": "mapping(uint256 => contract IDERIVATIVE)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    }
+  }
+}

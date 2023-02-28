@@ -42,6 +42,9 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
         derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
         weights[derivativeCount] = weight;
+        uint256 localTotalWeight = 0;
+        for(uint256 i = 0; i < derivativeCount; i++) localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
         emit DerivativeAdded(contractAddress, weight, derivativeCount);
         derivativeCount++;
     }
