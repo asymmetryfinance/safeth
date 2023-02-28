@@ -318,6 +318,37 @@ describe.only("Af Strategy", function () {
       ).eq(true);
     });
 
+    it("Should stake with a weight set to 0", async () => {
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+
+      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialDeposit = ethers.utils.parseEther("1");
+
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+      }
+
+      await strategyProxy.adjustWeight(0, 0);
+
+      await strategyProxy.stake({ value: initialDeposit });
+
+      const underlyingValue = await strategyProxy.underlyingValue();
+
+      // Underlying value is approx the same
+      // 2% tolerance because slippage
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(underlyingValue.toString()),
+          new bigDecimal(initialWeight.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
+    });
+
     it("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
       const derivativeCount = (
         await strategyProxy.derivativeCount()
