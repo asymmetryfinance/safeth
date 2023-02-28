@@ -8,15 +8,21 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
 import "../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-contract SfrxEth is IDERIVATIVE, Ownable {
 
+contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
     address public constant frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
     address public constant frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
     address public constant frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
+        _disableInitializers();
+    }
+
+    // This replaces the constructor for upgradeable contracts
+    function initialize() public initializer {
         _transferOwnership(msg.sender);
     }
 
