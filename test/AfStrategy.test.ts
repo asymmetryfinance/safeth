@@ -1,10 +1,11 @@
 /* eslint-disable new-cap */
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
+import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 import {
   initialUpgradeableDeploy,
@@ -193,6 +194,47 @@ describe.only("Af Strategy", function () {
         const postWithdrawValue = await derivatives[i].totalEthValue();
         expect(postWithdrawValue.eq(0)).eq(true);
       }
+    });
+
+    it("Should test Stakewise withdraw when an rEth2 balance has accumulated", async () => {
+      const stakewise = derivatives[3];
+
+      const rEth2WhaleAddress = "0x7BdDb2C97AF91f97E73F07dEB976fdFC2d2Ee93c";
+
+      const rEth2Address = "0x20bc832ca081b91433ff6c17f85701b6e92486c5";
+      const rEth2 = new ethers.Contract(rEth2Address, ERC20.abi, adminAccount);
+
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [rEth2WhaleAddress],
+      });
+
+      const transferAmount = ethers.utils.parseEther("0.1");
+      const whaleSigner = await ethers.getSigner(rEth2WhaleAddress);
+      const rEth2Whale = rEth2.connect(whaleSigner);
+
+      const initialDeposit = ethers.utils.parseEther("0.1");
+      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
+
+      const balanceAfterDeposit = await stakewise.balance();
+
+      // simulate rEth2 reward accumulation
+      await rEth2Whale.transfer(stakewise.address, transferAmount);
+
+      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
+      await stakewise.withdraw(balanceAfterDeposit);
+      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
+
+      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
+        ethBalanceBeforeWithdraw
+      );
+      expect(
+        decimalApproxEqual(
+          new bigDecimal(balanceWithdrawn.toString()),
+          new bigDecimal(initialDeposit.toString()),
+          new bigDecimal(0.02)
+        )
+      ).eq(true);
     });
   });
 
