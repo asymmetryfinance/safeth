@@ -28,7 +28,7 @@ describe.only("Af Strategy", function () {
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
-    const afEthAddress = await strategyProxy.afETH();
+    const afEthAddress = await strategyProxy.safETH();
     afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
     await afEth.setMinter(strategyProxy.address);
   });

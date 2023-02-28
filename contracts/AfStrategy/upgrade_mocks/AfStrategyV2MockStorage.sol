@@ -10,7 +10,7 @@ import "../../interfaces/Iderivative.sol";
 // ONLY add new variables at the end
 // Constant values CAN be modified on upgrade
 contract AfStrategyV2MockStorage {
-    address public afETH;
+    address public safETH;
     bool public pauseStaking;
     bool public pauseUnstaking;
     uint256 public derivativeCount;

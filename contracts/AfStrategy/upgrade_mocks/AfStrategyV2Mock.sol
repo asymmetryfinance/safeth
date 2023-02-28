@@ -34,9 +34,9 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
     }
 
     // This replaces the constructor for upgradeable contracts
-    function initialize(address _afETH) public initializer {
+    function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
-        afETH = _afETH;
+        safETH = _safETH;
     }
 
     function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
@@ -50,7 +50,7 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
     }
 
     function valueBySupply() public view returns(uint256) {
-        uint256 totalSupply = IAfETH(afETH).totalSupply();
+        uint256 totalSupply = IAfETH(safETH).totalSupply();
         uint256 underlyingValue = 0;
         for(uint i=0;i<derivativeCount;i++) underlyingValue += derivatives[i].totalEthValue();
         if(totalSupply == 0) return 10 ** 18;
@@ -70,15 +70,15 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
             totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
         }
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        IAfETH(afETH).mint(msg.sender, mintAmount);
+        IAfETH(safETH).mint(msg.sender, mintAmount);
     }
 
     function unstake(uint256 safEthAmount) public {
         require(pauseUnstaking == false, "unstaking is paused");
-        uint256 safEthTotalSupply = IAfETH(afETH).totalSupply();
+        uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         for(uint i=0;i<derivativeCount;i++) derivatives[i].withdraw((derivatives[i].balance() * safEthAmount) / safEthTotalSupply);
-        IAfETH(afETH).burn(msg.sender, safEthAmount);
+        IAfETH(safETH).burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line

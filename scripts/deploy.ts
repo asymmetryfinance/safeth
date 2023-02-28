@@ -1,7 +1,7 @@
 import hre, { upgrades, ethers } from "hardhat";
 
 async function main() {
-  const SafTokenDeployment = await ethers.getContractFactory("afETH");
+  const SafTokenDeployment = await ethers.getContractFactory("safETH");
   const safETH = await SafTokenDeployment.deploy(
     "Asymmetry Finance ETH",
     "safETH"
@@ -9,7 +9,7 @@ async function main() {
   //   await safETH.deployed();
 
   await hre.ethernal.push({
-    name: "afETH",
+    name: "safETH",
     address: safETH.address,
   });
 

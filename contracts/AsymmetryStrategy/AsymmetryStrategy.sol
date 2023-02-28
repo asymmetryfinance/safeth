@@ -53,7 +53,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 balancerBalances; // bal LP amount
         uint256 cvxNFTID;
         uint256 bundleNFTID;
-        uint256 afETH; // amount afETH minted to user
+        uint256 afETH; // amount safETH minted to user
         uint256 createdAt; // block.timestamp
         uint256 sfraxBalances; // Staked frax
     }
