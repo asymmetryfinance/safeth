@@ -110,7 +110,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
-        address(msg.sender).call{value: ethAmountToWithdraw}("");
+        (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}("");
+        require(sent, "Failed to send Ether");
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 

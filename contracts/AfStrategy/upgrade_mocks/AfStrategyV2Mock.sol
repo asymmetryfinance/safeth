@@ -82,7 +82,9 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
-        address(msg.sender).call{value: ethAmountToWithdraw}("");
+        (bool sent,) = address(msg.sender).call{value: ethAmountToWithdraw}("");
+        require(sent, "Failed to send Ether");
+
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {

@@ -50,14 +50,14 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
         else withdrawAmount = amount;
         uint256 wEthReceived = sellSeth2ForWeth(withdrawAmount);
         IWETH(wEth).withdraw(wEthReceived);
-        (bool success, ) = address(msg.sender).call{value: address(this).balance}("");
-        require(success, "call failed");
+        (bool sent, ) = address(msg.sender).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     function deposit() public payable onlyOwner returns (uint256) {
         if(msg.value > IStakewiseStaker(staker).minActivatingDeposit()){ 
-            (bool success, ) = address(msg.sender).call{value: msg.value}("");
-            require(success, "call failed");
+            (bool sent, ) = address(msg.sender).call{value: msg.value}("");
+            require(sent, "Failed to send Ether");
             return 0;
         }
         uint256 balanceBefore = IERC20(sEth2).balanceOf(address(this));

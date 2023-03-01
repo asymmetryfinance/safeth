@@ -29,7 +29,8 @@ contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
-        address(msg.sender).call{value: address(this).balance}("");
+        (bool sent,) = address(msg.sender).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     function withdrawAll() public onlyOwner {
@@ -39,7 +40,8 @@ contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
-        address(msg.sender).call{value: address(this).balance}("");
+        (bool sent,) = address(msg.sender).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
 
