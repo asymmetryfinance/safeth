@@ -28,16 +28,20 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     // This replaces the constructor for upgradeable contracts
-    function initialize(address _afETH) public initializer {
+    function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
-        afETH = _afETH;
+        safETH = _safETH;
     }
 
     function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
         derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
         weights[derivativeCount] = weight;
-        emit DerivativeAdded(contractAddress, weight, derivativeCount);
         derivativeCount++;
+
+        uint256 localTotalWeight = 0;
+        for(uint256 i = 0; i < derivativeCount; i++) localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
+        emit DerivativeAdded(contractAddress, weight, derivativeCount);
     }
 
     function adjustWeight(uint256 index, uint256 weight) public onlyOwner {
@@ -75,7 +79,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     function valueBySupply() public view returns(uint256) {
-        uint256 totalSupply = IAfETH(afETH).totalSupply();
+        uint256 totalSupply = IAfETH(safETH).totalSupply();
         if(totalSupply == 0) return 10 ** 18;
         return 10 ** 18 * underlyingValue() / totalSupply;
     }
@@ -88,29 +92,33 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         for(uint i=0;i<derivativeCount;i++) {
             if(weights[i] == 0) continue;
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
+
             // This is slightly less than ethAmount because slippage
-            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
+            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(depositAmount);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
+
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        IAfETH(afETH).mint(msg.sender, mintAmount);
+        IAfETH(safETH).mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, mintAmount);
     }
 
     function unstake(uint256 safEthAmount) public {
         require(pauseUnstaking == false, "unstaking is paused");
-        uint256 safEthTotalSupply = IAfETH(afETH).totalSupply();
+        uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         for(uint256 i=0;i<derivativeCount;i++) {
             uint256 derivativeAmount = (derivatives[i].balance() * safEthAmount) / safEthTotalSupply;
             if(derivativeAmount == 0) continue;
             derivatives[i].withdraw(derivativeAmount);
         }
-        IAfETH(afETH).burn(msg.sender, safEthAmount);
+        IAfETH(safETH).burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
-        address(msg.sender).call{value: ethAmountToWithdraw}("");
+        (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}("");
+        require(sent, "Failed to send Ether");
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 

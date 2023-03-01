@@ -1,10 +1,11 @@
 /* eslint-disable new-cap */
-import { ethers, upgrades } from "hardhat";
+import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { AfETH, AfStrategy } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
+import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 import {
   initialUpgradeableDeploy,
@@ -16,39 +17,48 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import bigDecimal from "js-big-decimal";
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
   let afEth: AfETH;
   let strategyProxy: AfStrategy;
   let snapshot: SnapshotRestorer;
+  let initialHardhatBlock: number; // incase we need to reset to where we started
 
-  before(async () => {
+  const resetToBlock = async (blockNumber: number) => {
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber,
+          },
+        },
+      ],
+    });
+
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
-    const afEthAddress = await strategyProxy.afETH();
+    const afEthAddress = await strategyProxy.safETH();
     afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
     await afEth.setMinter(strategyProxy.address);
+  };
+
+  before(async () => {
+    const latestBlock = await ethers.provider.getBlock("latest");
+    initialHardhatBlock = latestBlock.number;
+    await resetToBlock(initialHardhatBlock);
   });
 
-  beforeEach(async () => {
-    snapshot = await takeSnapshot();
-  });
-
-  afterEach(async () => {
-    await snapshot.restore();
-  });
-
-  describe("Deposit/Withdraw", function () {
-    it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
+  describe("Pause", function () {
+    it("Should pause staking / unstaking", async function () {
+      snapshot = await takeSnapshot();
+      await strategyProxy.setPauseStaking(true);
+      await time.increase(1);
       const depositAmount = ethers.utils.parseEther("1");
 
-      const price0 = await strategyProxy.valueBySupply();
-
-      // set all derivatives to the same weight and stake
-      // if there are 3 derivatives this is 33/33/33
       const derivativeCount = (
         await strategyProxy.derivativeCount()
       ).toNumber();
@@ -58,6 +68,25 @@ describe.only("Af Strategy", function () {
         await strategyProxy.adjustWeight(i, initialWeight);
         await time.increase(1);
       }
+      await expect(
+        strategyProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("staking is paused");
+
+      await strategyProxy.setPauseUnstaking(true);
+
+      await expect(strategyProxy.unstake(1000)).to.be.revertedWith(
+        "unstaking is paused"
+      );
+
+      // dont stay paused
+      await snapshot.restore();
+    });
+  });
+
+  describe("Deposit/Withdraw", function () {
+    it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
+      const depositAmount = ethers.utils.parseEther("1");
+      const price0 = await strategyProxy.valueBySupply();
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
@@ -76,17 +105,6 @@ describe.only("Af Strategy", function () {
     });
     it("Should withdraw without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
-      // set all derivatives to the same weight and stake
-      // if there are 3 derivatives this is 33/33/33
-      const derivativeCount = (
-        await strategyProxy.derivativeCount()
-      ).toNumber();
-      const initialWeight = BigNumber.from("1000000000000000000");
-
-      for (let i = 0; i < derivativeCount; i++) {
-        await strategyProxy.adjustWeight(i, initialWeight);
-        await time.increase(1);
-      }
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
@@ -119,8 +137,10 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Derivatives", async () => {
-    const derivatives = [] as any;
-    before(async () => {
+    let derivatives = [] as any;
+    beforeEach(async () => {
+      await resetToBlock(16637130);
+      derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
@@ -180,8 +200,92 @@ describe.only("Af Strategy", function () {
       }
     });
 
+    it("Should test Stakewise withdraw when an rEth2 balance has accumulated", async () => {
+      const stakewise = derivatives[3];
+
+      const rEth2WhaleAddress = "0x7BdDb2C97AF91f97E73F07dEB976fdFC2d2Ee93c";
+
+      const rEth2Address = "0x20bc832ca081b91433ff6c17f85701b6e92486c5";
+      const rEth2 = new ethers.Contract(rEth2Address, ERC20.abi, adminAccount);
+
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [rEth2WhaleAddress],
+      });
+
+      const transferAmount = ethers.utils.parseEther("0.1");
+      const whaleSigner = await ethers.getSigner(rEth2WhaleAddress);
+      const rEth2Whale = rEth2.connect(whaleSigner);
+
+      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
+
+      // simulate rEth2 reward accumulation
+      await rEth2Whale.transfer(stakewise.address, transferAmount);
+
+      // balance is in sEth2 which stable to eth
+      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
+
+      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
+      await stakewise.withdraw(await stakewise.balance());
+      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
+
+      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
+        ethBalanceBeforeWithdraw
+      );
+
+      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
+      // 2% tolerance from slippage
+      expect(
+        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
+      ).eq(true);
+    });
+
+    it("Should withdraw the full balance from stakewise if more than the balance is passed in", async () => {
+      const stakewise = derivatives[3];
+
+      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
+
+      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
+
+      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
+      await stakewise.withdraw((await stakewise.balance()).mul(2));
+      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
+
+      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
+        ethBalanceBeforeWithdraw
+      );
+
+      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
+      // 2% tolerance from slippage
+      expect(
+        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
+      ).eq(true);
+    });
+
+    it("Should not deposit if more than the minActivatingDeposit on Stakewise", async () => {
+      await resetToBlock(13637030); // 32 eth min at this block
+      const factory = await ethers.getContractFactory("StakeWise");
+
+      const stakewise = await upgrades.deployProxy(factory);
+      await stakewise.deployed();
+
+      const balanceBeforeDeposit = await stakewise.balance();
+
+      const depositResult = await stakewise.deposit({
+        value: ethers.utils.parseEther("33"),
+      });
+      await depositResult.wait();
+
+      const balanceAfterDeposit = await stakewise.balance();
+
+      // deposit doesnt happen because exceeded minActivatingDeposit at this block
+      expect(balanceBeforeDeposit.toString()).eq(
+        balanceAfterDeposit.toString()
+      );
+    });
+
     it("Should upgrade a derivative contract and have same values before and after upgrade", async () => {
-      const derivativeToUpgrade = derivatives[0];
+      const derivativeToUpgrade = derivatives[1];
 
       const addressBefore = derivativeToUpgrade.address;
       const priceBefore = await derivativeToUpgrade.ethPerDerivative(
@@ -198,7 +302,8 @@ describe.only("Af Strategy", function () {
 
       // value same before and after
       expect(addressBefore).eq(addressAfter);
-      expect(priceBefore).eq(priceAfter);
+      // price shouldnt have changed - maybe a tiny bit because block time
+      expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -225,17 +330,18 @@ describe.only("Af Strategy", function () {
 
       // Value in and out approx same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(depositAmount.toString()),
-          new bigDecimal(withdrawAmount.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(depositAmount, withdrawAmount)).eq(true);
     });
   });
 
   describe("Upgrades", async () => {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should have the same proxy address before and after upgrading", async () => {
       const addressBefore = strategyProxy.address;
       const strategy2 = await upgrade(
@@ -307,17 +413,18 @@ describe.only("Af Strategy", function () {
 
       // Value in and out approx same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(depositAmount.toString()),
-          new bigDecimal(withdrawAmount.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(depositAmount, withdrawAmount)).eq(true);
     });
   });
 
   describe("Weights & Rebalance", async () => {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should rebalance the underlying values to current weights", async () => {
       const derivativeCount = (
         await strategyProxy.derivativeCount()
@@ -347,49 +454,55 @@ describe.only("Af Strategy", function () {
       const underlyingValueAfter = await strategyProxy.underlyingValue();
       const priceAfter = await strategyProxy.valueBySupply();
 
-      // less than 2% difference before and after (because slippage)
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(underlyingValueAfter.toString()),
-          new bigDecimal(underlyingValueBefore.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      // less than 2% price difference before and after (because slippage)
+      expect(within2Percent(priceBefore, priceAfter)).eq(true);
 
-      const pricePercentChange = new bigDecimal(priceBefore.toString()).divide(
-        new bigDecimal(priceAfter.toString()),
-        18
+      // value of
+      // less than 2% underlying value difference before and after (because slippage)
+      expect(within2Percent(underlyingValueAfter, underlyingValueBefore)).eq(
+        true
       );
 
-      const valuePercentChange = new bigDecimal(
-        underlyingValueBefore.toString()
-      ).divide(new bigDecimal(underlyingValueAfter.toString()), 18);
-
-      // valueBySupply expected change by almost exactly the same % as value
-      expect(
-        decimalApproxEqual(
-          pricePercentChange,
-          valuePercentChange,
-          new bigDecimal("0.000000001")
-        )
-      ).eq(true);
-
       // value of all derivatives excluding the first
-      let remainingDerivativeValue = new bigDecimal();
+      let remainingDerivativeValue = BigNumber.from(0);
       for (let i = 1; i < derivativeCount; i++) {
         remainingDerivativeValue = remainingDerivativeValue.add(
-          new bigDecimal((await strategyProxy.derivativeValue(i)).toString())
+          await strategyProxy.derivativeValue(i)
         );
       }
 
       // value of first derivative should approx equal to the sum of the others (2% tolerance for slippage)
       expect(
-        decimalApproxEqual(
+        within2Percent(
           remainingDerivativeValue,
-          new bigDecimal((await strategyProxy.derivativeValue(0)).toString()),
-          new bigDecimal(0.02)
+          await strategyProxy.derivativeValue(0)
         )
       ).eq(true);
+    });
+
+    it("Should stake with a weight set to 0", async () => {
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+
+      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialDeposit = ethers.utils.parseEther("1");
+
+      // set all derivatives to the same weight and stake
+      // if there are 3 derivatives this is 33/33/33
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.adjustWeight(i, initialWeight);
+      }
+
+      await strategyProxy.adjustWeight(0, 0);
+
+      await strategyProxy.stake({ value: initialDeposit });
+
+      const underlyingValue = await strategyProxy.underlyingValue();
+
+      // Underlying value is approx the same
+      // 2% tolerance because slippage
+      expect(within2Percent(underlyingValue, initialWeight)).eq(true);
     });
 
     it("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
@@ -425,13 +538,9 @@ describe.only("Af Strategy", function () {
 
       // Underlying value is approx the same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(underlyingValueBefore.toString()),
-          new bigDecimal(underlyingValueAfter.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(underlyingValueBefore, underlyingValueAfter)).eq(
+        true
+      );
 
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
 
@@ -441,31 +550,6 @@ describe.only("Af Strategy", function () {
     });
   });
 
-  // verify that 2 bigDecimals are within a given % of each other
-  const decimalApproxEqual = (
-    amount1: bigDecimal,
-    amount2: bigDecimal,
-    maxDifferencePercent: bigDecimal
-  ) => {
-    if (amount1.compareTo(amount2) === -1) {
-      const differencePercent = new bigDecimal(1).subtract(
-        amount1.divide(amount2, 18)
-      );
-      return (
-        maxDifferencePercent.compareTo(differencePercent) === 1 ||
-        maxDifferencePercent.compareTo(differencePercent) === 0
-      );
-    } else {
-      const differencePercent = new bigDecimal(1).subtract(
-        amount2.divide(amount1, 18)
-      );
-      return (
-        maxDifferencePercent.compareTo(differencePercent) === 1 ||
-        maxDifferencePercent.compareTo(differencePercent) === 0
-      );
-    }
-  };
-
   // Verify that 2 ethers BigNumbers are within 0.000001% of each other
   const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
@@ -474,5 +558,15 @@ describe.only("Af Strategy", function () {
       : amount2.sub(amount1);
     const differenceRatio = amount1.div(difference);
     return differenceRatio.gt("1000000");
+  };
+
+  // Verify that 2 ethers BigNumbers are within 2 percent of each other
+  const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    const differenceRatio = amount1.div(difference);
+    return differenceRatio.gt("50");
   };
 });

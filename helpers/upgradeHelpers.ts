@@ -2,10 +2,10 @@ import { ethers, upgrades } from "hardhat";
 import { AfETH } from "../typechain-types";
 
 export const initialUpgradeableDeploy = async function () {
-  const afETHFactory = await ethers.getContractFactory("afETH");
+  const afETHFactory = await ethers.getContractFactory("safETH");
   const afEth = (await afETHFactory.deploy(
     "Asymmetry Finance ETH",
-    "afETH"
+    "safETH"
   )) as AfETH;
 
   const AfStrategy = await ethers.getContractFactory("AfStrategy");

@@ -57,7 +57,9 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
 
     function withdraw(uint256 amount) public onlyOwner {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
-        address(msg.sender).call{value: address(this).balance}("");
+        (bool sent, ) = address(msg.sender).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
+
     }
 
     function deposit() public onlyOwner payable returns (uint256) {
