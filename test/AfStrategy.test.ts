@@ -47,7 +47,7 @@ describe.only("Af Strategy", function () {
   };
 
   before(async () => {
-    await resetToBlock(16637230);
+    return await resetToBlock(parseInt(process.env.HARDHAT_FORK_BLOCK ?? "0"));
   });
 
   describe("Pause", function () {
