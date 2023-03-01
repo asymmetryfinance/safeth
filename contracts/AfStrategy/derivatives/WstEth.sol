@@ -11,8 +11,10 @@ import "../../interfaces/lido/IWStETH.sol";
 
 contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address public constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    address public constant lidoCrvPool =
+        0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address public constant stEthToken =
+        0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -31,14 +33,16 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);      
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}("");
+        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
+        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
+            ""
+        );
         require(sent, "Failed to send Ether");
     }
 
-    function deposit() public onlyOwner payable returns (uint256) {
+    function deposit() public payable onlyOwner returns (uint256) {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
-          // solhint-disable-next-line
+        // solhint-disable-next-line
         (bool sent, ) = wstETH.call{value: msg.value}("");
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
@@ -47,7 +51,7 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if(amount == 0) return 0;
+        if (amount == 0) return 0;
         return IWStETH(wstETH).getStETHByWstETH(amount);
     }
 
@@ -55,10 +59,9 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         return ethPerDerivative(balance());
     }
 
-    function balance() public view returns (uint256){
-       return IERC20(wstETH).balanceOf(address(this));
+    function balance() public view returns (uint256) {
+        return IERC20(wstETH).balanceOf(address(this));
     }
 
     receive() external payable {}
 }
-

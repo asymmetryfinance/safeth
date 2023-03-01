@@ -77,9 +77,11 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address constant stEthToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant lidoCrvPool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant sfrxEthAddress = 0xac3E018457B222d93114458476f3E3416Abbe38F;
+    address constant sfrxEthAddress =
+        0xac3E018457B222d93114458476f3E3416Abbe38F;
     address constant frxEthAddress = 0x5E8422345238F34275888049021821E8E08CAa1f;
-    address constant frxEthCrvPoolAddress = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+    address constant frxEthCrvPoolAddress =
+        0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if this is updated or discontinued?
@@ -305,13 +307,16 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return lockedCvxAmount;
     }
 
-
     function depositSfrax(uint256 amount) public payable returns (uint256) {
         address frxEthMinterAddress = 0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
-        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(address(this));
+        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
         frxETHMinterContract.submitAndDeposit{value: amount}(address(this));
-        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(address(this));
+        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
         return sfrxBalancePost - sfrxBalancePre;
     }
 
@@ -370,9 +375,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             );
             return amountSwapped;
         } else {
-            uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
+            uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
+                address(this)
+            );
             rocketDepositPool.deposit{value: amount}();
-            uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
+            uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
+                address(this)
+            );
             require(rethBalance2 > rethBalance1, "No rETH was minted");
             uint256 rethMinted = rethBalance2 - rethBalance1;
             //rocketBalances[currentDepositor] += rethMinted;
@@ -412,11 +421,15 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function withdrawREth() public {
-        uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
+        uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
+            address(this)
+        );
         uint256 amount = positions[msg.sender].rocketBalances;
         positions[msg.sender].rocketBalances = 0;
         RocketTokenRETHInterface(rETH).burn(amount);
-        uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(address(this));
+        uint256 rethBalance2 = RocketTokenRETHInterface(rETH).balanceOf(
+            address(this)
+        );
         require(rethBalance1 > rethBalance2, "No rETH was burned");
         uint256 rethBurned = rethBalance1 - rethBalance2;
     }

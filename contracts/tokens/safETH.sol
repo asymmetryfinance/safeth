@@ -13,7 +13,7 @@ contract safETH is ERC20, Ownable {
     ) ERC20(_name, _symbol) {}
 
     function setMinter(address newMinter) public onlyOwner {
-        minter=newMinter;
+        minter = newMinter;
     }
 
     function mint(address to, uint256 amount) public {
