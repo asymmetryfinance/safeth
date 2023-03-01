@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { AfETH, AfStrategy } from "../typechain-types";
+import { AfStrategy, SafETH } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
@@ -20,7 +20,7 @@ import {
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
-  let afEth: AfETH;
+  let afEth: SafETH;
   let strategyProxy: AfStrategy;
   let snapshot: SnapshotRestorer;
   let initialHardhatBlock: number; // incase we need to reset to where we started
@@ -42,7 +42,7 @@ describe.only("Af Strategy", function () {
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
     const afEthAddress = await strategyProxy.safETH();
-    afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as AfETH;
+    afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as SafETH;
     await afEth.setMinter(strategyProxy.address);
   };
 
@@ -50,6 +50,37 @@ describe.only("Af Strategy", function () {
     const latestBlock = await ethers.provider.getBlock("latest");
     initialHardhatBlock = latestBlock.number;
     await resetToBlock(initialHardhatBlock);
+  });
+
+  describe("Slippage", function () {
+    it("Set slippage derivatives via the strategy contract", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+
+      const derivativeCount = (
+        await strategyProxy.derivativeCount()
+      ).toNumber();
+
+      // set slippages to a value we expect to fail
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.setMaxSlippage(i, 0); // 0% slippage we expect to fail
+      }
+      await expect(
+        strategyProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("Too little received");
+
+      // set slippages back to good values
+      for (let i = 0; i < derivativeCount; i++) {
+        await strategyProxy.setMaxSlippage(i, ethers.utils.parseEther("0.05")); // 5%
+      }
+
+      const underlyingValueBefore = await strategyProxy.underlyingValue();
+      await strategyProxy.stake({ value: depositAmount });
+      const underlyingValueAfter = await strategyProxy.underlyingValue();
+
+      // expect deposit to work after setting slippage back to 5%
+      expect(approxEqual(underlyingValueBefore, BigNumber.from(0))).eq(true);
+      expect(within2Percent(underlyingValueAfter, depositAmount)).eq(true);
+    });
   });
 
   describe("Pause", function () {

@@ -124,12 +124,10 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (amount == 0) return 0;
         return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
     }
 
     function derivativePerEth(uint256 amount) public view returns (uint256) {
-        if (amount == 0) return 0;
         return RocketTokenRETHInterface(rethAddress()).getRethValue(amount);
     }
 
