@@ -27,7 +27,7 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
-        maxSlippage = ( 5 * 10 ** 16); // 5%
+        maxSlippage = (5 * 10 ** 16); // 5%
     }
 
     function setMaxSlippage(uint slippage) public onlyOwner {
@@ -39,7 +39,8 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
 
-        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) /
+            10 ** 18;
 
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(

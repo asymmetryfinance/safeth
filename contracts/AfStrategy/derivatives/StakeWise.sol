@@ -39,7 +39,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
-        maxSlippage = ( 5 * 10 ** 16); // 5%
+        maxSlippage = (5 * 10 ** 16); // 5%
     }
 
     function setMaxSlippage(uint slippage) public onlyOwner {
@@ -98,7 +98,8 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
 
         if (rEth2Balance == 0) return 0;
 
-        uint256 minOut = (estimatedSellReth2Output(rEth2Balance) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (estimatedSellReth2Output(rEth2Balance) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         IERC20(rEth2).approve(uniswapRouter, rEth2Balance);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -120,7 +121,8 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
             IERC20(sEth2).balanceOf(address(this))
         );
 
-        uint256 minOut = (estimatedSellSeth2Output(amount) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (estimatedSellSeth2Output(amount) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
