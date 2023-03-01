@@ -49,12 +49,16 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
         weights[index] = weight;
     }
 
+    function underlyingValue() public view returns (uint256) {
+        uint256 total = 0;
+        for(uint i=0;i<derivativeCount;i++) total += derivatives[i].totalEthValue();
+        return total;
+    }
+
     function valueBySupply() public view returns(uint256) {
         uint256 totalSupply = IAfETH(safETH).totalSupply();
-        uint256 underlyingValue = 0;
-        for(uint i=0;i<derivativeCount;i++) underlyingValue += derivatives[i].totalEthValue();
         if(totalSupply == 0) return 10 ** 18;
-        return 10 ** 18 * underlyingValue / totalSupply;
+        return 10 ** 18 * underlyingValue() / totalSupply;
     }
 
     function stake() public payable {
