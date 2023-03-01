@@ -19,6 +19,8 @@ contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant frxEthMinterAddress =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,6 +30,11 @@ contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = ( 5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {

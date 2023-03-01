@@ -37,6 +37,10 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         safETH = _safETH;
     }
 
+    function setMaxSlippage(uint derivativeIndex, uint slippage) public onlyOwner {
+        derivatives[derivativeIndex].setMaxSlippage(slippage);
+    }
+
     function addDerivative(
         address contractAddress,
         uint256 weight

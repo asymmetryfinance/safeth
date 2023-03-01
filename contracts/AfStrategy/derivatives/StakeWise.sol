@@ -28,6 +28,8 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant wEth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant staker = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -37,6 +39,11 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = ( 5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {

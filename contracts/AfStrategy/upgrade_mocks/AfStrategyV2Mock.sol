@@ -28,6 +28,8 @@ contract AfStrategyV2Mock is
     event Staked(address recipient, uint ethIn, uint safEthOut);
     event Unstaked(address recipient, uint ethOut, uint safEthIn);
 
+    uint256 public maxSlippage;
+
     function newFunction() public {
         newFunctionCalled = true;
     }

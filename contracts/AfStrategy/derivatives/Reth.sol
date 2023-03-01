@@ -22,6 +22,8 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -31,6 +33,11 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = ( 5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function rethAddress() private view returns (address) {
