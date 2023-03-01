@@ -41,9 +41,10 @@ contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
         uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
-        // TODO figure out if we want a min receive amount and what it should be
-        // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+
+        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
