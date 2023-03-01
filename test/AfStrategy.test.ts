@@ -24,6 +24,7 @@ describe.only("Af Strategy", function () {
   let afEth: AfETH;
   let strategyProxy: AfStrategy;
   let snapshot: SnapshotRestorer;
+  let initialHardhatBlock: number; // incase we need to reset to where we started
 
   const resetToBlock = async (blockNumber: number) => {
     await network.provider.request({
@@ -47,7 +48,9 @@ describe.only("Af Strategy", function () {
   };
 
   before(async () => {
-    return await resetToBlock(parseInt(process.env.HARDHAT_FORK_BLOCK ?? "0"));
+    const latestBlock = await ethers.provider.getBlock("latest");
+    initialHardhatBlock = latestBlock.number;
+    await resetToBlock(initialHardhatBlock);
   });
 
   describe("Pause", function () {
