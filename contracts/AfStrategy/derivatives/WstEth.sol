@@ -42,7 +42,6 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, minOut);
-        console.log("balance is", address(this).balance);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );

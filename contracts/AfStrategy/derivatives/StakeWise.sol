@@ -98,6 +98,8 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
 
         if (rEth2Balance == 0) return 0;
 
+        uint256 minOut = (estimatedSellReth2Output(rEth2Balance) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+
         IERC20(rEth2).approve(uniswapRouter, rEth2Balance);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -106,7 +108,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
                 fee: 500,
                 recipient: address(this),
                 amountIn: rEth2Balance,
-                amountOutMinimum: 1, // this isnt great
+                amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
@@ -117,6 +119,9 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
             uniswapRouter,
             IERC20(sEth2).balanceOf(address(this))
         );
+
+        uint256 minOut = (estimatedSellSeth2Output(amount) * (10 ** 18 - maxSlippage)) / 10 ** 18;
+
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: sEth2,
@@ -124,7 +129,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
                 fee: 500,
                 recipient: address(this),
                 amountIn: amount,
-                amountOutMinimum: 1, // this isnt great
+                amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
