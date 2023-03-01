@@ -53,7 +53,8 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         address tokenIn,
         address tokenOut,
         uint24 poolFee,
-        uint256 amountIn
+        uint256 amountIn,
+        uint256 minOut
     ) private returns (uint256 amountOut) {
         IERC20(tokenIn).approve(uniswapRouter, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -63,7 +64,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
                 fee: poolFee,
                 recipient: address(this),
                 amountIn: amountIn,
-                amountOutMinimum: 1,
+                amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
@@ -92,12 +93,14 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
             ROCKET_POOL_LIMIT;
         if (!canDeposit) {
+            uint256 minOut = (derivativePerEth(msg.value) * (10 ** 18 - maxSlippage)) / 10 ** 18;
             IWETH(wETH).deposit{value: msg.value}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 wETH,
                 rethAddress(),
                 500,
-                msg.value
+                msg.value,
+                minOut
             );
             return amountSwapped;
         } else {
@@ -123,6 +126,11 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
         if (amount == 0) return 0;
         return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
+    }
+
+    function derivativePerEth(uint256 amount) public view returns (uint256) {
+        if (amount == 0) return 0;
+        return RocketTokenRETHInterface(rethAddress()).getRethValue(amount);
     }
 
     function totalEthValue() public view returns (uint256) {
