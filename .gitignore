@@ -12,3 +12,6 @@ artifacts
 
 #openzeppelin local testnet upgrade addresses
 .openzeppelin/unknown-*.json
+
+# OSX generated
+.DS_Store

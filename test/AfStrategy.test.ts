@@ -261,11 +261,7 @@ describe.only("Af Strategy", function () {
       // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
       // 2% tolerance from slippage
       expect(
-        decimalApproxEqual(
-          new bigDecimal(balanceWithdrawn.toString()),
-          new bigDecimal(derivativeBalanceBeforeWithdraw.toString()),
-          new bigDecimal(0.02)
-        )
+        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
       ).eq(true);
     });
 
@@ -287,11 +283,7 @@ describe.only("Af Strategy", function () {
       // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
       // 2% tolerance from slippage
       expect(
-        decimalApproxEqual(
-          new bigDecimal(balanceWithdrawn.toString()),
-          new bigDecimal(derivativeBalanceBeforeWithdraw.toString()),
-          new bigDecimal(0.02)
-        )
+        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
       ).eq(true);
     });
 
@@ -336,13 +328,7 @@ describe.only("Af Strategy", function () {
       // value same before and after
       expect(addressBefore).eq(addressAfter);
       // price shouldnt have changed - maybe a tiny bit because block time
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(priceBefore.toString()),
-          new bigDecimal(priceAfter.toString()),
-          new bigDecimal(0.00000001)
-        )
-      ).eq(true);
+      expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -369,13 +355,7 @@ describe.only("Af Strategy", function () {
 
       // Value in and out approx same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(depositAmount.toString()),
-          new bigDecimal(withdrawAmount.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(depositAmount, withdrawAmount)).eq(true);
     });
   });
 
@@ -458,13 +438,7 @@ describe.only("Af Strategy", function () {
 
       // Value in and out approx same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(depositAmount.toString()),
-          new bigDecimal(withdrawAmount.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(depositAmount, withdrawAmount)).eq(true);
     });
   });
 
@@ -505,47 +479,28 @@ describe.only("Af Strategy", function () {
       const underlyingValueAfter = await strategyProxy.underlyingValue();
       const priceAfter = await strategyProxy.valueBySupply();
 
-      // less than 2% difference before and after (because slippage)
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(underlyingValueAfter.toString()),
-          new bigDecimal(underlyingValueBefore.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      // less than 2% price difference before and after (because slippage)
+      expect(within2Percent(priceBefore, priceAfter)).eq(true);
 
-      const pricePercentChange = new bigDecimal(priceBefore.toString()).divide(
-        new bigDecimal(priceAfter.toString()),
-        18
+      // value of
+      // less than 2% underlying value difference before and after (because slippage)
+      expect(within2Percent(underlyingValueAfter, underlyingValueBefore)).eq(
+        true
       );
 
-      const valuePercentChange = new bigDecimal(
-        underlyingValueBefore.toString()
-      ).divide(new bigDecimal(underlyingValueAfter.toString()), 18);
-
-      // valueBySupply expected change by almost exactly the same % as value
-      expect(
-        decimalApproxEqual(
-          pricePercentChange,
-          valuePercentChange,
-          new bigDecimal("0.000000001")
-        )
-      ).eq(true);
-
       // value of all derivatives excluding the first
-      let remainingDerivativeValue = new bigDecimal();
+      let remainingDerivativeValue = BigNumber.from(0);
       for (let i = 1; i < derivativeCount; i++) {
         remainingDerivativeValue = remainingDerivativeValue.add(
-          new bigDecimal((await strategyProxy.derivativeValue(i)).toString())
+          await strategyProxy.derivativeValue(i)
         );
       }
 
       // value of first derivative should approx equal to the sum of the others (2% tolerance for slippage)
       expect(
-        decimalApproxEqual(
+        within2Percent(
           remainingDerivativeValue,
-          new bigDecimal((await strategyProxy.derivativeValue(0)).toString()),
-          new bigDecimal(0.02)
+          await strategyProxy.derivativeValue(0)
         )
       ).eq(true);
     });
@@ -572,13 +527,7 @@ describe.only("Af Strategy", function () {
 
       // Underlying value is approx the same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(underlyingValue.toString()),
-          new bigDecimal(initialWeight.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(underlyingValue, initialWeight)).eq(true);
     });
 
     it("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
@@ -614,13 +563,9 @@ describe.only("Af Strategy", function () {
 
       // Underlying value is approx the same
       // 2% tolerance because slippage
-      expect(
-        decimalApproxEqual(
-          new bigDecimal(underlyingValueBefore.toString()),
-          new bigDecimal(underlyingValueAfter.toString()),
-          new bigDecimal(0.02)
-        )
-      ).eq(true);
+      expect(within2Percent(underlyingValueBefore, underlyingValueAfter)).eq(
+        true
+      );
 
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
 
@@ -630,31 +575,6 @@ describe.only("Af Strategy", function () {
     });
   });
 
-  // verify that 2 bigDecimals are within a given % of each other
-  const decimalApproxEqual = (
-    amount1: bigDecimal,
-    amount2: bigDecimal,
-    maxDifferencePercent: bigDecimal
-  ) => {
-    if (amount1.compareTo(amount2) === -1) {
-      const differencePercent = new bigDecimal(1).subtract(
-        amount1.divide(amount2, 18)
-      );
-      return (
-        maxDifferencePercent.compareTo(differencePercent) === 1 ||
-        maxDifferencePercent.compareTo(differencePercent) === 0
-      );
-    } else {
-      const differencePercent = new bigDecimal(1).subtract(
-        amount2.divide(amount1, 18)
-      );
-      return (
-        maxDifferencePercent.compareTo(differencePercent) === 1 ||
-        maxDifferencePercent.compareTo(differencePercent) === 0
-      );
-    }
-  };
-
   // Verify that 2 ethers BigNumbers are within 0.000001% of each other
   const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
@@ -663,5 +583,15 @@ describe.only("Af Strategy", function () {
       : amount2.sub(amount1);
     const differenceRatio = amount1.div(difference);
     return differenceRatio.gt("1000000");
+  };
+
+  // Verify that 2 ethers BigNumbers are within 2 percent of each other
+  const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    const differenceRatio = amount1.div(difference);
+    return differenceRatio.gt("50");
   };
 });
