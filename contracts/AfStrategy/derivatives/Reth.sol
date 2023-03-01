@@ -16,6 +16,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant rocketStorageAddress = 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
+    uint256 public constant ROCKET_POOL_LIMIT = 5000000000000000000000;
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
@@ -58,6 +59,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
+
     }
 
     function deposit() public onlyOwner payable returns (uint256) {
@@ -68,16 +70,33 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
-        // TODO figure out the best way to acquire rEth
-        IWETH(wETH).deposit{value: msg.value}();
-        uint256 amountSwapped = swapExactInputSingleHop(
-            wETH,
-            rethAddress(),
-            500,
-            msg.value
-        );
-        return amountSwapped;
-
+        bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
+            ROCKET_POOL_LIMIT;
+        if (!canDeposit) {
+            IWETH(wETH).deposit{value: msg.value}();
+            uint256 amountSwapped = swapExactInputSingleHop(
+                wETH,
+                rethAddress(),
+                500,
+                msg.value
+            );
+            return amountSwapped;
+        } else {
+            address rocketTokenRETHAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
+            RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
+                rocketTokenRETHAddress
+            );
+            uint256 rethBalance1 = rocketTokenRETH.balanceOf(address(this));
+            rocketDepositPool.deposit{value: msg.value}();
+            uint256 rethBalance2 = rocketTokenRETH.balanceOf(address(this));
+            require(rethBalance2 > rethBalance1, "No rETH was minted");
+            uint256 rethMinted = rethBalance2 - rethBalance1;
+            return (rethMinted);
+        }
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
