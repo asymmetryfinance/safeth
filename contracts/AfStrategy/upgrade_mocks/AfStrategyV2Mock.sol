@@ -18,7 +18,11 @@ import "../derivatives/SfrxEth.sol";
 import "../derivatives/Reth.sol";
 import "../derivatives/WstEth.sol";
 
-contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2MockStorage {
+contract AfStrategyV2Mock is
+    Initializable,
+    OwnableUpgradeable,
+    AfStrategyV2MockStorage
+{
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
     event Staked(address recipient, uint ethIn, uint safEthOut);
@@ -27,6 +31,7 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
     function newFunction() public {
         newFunctionCalled = true;
     }
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -39,7 +44,10 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
         safETH = _safETH;
     }
 
-    function addDerivative(address contractAddress, uint256 weight) public onlyOwner {
+    function addDerivative(
+        address contractAddress,
+        uint256 weight
+    ) public onlyOwner {
         derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
         weights[derivativeCount] = weight;
         derivativeCount++;
@@ -51,27 +59,30 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
 
     function underlyingValue() public view returns (uint256) {
         uint256 total = 0;
-        for(uint i=0;i<derivativeCount;i++) total += derivatives[i].totalEthValue();
+        for (uint i = 0; i < derivativeCount; i++)
+            total += derivatives[i].totalEthValue();
         return total;
     }
 
-    function valueBySupply() public view returns(uint256) {
+    function valueBySupply() public view returns (uint256) {
         uint256 totalSupply = IAfETH(safETH).totalSupply();
-        if(totalSupply == 0) return 10 ** 18;
-        return 10 ** 18 * underlyingValue() / totalSupply;
+        if (totalSupply == 0) return 10 ** 18;
+        return (10 ** 18 * underlyingValue()) / totalSupply;
     }
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
         uint256 preDepositPrice = valueBySupply();
 
-        uint totalWeight =0;
-        for(uint i=0;i<derivativeCount;i++) totalWeight += weights[i];
+        uint totalWeight = 0;
+        for (uint i = 0; i < derivativeCount; i++) totalWeight += weights[i];
 
         uint256 totalStakeValueEth = 0;
-        for(uint i=0;i<derivativeCount;i++) {
+        for (uint i = 0; i < derivativeCount; i++) {
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].ethPerDerivative(derivatives[i].deposit{value: ethAmount}());
+            totalStakeValueEth += derivatives[i].ethPerDerivative(
+                derivatives[i].deposit{value: ethAmount}()
+            );
         }
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
         IAfETH(safETH).mint(msg.sender, mintAmount);
@@ -81,14 +92,18 @@ contract AfStrategyV2Mock is Initializable, OwnableUpgradeable, AfStrategyV2Mock
         require(pauseUnstaking == false, "unstaking is paused");
         uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
         uint256 ethAmountBefore = address(this).balance;
-        for(uint i=0;i<derivativeCount;i++) derivatives[i].withdraw((derivatives[i].balance() * safEthAmount) / safEthTotalSupply);
+        for (uint i = 0; i < derivativeCount; i++)
+            derivatives[i].withdraw(
+                (derivatives[i].balance() * safEthAmount) / safEthTotalSupply
+            );
         IAfETH(safETH).burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
-        (bool sent,) = address(msg.sender).call{value: ethAmountToWithdraw}("");
+        (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
+            ""
+        );
         require(sent, "Failed to send Ether");
-
     }
 
     function setPauseStaking(bool _pause) public onlyOwner {
