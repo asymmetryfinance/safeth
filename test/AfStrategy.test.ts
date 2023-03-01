@@ -44,20 +44,7 @@ describe.only("Af Strategy", function () {
   describe("Deposit/Withdraw", function () {
     it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
-
       const price0 = await strategyProxy.valueBySupply();
-
-      // set all derivatives to the same weight and stake
-      // if there are 3 derivatives this is 33/33/33
-      const derivativeCount = (
-        await strategyProxy.derivativeCount()
-      ).toNumber();
-      const initialWeight = BigNumber.from("1000000000000000000");
-
-      for (let i = 0; i < derivativeCount; i++) {
-        await strategyProxy.adjustWeight(i, initialWeight);
-        await time.increase(1);
-      }
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
@@ -76,17 +63,6 @@ describe.only("Af Strategy", function () {
     });
     it("Should withdraw without changing the underlying valueBySupply by a significant amount", async () => {
       const depositAmount = ethers.utils.parseEther("1");
-      // set all derivatives to the same weight and stake
-      // if there are 3 derivatives this is 33/33/33
-      const derivativeCount = (
-        await strategyProxy.derivativeCount()
-      ).toNumber();
-      const initialWeight = BigNumber.from("1000000000000000000");
-
-      for (let i = 0; i < derivativeCount; i++) {
-        await strategyProxy.adjustWeight(i, initialWeight);
-        await time.increase(1);
-      }
 
       await strategyProxy.stake({ value: depositAmount });
       await time.increase(1);
