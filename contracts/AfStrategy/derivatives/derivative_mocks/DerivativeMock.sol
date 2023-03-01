@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../interfaces/Iderivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
+import "./IderivativeMock.sol";
+import "../../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
+import "../../../interfaces/curve/ICrvEthPool.sol";
+import "../../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
-import "../../interfaces/rocketpool/RocketStorageInterface.sol";
-import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "../../interfaces/IWETH.sol";
-import "../../interfaces/uniswap/ISwapRouter.sol";
+import "../../../interfaces/rocketpool/RocketStorageInterface.sol";
+import "../../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
+import "../../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../../../interfaces/IWETH.sol";
+import "../../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
-    address public constant rocketStorageAddress = 0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
+contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
+    address public constant rocketStorageAddress =
+        0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
     uint256 public constant ROCKET_POOL_LIMIT = 5000000000000000000000;
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant uniswapRouter = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address public constant uniswapRouter =
+        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -31,11 +33,16 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         _transferOwnership(msg.sender);
     }
 
-    function rethAddress() private view returns(address) {
-        return RocketStorageInterface(rocketStorageAddress).getAddress(keccak256(abi.encodePacked("contract.address", "rocketTokenRETH")));
+    function rethAddress() private view returns (address) {
+        return
+            RocketStorageInterface(rocketStorageAddress).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
     }
 
-        function swapExactInputSingleHop(
+    function swapExactInputSingleHop(
         address tokenIn,
         address tokenOut,
         uint24 poolFee,
@@ -60,11 +67,32 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         address(msg.sender).call{value: address(this).balance}("");
     }
 
-    function deposit() public onlyOwner payable returns (uint256) {
-        // Per RocketPool Docs query deposit pool address each time it is used
-        address rocketDepositPoolAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
-            keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
+    function withdrawAll() public onlyOwner {
+        address rocketTokenRETHAddress = RocketStorageInterface(
+            rocketStorageAddress
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketTokenRETH")
+                )
+            );
+        RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
+            rocketTokenRETHAddress
         );
+        RocketTokenRETHInterface(rethAddress()).burn(
+            rocketTokenRETH.balanceOf(address(this))
+        );
+        address(msg.sender).call{value: address(this).balance}("");
+    }
+
+    function deposit() public payable onlyOwner returns (uint256) {
+        // Per RocketPool Docs query deposit pool address each time it is used
+        address rocketDepositPoolAddress = RocketStorageInterface(
+            rocketStorageAddress
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketDepositPool")
+                )
+            );
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
@@ -80,11 +108,13 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
             );
             return amountSwapped;
         } else {
-            address rocketTokenRETHAddress = RocketStorageInterface(rocketStorageAddress).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketTokenRETH")
-                )
-            );
+            address rocketTokenRETHAddress = RocketStorageInterface(
+                rocketStorageAddress
+            ).getAddress(
+                    keccak256(
+                        abi.encodePacked("contract.address", "rocketTokenRETH")
+                    )
+                );
             RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
                 rocketTokenRETHAddress
             );
@@ -98,7 +128,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if(amount == 0) return 0;
+        if (amount == 0) return 0;
         return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
     }
 
@@ -106,10 +136,9 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         return ethPerDerivative(balance());
     }
 
-    function balance() public view returns (uint256){
+    function balance() public view returns (uint256) {
        return IERC20(rethAddress()).balanceOf(address(this));
     }
 
     receive() external payable {}
 }
-

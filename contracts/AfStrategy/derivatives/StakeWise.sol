@@ -2,10 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "../../interfaces/Iderivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
@@ -18,8 +16,7 @@ import "../../interfaces/stakewise/IStakewiseStaker.sol";
 // There is also an "activation period" that applies to larger deposits.
 // For simplicity we should throw if our deposit requires an activation period
 // This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
-contract StakeWise is IDERIVATIVE, Ownable {
-
+contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address public constant sEth2 =
@@ -31,7 +28,14 @@ contract StakeWise is IDERIVATIVE, Ownable {
     address public constant wEth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant staker = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
     
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
+        _disableInitializers();
+    }
+
+    // This replaces the constructor for upgradeable contracts
+    function initialize() public initializer {
         _transferOwnership(msg.sender);
     }
 
@@ -46,11 +50,16 @@ contract StakeWise is IDERIVATIVE, Ownable {
         else withdrawAmount = amount;
         uint256 wEthReceived = sellSeth2ForWeth(amount);
         IWETH(wEth).withdraw(wEthReceived);
-        address(msg.sender).call{value: address(this).balance}("");
+        (bool success, ) = address(msg.sender).call{value: address(this).balance}("");
+        require(success, "call failed");
     }
 
-    // TODO check and throw if there is an activation period
     function deposit() public payable onlyOwner returns (uint256) {
+        if(msg.value > IStakewiseStaker(staker).minActivatingDeposit()){ 
+            (bool success, ) = address(msg.sender).call{value: msg.value}("");
+            require(success, "call failed");
+            return 0;
+        }
         uint256 balanceBefore = IERC20(sEth2).balanceOf(address(this));
         IStakewiseStaker(staker).stake{value: msg.value}();
         uint256 balanceAfter = IERC20(sEth2).balanceOf(address(this));
@@ -108,18 +117,16 @@ contract StakeWise is IDERIVATIVE, Ownable {
     }
 
     
-
+    // how much weth we expect to get for a given seth2 input amount
     function estimatedSellSeth2Output(uint256 amount) public view returns (uint) {
-        //IERC20(sEth2).balanceOf(address(this))
-        return (poolPrice(seth2WethPool) * (amount)) / (10 ** 18);
+        return (amount * 10 ** 18) / poolPrice(seth2WethPool);
     }
 
+    // how much seth2 we expect to get for a given reth2 input amount
     function estimatedSellReth2Output(uint256 amount) public view returns (uint) {
-        return (poolPrice(rEth2Seth2Pool) * (amount)) / (10 ** 18);
+        return (amount * 10 ** 18) / poolPrice(rEth2Seth2Pool);
     }
 
-    // TODO figure out if this price is rEth2/sEth2 or sEth2/rEth2
-    // Prices are nearly the same so its hard to tell
     function poolPrice(address poolAddress)
         public
         view
@@ -129,6 +136,7 @@ contract StakeWise is IDERIVATIVE, Ownable {
         (uint160 sqrtPriceX96,,,,,,) =  pool.slot0();
         return sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18) >> (96 * 2);
     }
+
 
     receive() external payable {}
 }

@@ -6,17 +6,11 @@ import "../interfaces/IWETH.sol";
 import "../interfaces/IAfETH.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
-import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "../interfaces/rocketpool/RocketStorageInterface.sol";
-import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
-import "./derivatives/SfrxEth.sol";
-import "./derivatives/Reth.sol";
-import "./derivatives/WstEth.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event StakingPaused(bool indexed paused);
