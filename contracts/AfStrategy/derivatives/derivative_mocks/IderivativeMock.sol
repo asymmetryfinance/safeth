@@ -13,4 +13,6 @@ interface IDERIVATIVEMOCK {
     function balance() external view returns (uint256);
 
     function withdrawAll() external;
+
+    function setMaxSlippage(uint256 slippage) external;
 }

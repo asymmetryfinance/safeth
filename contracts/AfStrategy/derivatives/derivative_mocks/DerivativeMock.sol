@@ -20,10 +20,16 @@ contract DerivativeMock is IDERIVATIVEMOCK, Initializable, OwnableUpgradeable {
     address public constant frxEthMinterAddress =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {

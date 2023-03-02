@@ -19,6 +19,8 @@ contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant frxEthMinterAddress =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,15 +30,22 @@ contract SfrxEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = (5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {
         IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
         uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
-        // TODO figure out if we want a min receive amount and what it should be
-        // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+
+        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) /
+            10 ** 18;
+
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );

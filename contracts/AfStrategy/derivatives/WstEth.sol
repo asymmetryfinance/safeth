@@ -16,6 +16,8 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant stEthToken =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -25,15 +27,22 @@ contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = (5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {
         IWStETH(wstETH).unwrap(amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
-        // TODO figure out if we want a min receive amount and what it should be
-        // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
+
+        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) /
+            10 ** 18;
+
+        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );

@@ -11,4 +11,6 @@ interface IDERIVATIVE {
     function totalEthValue() external view returns (uint256);
 
     function balance() external view returns (uint256);
+
+    function setMaxSlippage(uint256 slippage) external;
 }

@@ -28,6 +28,8 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant wEth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant staker = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
 
+    uint256 public maxSlippage;
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -37,6 +39,11 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
+        maxSlippage = (5 * 10 ** 16); // 5%
+    }
+
+    function setMaxSlippage(uint slippage) public onlyOwner {
+        maxSlippage = slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {
@@ -91,6 +98,9 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
 
         if (rEth2Balance == 0) return 0;
 
+        uint256 minOut = (estimatedSellReth2Output(rEth2Balance) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
+
         IERC20(rEth2).approve(uniswapRouter, rEth2Balance);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -99,7 +109,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
                 fee: 500,
                 recipient: address(this),
                 amountIn: rEth2Balance,
-                amountOutMinimum: 1, // this isnt great
+                amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
@@ -110,6 +120,10 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
             uniswapRouter,
             IERC20(sEth2).balanceOf(address(this))
         );
+
+        uint256 minOut = (estimatedSellSeth2Output(amount) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
+
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: sEth2,
@@ -117,7 +131,7 @@ contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
                 fee: 500,
                 recipient: address(this),
                 amountIn: amount,
-                amountOutMinimum: 1, // this isnt great
+                amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
