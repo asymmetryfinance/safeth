@@ -18,7 +18,7 @@ import {
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
 
-describe.only("Af Strategy", function () {
+describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
   let afEth: SafETH;
   let strategyProxy: AfStrategy;

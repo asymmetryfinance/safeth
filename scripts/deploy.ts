@@ -67,6 +67,18 @@ async function main() {
     name: "WstEth",
     address: wst.address,
   });
+
+  const StakeWiseDeployment = await ethers.getContractFactory("StakeWise");
+  const stakeWise = await upgrades.deployProxy(StakeWiseDeployment, []);
+  await stakeWise.deployed();
+
+  await stakeWise.transferOwnership(afStrategy.address);
+  await afStrategy.addDerivative(stakeWise.address, "1000000000000000000");
+  console.log("stakewise deployed to:", stakeWise.address);
+  await hre.ethernal.push({
+    name: "StakeWise",
+    address: stakeWise.address,
+  });
 }
 
 main()

@@ -71,8 +71,9 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function rebalanceToWeights() public onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
 
-        for (uint i = 0; i < derivativeCount; i++)
-            derivatives[i].withdraw(derivatives[i].balance());
+        for (uint i = 0; i < derivativeCount; i++) {
+            if(derivatives[i].balance() > 0) derivatives[i].withdraw(derivatives[i].balance());
+        }
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
