@@ -17,6 +17,8 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
+import axios from "axios";
+import { ONE_INCH_BASE_URL, WETH_ADDRESS } from "./constants";
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
@@ -53,7 +55,7 @@ describe.only("Af Strategy", function () {
   });
 
   describe("Slippage", function () {
-    it("Set slippage derivatives via the strategy contract", async function () {
+    it.only("Set slippage derivatives via the strategy contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
 
       const derivativeCount = (
@@ -64,6 +66,23 @@ describe.only("Af Strategy", function () {
       for (let i = 0; i < derivativeCount; i++) {
         await strategyProxy.setMaxSlippage(i, 0); // 0% slippage we expect to fail
       }
+
+      console.log(
+        "url",
+        `${ONE_INCH_BASE_URL}/quote?fromTokenAddress=${WETH_ADDRESS}&toTokenAddress=0xae78736Cd615f374D3085123A210448E74Fc6393&amount=${depositAmount
+          .div(3)
+          .toString()}`
+      );
+      const response = await axios.get(
+        `${ONE_INCH_BASE_URL}/quote?fromTokenAddress=${WETH_ADDRESS}&toTokenAddress=0xae78736Cd615f374D3085123A210448E74Fc6393&amount=${depositAmount
+          .div(3)
+          .toString()}`
+      );
+
+      console.log("response", response);
+
+      expect(response.status).eq(200);
+
       await expect(
         strategyProxy.stake({ value: depositAmount })
       ).to.be.revertedWith("Too little received");

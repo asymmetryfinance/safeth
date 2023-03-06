@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../interfaces/Iderivative.sol";
+import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/lido/IWStETH.sol";
 

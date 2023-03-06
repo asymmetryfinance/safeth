@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../interfaces/Iderivative.sol";
+import "../../interfaces/IDerivative.sol";
 import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
@@ -13,6 +12,7 @@ import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "../../interfaces/1inch/IOneSplit.sol";
 
 contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant rocketStorageAddress =
@@ -21,6 +21,8 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address public constant oneInchSplit =
+        0xC586BeF4a0992C495Cf22e1aeEE4E446CECDee0E;
 
     uint256 public maxSlippage;
 
@@ -33,10 +35,10 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
-        maxSlippage = (5 * 10 ** 16); // 5%
+        maxSlippage = (5 * 10**16); // 5%
     }
 
-    function setMaxSlippage(uint slippage) public onlyOwner {
+    function setMaxSlippage(uint256 slippage) public onlyOwner {
         maxSlippage = slippage;
     }
 
@@ -52,22 +54,24 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     function swapExactInputSingleHop(
         address tokenIn,
         address tokenOut,
-        uint24 poolFee,
         uint256 amountIn,
         uint256 minOut
     ) private returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(uniswapRouter, amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: poolFee,
-                recipient: address(this),
-                amountIn: amountIn,
-                amountOutMinimum: minOut,
-                sqrtPriceLimitX96: 0
-            });
-        amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
+        IERC20(tokenIn).approve(oneInchSplit, amountIn);
+        console.log("Start get expected");
+        (uint256 returnAmount, uint256[] memory distribution) = IOneSplit(
+            oneInchSplit
+        ).getExpectedReturn(IERC20(tokenOut), IERC20(tokenIn), amountIn, 1000, 0);
+        console.log("returnAmount", returnAmount);
+        amountOut = IOneSplit(oneInchSplit).swap(
+            IERC20(tokenIn),
+            IERC20(tokenOut),
+            amountIn,
+            minOut,
+            distribution,
+            0
+        );
+        console.log("AMOUNT", amountOut);
     }
 
     function withdraw(uint256 amount) public onlyOwner {
@@ -80,6 +84,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
 
     function deposit() public payable onlyOwner returns (uint256) {
         // Per RocketPool Docs query deposit pool address each time it is used
+        console.log("deposit");
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
         ).getAddress(
@@ -92,17 +97,20 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
             );
         bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
             ROCKET_POOL_LIMIT;
+        console.log("Can", canDeposit);
         if (!canDeposit) {
             uint256 minOut = (derivativePerEth(msg.value) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10**18 - maxSlippage)) / 10**18;
+            console.log("minOut", minOut);
             IWETH(wETH).deposit{value: msg.value}();
+            console.log("try");
             uint256 amountSwapped = swapExactInputSingleHop(
                 wETH,
                 rethAddress(),
-                500,
                 msg.value,
                 minOut
             );
+            console.log("amountSwapped", amountSwapped);
             return amountSwapped;
         } else {
             address rocketTokenRETHAddress = RocketStorageInterface(
