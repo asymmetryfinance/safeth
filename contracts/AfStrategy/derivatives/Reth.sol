@@ -33,10 +33,10 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     // This replaces the constructor for upgradeable contracts
     function initialize() public initializer {
         _transferOwnership(msg.sender);
-        maxSlippage = (5 * 10 ** 16); // 5%
+        maxSlippage = (5 * 10**16); // 5%
     }
 
-    function setMaxSlippage(uint slippage) public onlyOwner {
+    function setMaxSlippage(uint256 slippage) public onlyOwner {
         maxSlippage = slippage;
     }
 
@@ -92,9 +92,10 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
             );
         bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
             ROCKET_POOL_LIMIT;
+
         if (!canDeposit) {
             uint256 minOut = (derivativePerEth(msg.value) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10**18 - maxSlippage)) / 10**18;
             IWETH(wETH).deposit{value: msg.value}();
             uint256 amountSwapped = swapExactInputSingleHop(
                 wETH,
