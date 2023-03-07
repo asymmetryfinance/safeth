@@ -8,8 +8,7 @@ import "hardhat/console.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/convex/ICvxLockerV2.sol";
-import "../tokens/afCVX1155.sol";
-import "../tokens/afBundle1155.sol";
+
 import "../interfaces/IAfETH.sol";
 import "../interfaces/IAf1155.sol";
 import "../interfaces/frax/IFrxETHMinter.sol";
@@ -34,14 +33,12 @@ import "../interfaces/lido/IstETH.sol";
 import "../interfaces/balancer/IVault.sol";
 import "../interfaces/balancer/IBalancerHelpers.sol";
 
-import "../Vault.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AsymmetryStrategy is ERC1155Holder, Ownable {
     using Strings for uint256;
     event StakingPaused(bool paused);
     event UnstakingPaused(bool paused);
-    event SetVault(address token, address vault);
 
     struct Position {
         uint256 positionID;
@@ -160,14 +157,14 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
             amountCvxLocked
         );
         uint256 wstEthMinted = depositWstEth(ethAmount / numberOfDerivatives);
-        Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
+        // Vault(vaults[wstETH]).deposit(wstEthMinted, address(this));
 
         uint256 rEthMinted = depositREth(ethAmount / numberOfDerivatives);
-        Vault(vaults[rETH]).deposit(rEthMinted, address(this));
+        // Vault(vaults[rETH]).deposit(rEthMinted, address(this));
 
         uint256 sfraxMinted = depositSfrax(ethAmount / numberOfDerivatives);
         // TODO: sfrxETH is a 4626 vault.  We should check to see how in depth or Vault contract gets and if it stays standard remove this
-        Vault(vaults[sfrxEthAddress]).deposit(sfraxMinted, address(this));
+        // Vault(vaults[sfrxEthAddress]).deposit(sfraxMinted, address(this));
 
         // TODO: Deploy and deposit balancer tokens of the 4626 vaults
         //uint256 balLpAmount = depositBalTokens(wstEthMinted);
@@ -559,13 +556,13 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         uint256 balPoolTokens
     ) private returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
-        IAfBundle1155(bundleNFT).mint(
-            cvxNftId,
-            cvxAmount,
-            newBundleNftId,
-            balPoolTokens,
-            address(this)
-        );
+        // IAfBundle1155(bundleNFT).mint(
+        //     cvxNftId,
+        //     cvxAmount,
+        //     newBundleNftId,
+        //     balPoolTokens,
+        //     address(this)
+        // );
         // positions[currentDepositor] = newBundleNftId;
         // bundleNFtBalances[newBundleNftId] = balPoolTokens;
         return (newBundleNftId);
@@ -613,7 +610,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         ids[1] = positions[user].cvxNFTID;
         amounts[0] = positions[user].balancerBalances;
         amounts[1] = positions[user].convexBalances;
-        IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+        // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
     function mintAfEth(uint256 amount) private {
@@ -634,7 +631,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
 
     function setVault(address _token, address _vault) public onlyOwner {
         vaults[_token] = _vault;
-        emit SetVault(_token, _vault);
+        // emit SetVault(_token, _vault);
         IERC20(_token).approve(_vault, type(uint256).max);
     }
 

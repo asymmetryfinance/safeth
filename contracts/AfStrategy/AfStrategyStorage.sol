@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../interfaces/Iderivative.sol";
+import "../interfaces/IDerivative.sol";
 
 // Upgradeability Rules:
 // DO NOT change existing variable names or types

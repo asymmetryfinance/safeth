@@ -17,6 +17,7 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
+import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
@@ -192,6 +193,21 @@ describe.only("Af Strategy", function () {
       const derivative3 = await upgrades.deployProxy(factory3);
       await derivative3.deployed();
       derivatives.push(derivative3);
+    });
+
+    it.only("Should use reth deposit contract", async () => {
+      await resetToBlock(16773008); // Deposit contract not empty here
+      const rEthDerivative = derivatives[0];
+      const depositPoolAddress = "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4";
+      const depositPool = new ethers.Contract(
+        depositPoolAddress,
+        rEthDepositPoolAbi,
+        adminAccount
+      );
+      const balance = await depositPool.getBalance();
+      console.log("balance", balance);
+      await rEthDerivative.deposit({ value: ethers.utils.parseEther("1") });
+      await time.increase(1);
     });
 
     it("Should test each function on all derivative contracts", async () => {
