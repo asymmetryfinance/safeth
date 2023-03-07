@@ -4,10 +4,19 @@ import { getLatestContract } from "../../helpers/upgradeHelpers";
 import { SafETH } from "../../typechain-types";
 import { afEthAbi } from "../abi/afEthAbi";
 
-export const stakeMinimum = 0.1;
-export const stakeMaximum = 3;
+// fucked up value
+// let seed = 7;
+// export const stakeMinimum = 1;
+// export const stakeMaximum = 2;
 
-export const stakeLargeAmount = 5;
+// good value
+// let seed = 10;
+// export const stakeMinimum = 1;
+// export const stakeMaximum = 2;
+
+let seed = 7;
+export const stakeMinimum = 1;
+export const stakeMaximum = 2;
 
 export const getAdminAccount = async () => {
   const accounts = await ethers.getSigners();
@@ -19,13 +28,19 @@ export const getUserAccounts = async () => {
 };
 
 export const randomEthAmount = (min: number, max: number) => {
-  return (min + Math.random() * (max - min)).toString();
+  return (min + deterministicRandom() * (max - min)).toString();
 };
 
 export const randomBnInRange = (min: BigNumber, max: BigNumber) => {
   return ethers.BigNumber.from(min).add(
     ethers.BigNumber.from(ethers.utils.randomBytes(32)).mod(max.sub(min))
   );
+};
+
+// For deterministic (seeded) random values in tests
+const deterministicRandom = () => {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
 };
 
 export const getUserBalances = async () => {
@@ -65,10 +80,15 @@ export const randomStakeUnstake = async (
   const userAccounts = await getUserAccounts();
 
   let totalNetworkFee = BigNumber.from(0);
-  for (let i = 0; i < userAccounts.length; i++) {
+
+  for (let i = 0; i < 1; i++) {
+    console.log(
+      "bal1",
+      ethers.utils.formatUnits(await userAccounts[i].getBalance())
+    );
     const userStrategySigner = strategy.connect(userAccounts[i]);
     for (let j = 0; j < 3; j++) {
-      const doStake = Math.random() > 0.5;
+      const doStake = deterministicRandom() > 0.5;
       if (doStake) {
         const ethAmount = randomEthAmount(stakeMinimum, stakeMaximum);
         const depositAmount = ethers.utils.parseEther(ethAmount);
@@ -82,7 +102,7 @@ export const randomStakeUnstake = async (
         );
       } else {
         const safEthBalance = await safEth.balanceOf(userAccounts[i].address);
-        const withdrawAmount = safEthBalance.div(4);
+        const withdrawAmount = safEthBalance;
         console.log("withdrawing ", userAccounts[i].address, withdrawAmount);
         const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
         const mined = await unstakeResult.wait();
@@ -90,6 +110,10 @@ export const randomStakeUnstake = async (
           mined.gasUsed.mul(mined.effectiveGasPrice)
         );
       }
+      console.log(
+        "bal2",
+        ethers.utils.formatUnits(await userAccounts[i].getBalance())
+      );
     }
   }
   return totalNetworkFee;

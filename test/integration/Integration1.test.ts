@@ -18,7 +18,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe.only("Integration Test 1", function () {
+describe("Integration Test 1", function () {
   let safEthContractAddress: string;
   let strategyContractAddress: string;
 
