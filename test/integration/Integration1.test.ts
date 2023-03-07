@@ -6,6 +6,9 @@ import {
   getUserAccounts,
   randomEthAmount,
   randomStakeUnstake,
+  stakeLargeAmount,
+  stakeMaximum,
+  stakeMinimum,
   totalUserBalances,
 } from "./integrationHelpers";
 import { getLatestContract } from "../../helpers/upgradeHelpers";
@@ -89,6 +92,57 @@ describe.only("Integration Test 1", function () {
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
 
+  it("Should stake a small amount", async function () {
+    const strategy = await getLatestContract(
+      strategyContractAddress,
+      "AfStrategy"
+    );
+
+    const userAccounts = await getUserAccounts();
+
+    let totalDeposited = BigNumber.from(0);
+
+    const depositAmount = ethers.utils.parseEther(
+      randomEthAmount(stakeMinimum, stakeMaximum)
+    );
+    totalDeposited = totalDeposited.add(depositAmount);
+    const userStrategySigner = strategy.connect(userAccounts[0]);
+    await userStrategySigner.stake({ value: depositAmount });
+    await time.increase(1);
+
+    const underlyingValue = await strategy.underlyingValue();
+
+    expect(within2Percent(underlyingValue, totalDeposited)).eq(true);
+  });
+
+  it("Should stake a large amount", async function () {
+    const strategy = await getLatestContract(
+      strategyContractAddress,
+      "AfStrategy"
+    );
+
+    const userAccounts = await getUserAccounts();
+
+    let totalDeposited = BigNumber.from(0);
+
+    const depositAmount = ethers.utils.parseEther(stakeLargeAmount.toString());
+    totalDeposited = totalDeposited.add(depositAmount);
+    const userStrategySigner = strategy.connect(userAccounts[0]);
+
+    const underlyingValueBefore = await strategy.underlyingValue();
+
+    await userStrategySigner.stake({ value: depositAmount });
+    await time.increase(1);
+
+    const underlyingValueAfter = await strategy.underlyingValue();
+
+    const underlyingValueChange = underlyingValueBefore
+      .sub(underlyingValueAfter)
+      .abs();
+
+    expect(within2Percent(underlyingValueChange, totalDeposited)).eq(true);
+  });
+
   it("Should stake a random amount for each user", async function () {
     const strategy = await getLatestContract(
       strategyContractAddress,
@@ -99,50 +153,25 @@ describe.only("Integration Test 1", function () {
 
     let totalDeposited = BigNumber.from(0);
 
+    const underlyingValueBefore = await strategy.underlyingValue();
+
     for (let i = 0; i < userAccounts.length; i++) {
-      const depositAmount = ethers.utils.parseEther(randomEthAmount(0.1, 5));
+      const depositAmount = ethers.utils.parseEther(
+        randomEthAmount(stakeMinimum, stakeMaximum)
+      );
       totalDeposited = totalDeposited.add(depositAmount);
       const userStrategySigner = strategy.connect(userAccounts[i]);
       await userStrategySigner.stake({ value: depositAmount });
       await time.increase(1);
     }
 
-    const underlyingValue = await strategy.underlyingValue();
-
-    expect(within1Percent(underlyingValue, totalDeposited)).eq(true);
-  });
-
-  it("Should do random stakes & unstakes for all users (1)", async function () {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
-
-    const underlyingValueBefore = await strategy.underlyingValue();
-
-    const totalUserBalanceBefore = await totalUserBalances();
-
-    const networkFee = await randomStakeUnstake(
-      strategyContractAddress,
-      safEthContractAddress
-    );
-
-    const totalUserBalanceAfter = await totalUserBalances();
-
-    const totalUserEthSentReceived = totalUserBalanceBefore
-      .sub(totalUserBalanceAfter)
-      .sub(networkFee);
-
     const underlyingValueAfter = await strategy.underlyingValue();
 
-    const underlyingValueChange = underlyingValueAfter.sub(
-      underlyingValueBefore
-    );
+    const underlyingValueChange = underlyingValueBefore
+      .sub(underlyingValueAfter)
+      .abs();
 
-    // higher tolerance because there are 3 trades per user in this test (more potential slippage)
-    expect(within3Percent(totalUserEthSentReceived, underlyingValueChange)).eq(
-      true
-    );
+    expect(within2Percent(underlyingValueChange, totalDeposited)).eq(true);
   });
 
   it("Should change weights and rebalance (1)", async function () {
@@ -167,12 +196,12 @@ describe.only("Integration Test 1", function () {
 
     expect(derivative0Value).eq(BigNumber.from(0));
     expect(
-      within1Percent(derivative1Value, derivative2Value.add(derivative3Value))
+      within2Percent(derivative1Value, derivative2Value.add(derivative3Value))
     ).eq(true);
-    expect(within1Percent(derivative2Value, derivative3Value)).eq(true);
+    expect(within2Percent(derivative2Value, derivative3Value)).eq(true);
   });
 
-  it("Should do random staking & unstakings for all users (2)", async function () {
+  it("Should do random stakes & unstakes for all users (1)", async function () {
     const strategy = await getLatestContract(
       strategyContractAddress,
       "AfStrategy"
@@ -189,18 +218,18 @@ describe.only("Integration Test 1", function () {
 
     const totalUserBalanceAfter = await totalUserBalances();
 
-    const totalUserEthSentReceived = totalUserBalanceBefore
-      .sub(totalUserBalanceAfter)
-      .sub(networkFee);
+    const totalUserEthSentReceived = totalUserBalanceAfter
+      .add(networkFee)
+      .sub(totalUserBalanceBefore)
+      .abs();
 
     const underlyingValueAfter = await strategy.underlyingValue();
 
-    const underlyingValueChange = underlyingValueAfter.sub(
-      underlyingValueBefore
-    );
+    const underlyingValueChange = underlyingValueBefore
+      .sub(underlyingValueAfter)
+      .abs();
 
-    // higher tolerance because there are 3 trades per user in this test (more potential slippage)
-    expect(within3Percent(totalUserEthSentReceived, underlyingValueChange)).eq(
+    expect(within2Percent(totalUserEthSentReceived, underlyingValueChange)).eq(
       true
     );
   });
@@ -223,71 +252,119 @@ describe.only("Integration Test 1", function () {
     const derivative2Value = await strategy.derivativeValue(2);
     const derivative3Value = await strategy.derivativeValue(3);
 
-    expect(within1Percent(derivative0Value, derivative1Value)).eq(true);
-    expect(within1Percent(derivative2Value, derivative3Value)).eq(true);
+    // derivative0 ~= derivative1
+    // 33.33% = 33.33%
+    expect(within2Percent(derivative0Value, derivative1Value)).eq(true);
 
+    // derivative2 ~= derivative3
+    // 16.66% ~= 16.66%
+    expect(within2Percent(derivative2Value, derivative3Value)).eq(true);
+
+    // derivative0 ~= derivative2+derivative3
+    // 33.33% ~= 16.66% + 16.66%
     expect(
-      within1Percent(derivative0Value, derivative2Value.add(derivative3Value))
+      within2Percent(derivative0Value, derivative2Value.add(derivative3Value))
     ).eq(true);
 
+    // derivative1 ~= derivative2+derivative3
+    // 33% ~= 16.66% + 16.66%
     expect(
-      within1Percent(derivative1Value, derivative2Value.add(derivative3Value))
+      within2Percent(derivative1Value, derivative2Value.add(derivative3Value))
     ).eq(true);
   });
 
-  it("Should unstake everything for all users and check balances", async function () {
-    // TODO finish this test and figure out why the others sometimes fail
+  it("Should do random stakes & unstakes for all users (2)", async function () {
+    const strategy = await getLatestContract(
+      strategyContractAddress,
+      "AfStrategy"
+    );
 
-    // const strategy = await getLatestContract(
-    //   strategyContractAddress,
-    //   "AfStrategy"
-    // );
+    const underlyingValueBefore = await strategy.underlyingValue();
 
-    // const safEth = new ethers.Contract(
-    //   safEthContractAddress,
-    //   afEthAbi,
-    //   await getAdminAccount()
-    // ) as SafETH;
+    const totalUserBalanceBefore = await totalUserBalances();
 
-    // const userAccounts = await getUserAccounts();
+    const networkFee = await randomStakeUnstake(
+      strategyContractAddress,
+      safEthContractAddress
+    );
 
-    // for (let i = 0; i < userAccounts.length; i++) {
-    //   const withdrawAmount = await safEth.balanceOf(userAccounts[i].address);
-    //   const userStrategySigner = strategy.connect(userAccounts[i]);
-    //   const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
-    //   const mined = await unstakeResult.wait();
-    // }
+    const totalUserBalanceAfter = await totalUserBalances();
 
-    // const underlyingValue = await strategy.underlyingValue();
+    const totalUserEthSentReceived = totalUserBalanceAfter
+      .add(networkFee)
+      .sub(totalUserBalanceBefore)
+      .abs();
 
-    // console.log('underlyingValue', underlyingValue);
+    const underlyingValueAfter = await strategy.underlyingValue();
 
+    const underlyingValueChange = underlyingValueBefore
+      .sub(underlyingValueAfter)
+      .abs();
+
+    expect(within2Percent(totalUserEthSentReceived, underlyingValueChange)).eq(
+      true
+    );
+  });
+
+  it("Should unstake everything for all users", async function () {
+    const strategy = await getLatestContract(
+      strategyContractAddress,
+      "AfStrategy"
+    );
+    const safEth = new ethers.Contract(
+      safEthContractAddress,
+      afEthAbi,
+      await getAdminAccount()
+    ) as SafETH;
+
+    const underlyingValueBefore = await strategy.underlyingValue();
+
+    const totalUserBalanceBefore = await totalUserBalances();
+
+    const userAccounts = await getUserAccounts();
+
+    let networkFee = BigNumber.from(0);
+    for (let i = 0; i < userAccounts.length; i++) {
+      const withdrawAmount = await safEth.balanceOf(userAccounts[i].address);
+      if (withdrawAmount.eq(0)) continue;
+      const userStrategySigner = strategy.connect(userAccounts[i]);
+      const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
+      const mined = await unstakeResult.wait();
+      networkFee = networkFee.add(mined.gasUsed.mul(mined.effectiveGasPrice));
+      await time.increase(1);
+    }
+
+    const underlyingValueAfter = await strategy.underlyingValue();
+
+    const totalUserBalanceAfter = await totalUserBalances();
+
+    const totalUserEthSentReceived = totalUserBalanceAfter
+      .add(networkFee)
+      .sub(totalUserBalanceBefore)
+      .abs();
+
+    const underlyingValueChange = underlyingValueBefore
+      .sub(underlyingValueAfter)
+      .abs();
+
+    expect(within2Percent(underlyingValueChange, totalUserEthSentReceived)).eq(
+      true
+    );
   });
 });
 
-const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.eq(amount2)) return true;
-  const difference = amount1.gt(amount2)
-    ? amount1.sub(amount2)
-    : amount2.sub(amount1);
-  const differenceRatio = amount1.div(difference);
-  return differenceRatio.gt("100");
-};
-
 const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;
-  const difference = amount1.gt(amount2)
-    ? amount1.sub(amount2)
-    : amount2.sub(amount1);
-  const differenceRatio = amount1.div(difference);
-  return differenceRatio.gt("50");
+  return getDifferenceRatio(amount1, amount2).gt("50");
 };
 
-const within3Percent = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.eq(amount2)) return true;
+// Get ratio between 2 amounts such that % diff = 1/ratio
+// Example: 200 = 0.5%, 100 = 1%, 50 = 2%, 25 = 4%, etc
+// Useful for comparing %s with ethers bignumbers that dont support floating point numbers
+const getDifferenceRatio = (amount1: BigNumber, amount2: BigNumber) => {
+  if (amount1.lt(0) || amount2.lt(0)) throw new Error("Positive values only");
   const difference = amount1.gt(amount2)
     ? amount1.sub(amount2)
     : amount2.sub(amount1);
-  const differenceRatio = amount1.div(difference);
-  return differenceRatio.gt("33");
+  return amount1.div(difference);
 };

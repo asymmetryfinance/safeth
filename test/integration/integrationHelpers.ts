@@ -1,9 +1,13 @@
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { getLatestContract } from "../../helpers/upgradeHelpers";
 import { SafETH } from "../../typechain-types";
 import { afEthAbi } from "../abi/afEthAbi";
+
+export const stakeMinimum = 0.1;
+export const stakeMaximum = 3;
+
+export const stakeLargeAmount = 5;
 
 export const getAdminAccount = async () => {
   const accounts = await ethers.getSigners();
@@ -15,7 +19,7 @@ export const getUserAccounts = async () => {
 };
 
 export const randomEthAmount = (min: number, max: number) => {
-  return (min + Math.random() * max).toString();
+  return (min + Math.random() * (max - min)).toString();
 };
 
 export const randomBnInRange = (min: BigNumber, max: BigNumber) => {
@@ -33,15 +37,15 @@ export const getUserBalances = async () => {
 };
 
 export const totalUserBalances = async () => {
-  const accounts = await getUserAccounts();
+  const userAccounts = await getUserAccounts();
   let total = BigNumber.from(0);
-  for (let i = 0; i < accounts.length; i++) {
-    total = total.add(BigNumber.from(await accounts[i].getBalance()));
+  for (let i = 0; i < userAccounts.length; i++) {
+    total = total.add(BigNumber.from(await userAccounts[i].getBalance()));
   }
   return total;
 };
 
-// randomly stakes and unstakes 3 times for each user.
+// randomly either stakes a random amount or unstake half their balance
 // assumes user has some staked balance already for unstakes to work
 export const randomStakeUnstake = async (
   strategyContractAddress: string,
@@ -62,12 +66,11 @@ export const randomStakeUnstake = async (
 
   let totalNetworkFee = BigNumber.from(0);
   for (let i = 0; i < userAccounts.length; i++) {
+    const userStrategySigner = strategy.connect(userAccounts[i]);
     for (let j = 0; j < 3; j++) {
       const doStake = Math.random() > 0.5;
-
-      const userStrategySigner = strategy.connect(userAccounts[i]);
       if (doStake) {
-        const ethAmount = randomEthAmount(0.1, 5);
+        const ethAmount = randomEthAmount(stakeMinimum, stakeMaximum);
         const depositAmount = ethers.utils.parseEther(ethAmount);
         console.log("depositing ", userAccounts[i].address, depositAmount);
         const stakeResult = await userStrategySigner.stake({
@@ -79,10 +82,7 @@ export const randomStakeUnstake = async (
         );
       } else {
         const safEthBalance = await safEth.balanceOf(userAccounts[i].address);
-        const withdrawAmount = await randomBnInRange(
-          BigNumber.from(1),
-          safEthBalance
-        );
+        const withdrawAmount = safEthBalance.div(4);
         console.log("withdrawing ", userAccounts[i].address, withdrawAmount);
         const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
         const mined = await unstakeResult.wait();
