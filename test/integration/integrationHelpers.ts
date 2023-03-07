@@ -14,7 +14,7 @@ import { afEthAbi } from "../abi/afEthAbi";
 // export const stakeMinimum = 1;
 // export const stakeMaximum = 2;
 
-let seed = 7;
+let seed = 9;
 export const stakeMinimum = 1;
 export const stakeMaximum = 2;
 
