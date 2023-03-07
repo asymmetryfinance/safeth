@@ -16,7 +16,7 @@ import "../../interfaces/stakewise/IStakewiseStaker.sol";
 // There is also an "activation period" that applies to larger deposits.
 // For simplicity we should throw if our deposit requires an activation period
 // This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
-contract StakeWise is IDERIVATIVE, Initializable, OwnableUpgradeable {
+contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address public constant sEth2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;

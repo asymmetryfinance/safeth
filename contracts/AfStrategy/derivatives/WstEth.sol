@@ -9,7 +9,7 @@ import "../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/lido/IWStETH.sol";
 
-contract WstEth is IDERIVATIVE, Initializable, OwnableUpgradeable {
+contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address public constant lidoCrvPool =
         0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
