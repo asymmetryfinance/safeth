@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-interface IDERIVATIVEMOCK {
+interface IDerivativeMock {
     function deposit() external payable returns (uint256);
 
     function withdraw(uint amount) external;
