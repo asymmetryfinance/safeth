@@ -196,7 +196,7 @@ describe.only("Af Strategy", function () {
       derivatives.push(derivative3);
     });
 
-    it.only("Should use reth deposit contract", async () => {
+    it("Should use reth deposit contract", async () => {
       await resetToBlock(15430855); // Deposit contract not full here
       const factory = await ethers.getContractFactory("Reth");
       const rEthDerivative = await upgrades.deployProxy(factory);
