@@ -105,11 +105,11 @@ describe.only("Integration Test 1", function () {
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
 
-  it("Should stake a random amount for each user", async function () {
+  it("Should stake a random amount 3 times for each user", async function () {
     await testRandomStakes();
   });
 
-  it("Should unstake a random amount for each user", async function () {
+  it("Should unstake a random amount 3 times for each user", async function () {
     await testRandomUnstakes();
   });
 
@@ -140,15 +140,15 @@ describe.only("Integration Test 1", function () {
     expect(within1Percent(derivative2Value, derivative3Value)).eq(true);
   });
 
-  it("Should stake a random amount for each user", async function () {
+  it("Should stake a random amount 3 times for each user", async function () {
     await testRandomStakes();
   });
 
-  it("Should unstake a random amount for each user", async function () {
+  it("Should unstake a random amount 3 times for each user", async function () {
     await testRandomUnstakes();
   });
 
-  it("Should change weights and rebalance again", async function () {
+  it("Should change weights and rebalance", async function () {
     const strategy = await getLatestContract(
       strategyContractAddress,
       "AfStrategy"
@@ -187,11 +187,11 @@ describe.only("Integration Test 1", function () {
     ).eq(true);
   });
 
-  it("Should stake a random amount for each user", async function () {
+  it("Should stake a random amount 3 times for each user", async function () {
     await testRandomStakes();
   });
 
-  it("Should unstake a random amount for each user", async function () {
+  it("Should unstake a random amount 3 times for each user", async function () {
     await testRandomUnstakes();
   });
 
