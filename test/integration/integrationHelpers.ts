@@ -117,7 +117,7 @@ export const randomUnstakes = async (
       const balanceAfter = await userAccounts[i].getBalance();
       const amountUnstaked = balanceAfter.sub(balanceBefore).add(networkFee);
       totalUnstaked = totalUnstaked.add(amountUnstaked);
-      console.log("unstaked ", userAccounts[i].address, amountUnstaked);
+      // console.log("unstaked ", userAccounts[i].address, amountUnstaked);
     }
   }
   return totalUnstaked;
