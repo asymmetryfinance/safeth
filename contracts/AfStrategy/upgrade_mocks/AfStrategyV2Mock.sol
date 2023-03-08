@@ -59,22 +59,18 @@ contract AfStrategyV2Mock is
         weights[index] = weight;
     }
 
-    function underlyingValue() public view returns (uint256) {
-        uint256 total = 0;
-        for (uint i = 0; i < derivativeCount; i++)
-            total += derivatives[i].totalEthValue();
-        return total;
-    }
-
-    function valueBySupply() public view returns (uint256) {
-        uint256 totalSupply = IAfETH(safETH).totalSupply();
-        if (totalSupply == 0) return 10 ** 18;
-        return (10 ** 18 * underlyingValue()) / totalSupply;
-    }
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        uint256 preDepositPrice = valueBySupply();
+
+        uint256 underlyingValue = 0;
+        for (uint i = 0; i < derivativeCount; i++)
+            underlyingValue += derivatives[i].totalEthValue();
+
+        uint256 totalSupply = IAfETH(safETH).totalSupply();
+        uint256 preDepositPrice;
+        if (totalSupply == 0) preDepositPrice = 10 ** 18;
+        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
 
         uint totalWeight = 0;
         for (uint i = 0; i < derivativeCount; i++) totalWeight += weights[i];

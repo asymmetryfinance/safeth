@@ -73,13 +73,7 @@ describe.only("Af Strategy", function () {
         await strategyProxy.setMaxSlippage(i, ethers.utils.parseEther("0.05")); // 5%
       }
 
-      const underlyingValueBefore = await strategyProxy.underlyingValue();
       await strategyProxy.stake({ value: depositAmount });
-      const underlyingValueAfter = await strategyProxy.underlyingValue();
-
-      // expect deposit to work after setting slippage back to 5%
-      expect(approxEqual(underlyingValueBefore, BigNumber.from(0))).eq(true);
-      expect(within2Percent(underlyingValueAfter, depositAmount)).eq(true);
     });
   });
 
@@ -111,59 +105,6 @@ describe.only("Af Strategy", function () {
 
       // dont stay paused
       await snapshot.restore();
-    });
-  });
-
-  describe("Deposit/Withdraw", function () {
-    it("Should deposit without changing the underlying valueBySupply by a significant amount", async () => {
-      const depositAmount = ethers.utils.parseEther("1");
-      const price0 = await strategyProxy.valueBySupply();
-
-      await strategyProxy.stake({ value: depositAmount });
-      await time.increase(1);
-      const price1 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price0, price1)).eq(true);
-
-      await strategyProxy.stake({ value: depositAmount });
-      await time.increase(1);
-      const price2 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price1, price2)).eq(true);
-
-      await strategyProxy.stake({ value: depositAmount });
-      await time.increase(1);
-      const price3 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price2, price3)).eq(true);
-    });
-    it("Should withdraw without changing the underlying valueBySupply by a significant amount", async () => {
-      const depositAmount = ethers.utils.parseEther("1");
-
-      await strategyProxy.stake({ value: depositAmount });
-      await time.increase(1);
-      const unstakeAmountPerTx = (
-        await afEth.balanceOf(adminAccount.address)
-      ).div(4);
-
-      const price0 = await strategyProxy.valueBySupply();
-
-      await strategyProxy.unstake(unstakeAmountPerTx);
-      await time.increase(1);
-      const price1 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price0, price1)).eq(true);
-
-      await strategyProxy.unstake(unstakeAmountPerTx);
-      await time.increase(1);
-      const price2 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price1, price2)).eq(true);
-
-      await strategyProxy.unstake(unstakeAmountPerTx);
-      await time.increase(1);
-      const price3 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price2, price3)).eq(true);
-
-      await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
-      await time.increase(1);
-      const price4 = await strategyProxy.valueBySupply();
-      expect(approxEqual(price3, price4)).eq(true);
     });
   });
 
@@ -383,16 +324,7 @@ describe.only("Af Strategy", function () {
       const addressAfter = strategy2.address;
       expect(addressBefore).eq(addressAfter);
     });
-    it("Should have roughly the same valueBySupply after upgrading", async () => {
-      const priceBefore = await strategyProxy.valueBySupply();
-      const strategy2 = await upgrade(
-        strategyProxy.address,
-        "AfStrategyV2Mock"
-      );
-      await time.increase(1);
-      const priceAfter = await strategy2.valueBySupply();
-      expect(approxEqual(priceBefore, priceAfter)).eq(true);
-    });
+
     it("Should allow v2 functionality to be used after upgrading", async () => {
       const strategy2 = await upgrade(
         strategyProxy.address,
@@ -473,26 +405,11 @@ describe.only("Af Strategy", function () {
       await strategyProxy.stake({ value: initialDeposit });
       await time.increase(1);
 
-      const underlyingValueBefore = await strategyProxy.underlyingValue();
-      const priceBefore = await strategyProxy.valueBySupply();
-
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // this is like 33/33/33 -> 50/25/25 (3 derivatives) or 25/25/25/25 -> 50/16.66/16.66/16.66 (4 derivatives)
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await strategyProxy.rebalanceToWeights();
       await time.increase(1);
-
-      const underlyingValueAfter = await strategyProxy.underlyingValue();
-      const priceAfter = await strategyProxy.valueBySupply();
-
-      // less than 2% price difference before and after (because slippage)
-      expect(within2Percent(priceBefore, priceAfter)).eq(true);
-
-      // value of
-      // less than 2% underlying value difference before and after (because slippage)
-      expect(within2Percent(underlyingValueAfter, underlyingValueBefore)).eq(
-        true
-      );
 
       // value of all derivatives excluding the first
       let remainingDerivativeValue = BigNumber.from(0);
@@ -529,11 +446,6 @@ describe.only("Af Strategy", function () {
 
       await strategyProxy.stake({ value: initialDeposit });
 
-      const underlyingValue = await strategyProxy.underlyingValue();
-
-      // Underlying value is approx the same
-      // 2% tolerance because slippage
-      expect(within2Percent(underlyingValue, initialWeight)).eq(true);
     });
 
     it("Should stake, unstake & rebalance when one of the weights is set to 0", async () => {
@@ -552,8 +464,6 @@ describe.only("Af Strategy", function () {
       await strategyProxy.stake({ value: initialDeposit });
       await time.increase(1);
 
-      const underlyingValueBefore = await strategyProxy.underlyingValue();
-
       // set derivative 0 to 0, rebalance and stake
       // This is like 33/33/33 -> 0/50/50
       await strategyProxy.adjustWeight(0, 0);
@@ -565,19 +475,7 @@ describe.only("Af Strategy", function () {
       // derivative0 should now have 0 value
       expect(derivative0ValueAfter.toString() === "0").eq(true);
 
-      const underlyingValueAfter = await strategyProxy.underlyingValue();
-
-      // Underlying value is approx the same
-      // 2% tolerance because slippage
-      expect(within2Percent(underlyingValueBefore, underlyingValueAfter)).eq(
-        true
-      );
-
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
-
-      const finalUnderlyingValue = await strategyProxy.underlyingValue();
-      // successfully withdrew with a 0 weight
-      expect(finalUnderlyingValue.toString()).eq("0");
     });
   });
 
