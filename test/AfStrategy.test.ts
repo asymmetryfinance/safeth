@@ -20,7 +20,7 @@ import {
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
 import { RETH_MAX } from "./constants";
 
-describe.only("Af Strategy", function () {
+describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
   let afEth: SafETH;
   let strategyProxy: AfStrategy;
