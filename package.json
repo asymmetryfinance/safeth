@@ -10,7 +10,7 @@
     "deploy": "yarn hardhat run scripts/deploy.ts",
     "lint": "yarn lint:ts && yarn lint:solidity && yarn lint:prettier",
     "lint:ts": "yarn eslint '**/*.{js,ts}'",
-    "lint:solidity": "yarn solhint -w 0 **/*.sol",
+    "lint:solidity": "yarn solhint **/*.sol",
     "lint:prettier": "prettier --list-different 'contracts/**/*.sol'",
     "lint:fix": "yarn solhint **/*.sol --fix && yarn eslint '**/*.{js,ts}' --fix",
     "prettier": "prettier '**/*.{json,sol,md}' --write",
