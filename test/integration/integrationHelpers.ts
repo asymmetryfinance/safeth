@@ -66,7 +66,7 @@ export const randomStakes = async (
       const ethAmount = randomEthAmount(stakeMinimum, stakeMaximum);
       const depositAmount = ethers.utils.parseEther(ethAmount);
       totalStaked = totalStaked.add(depositAmount);
-      console.log("staking ", userAccounts[i].address, depositAmount);
+      // console.log("staking ", userAccounts[i].address, depositAmount);
       const stakeResult = await userStrategySigner.stake({
         value: depositAmount,
       });
