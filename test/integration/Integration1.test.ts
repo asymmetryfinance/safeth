@@ -273,10 +273,6 @@ describe.only("Integration Test 1", function () {
   };
 
   const testRandomUnstakes = async () => {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
     const underlyingValueBefore = await strategyUnderlyingValue();
     const totalUnstaked = await randomUnstakes(
       strategyContractAddress,

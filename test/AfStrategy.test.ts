@@ -494,7 +494,6 @@ describe("Af Strategy", function () {
       await strategyProxy.stake({ value: initialDeposit });
       await time.increase(1);
 
-
       // set derivative 0 to 0, rebalance and stake
       // This is like 33/33/33 -> 0/50/50
       await strategyProxy.adjustWeight(0, 0);
