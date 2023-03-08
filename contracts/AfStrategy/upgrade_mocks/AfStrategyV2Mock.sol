@@ -50,7 +50,7 @@ contract AfStrategyV2Mock is
         address contractAddress,
         uint256 weight
     ) public onlyOwner {
-        derivatives[derivativeCount] = IDERIVATIVE(contractAddress);
+        derivatives[derivativeCount] = IDerivative(contractAddress);
         weights[derivativeCount] = weight;
         derivativeCount++;
     }

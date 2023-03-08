@@ -15,6 +15,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 12,
   },
+  ignorePatterns: ["node_modules/*", "coverage/*"],
   rules: {
     "node/no-unpublished-import": 0,
     "node/no-missing-import": 0,

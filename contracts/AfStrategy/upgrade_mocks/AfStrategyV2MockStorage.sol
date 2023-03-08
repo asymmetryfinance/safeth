@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../interfaces/Iderivative.sol";
+import "../../interfaces/IDerivative.sol";
 
 // Upgradeability Rules:
 // DO NOT change existing variable names or types
@@ -15,7 +15,7 @@ contract AfStrategyV2MockStorage {
     bool public pauseUnstaking;
     uint256 public derivativeCount;
     uint256 public totalWeight;
-    mapping(uint => IDERIVATIVE) public derivatives;
+    mapping(uint => IDerivative) public derivatives;
     mapping(uint => uint) public weights;
 
     bool public newFunctionCalled;
