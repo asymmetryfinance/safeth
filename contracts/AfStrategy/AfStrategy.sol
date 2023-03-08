@@ -37,6 +37,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
         safETH = _safETH;
+        minAmount = 5 ** 17;
+        maxAmount = 200 ** 18;
     }
 
     function setMaxSlippage(
