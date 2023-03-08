@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "../../interfaces/Iderivative.sol";
+import "../../interfaces/IDerivative.sol";
 import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
@@ -10,14 +10,14 @@ import "hardhat/console.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../../interfaces/rocketpool/RocketDAOProtocolSettingsDepositInterface.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
+contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant rocketStorageAddress =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-    uint256 public constant ROCKET_POOL_LIMIT = 5000000000000000000000;
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
@@ -36,7 +36,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         maxSlippage = (5 * 10 ** 16); // 5%
     }
 
-    function setMaxSlippage(uint slippage) public onlyOwner {
+    function setMaxSlippage(uint256 slippage) public onlyOwner {
         maxSlippage = slippage;
     }
 
@@ -79,7 +79,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     function deposit() public payable onlyOwner returns (uint256) {
-        // Per RocketPool Docs query deposit pool address each time it is used
+        // Per RocketPool Docs query addresses each time it is used
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
         ).getAddress(
@@ -87,11 +87,27 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
                     abi.encodePacked("contract.address", "rocketDepositPool")
                 )
             );
+        address rocketProtocolSettingsAddress = RocketStorageInterface(
+            rocketStorageAddress
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked(
+                        "contract.address",
+                        "rocketDAOProtocolSettingsDeposit"
+                    )
+                )
+            );
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
+        RocketDAOProtocolSettingsDepositInterface rocketDAOProtocolSettingsDeposit = RocketDAOProtocolSettingsDepositInterface(
+                rocketProtocolSettingsAddress
+            );
+
         bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
-            ROCKET_POOL_LIMIT;
+            rocketDAOProtocolSettingsDeposit.getMaximumDepositPoolSize() &&
+            msg.value >= rocketDAOProtocolSettingsDeposit.getMinimumDeposit();
+
         if (!canDeposit) {
             uint256 minOut = (derivativePerEth(msg.value) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;

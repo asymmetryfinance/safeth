@@ -17,6 +17,8 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
+import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
+import { RETH_MAX } from "./constants";
 
 describe.only("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
@@ -192,6 +194,36 @@ describe.only("Af Strategy", function () {
       const derivative3 = await upgrades.deployProxy(factory3);
       await derivative3.deployed();
       derivatives.push(derivative3);
+    });
+
+    it("Should use reth deposit contract", async () => {
+      await resetToBlock(15430855); // Deposit contract not full here
+      const factory = await ethers.getContractFactory("Reth");
+      const rEthDerivative = await upgrades.deployProxy(factory);
+      await rEthDerivative.deployed();
+
+      const depositPoolAddress = "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4";
+      const depositPool = new ethers.Contract(
+        depositPoolAddress,
+        rEthDepositPoolAbi,
+        adminAccount
+      );
+      const balance = await depositPool.getBalance();
+      expect(balance).lt(RETH_MAX);
+
+      const preStakeBalance = await rEthDerivative.balance();
+      expect(preStakeBalance.eq(0)).eq(true);
+
+      const value = ethers.utils.parseEther("1");
+      const postStakeEthEstimation = await rEthDerivative.derivativePerEth(
+        value
+      );
+
+      await rEthDerivative.deposit({ value });
+      await time.increase(1);
+
+      const postStakeBalance = await rEthDerivative.balance();
+      expect(within2Percent(postStakeBalance, postStakeEthEstimation)).eq(true);
     });
 
     it("Should test each function on all derivative contracts", async () => {

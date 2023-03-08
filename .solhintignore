@@ -1,2 +1,4 @@
 node_modules
-contracts/AsymmetryStrategy.sol
+contracts/AsymmetryStrategy
+coverage
+artifacts
