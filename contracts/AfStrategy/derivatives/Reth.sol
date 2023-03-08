@@ -13,6 +13,8 @@ import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "../../interfaces/uniswap/IUniswapV3Pool.sol";
+import "../../interfaces/uniswap/IUniswapV3Factory.sol";
 
 contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant rocketStorageAddress =
@@ -21,6 +23,7 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address public constant uniV3Factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
     uint256 public maxSlippage;
 
@@ -78,6 +81,21 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         require(sent, "Failed to send Ether");
     }
 
+    function poolCanDeposit(uint256 amount) public view onlyOwner returns (bool) {
+                address rocketDepositPoolAddress = RocketStorageInterface(
+            rocketStorageAddress
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketDepositPool")
+                )
+            );
+                RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                rocketDepositPoolAddress
+            );
+        return (rocketDepositPool.getBalance() + amount <=
+            ROCKET_POOL_LIMIT);
+    }
+
     function deposit() public payable onlyOwner returns (uint256) {
         // Per RocketPool Docs query deposit pool address each time it is used
         address rocketDepositPoolAddress = RocketStorageInterface(
@@ -90,9 +108,8 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
                 rocketDepositPoolAddress
             );
-        bool canDeposit = rocketDepositPool.getBalance() + msg.value <=
-            ROCKET_POOL_LIMIT;
-        if (!canDeposit) {
+
+        if (!poolCanDeposit(msg.value)) {
             uint256 minOut = (derivativePerEth(msg.value) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
             IWETH(wETH).deposit{value: msg.value}();
@@ -124,12 +141,18 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
         }
     }
 
+    // eth price for acquiring the derivative (via native protocol or defi exchange)
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
+        if(poolCanDeposit(amount)) return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
+        else return (poolPrice() * amount / (10 ** 18));
     }
 
+    // inverse of ethPerDerivative
     function derivativePerEth(uint256 amount) public view returns (uint256) {
-        return RocketTokenRETHInterface(rethAddress()).getRethValue(amount);
+        if(poolCanDeposit(amount)) return RocketTokenRETHInterface(rethAddress()).getRethValue(amount);
+        else {
+            return (amount * 10 ** 18) / poolPrice();
+        }
     }
 
     function totalEthValue() public view returns (uint256) {
@@ -141,4 +164,20 @@ contract Reth is IDERIVATIVE, Initializable, OwnableUpgradeable {
     }
 
     receive() external payable {}
+
+    function poolPrice() public view returns (uint256) {
+
+            address rocketTokenRETHAddress = RocketStorageInterface(
+                rocketStorageAddress
+            ).getAddress(
+                    keccak256(
+                        abi.encodePacked("contract.address", "rocketTokenRETH")
+                    )
+                );
+
+        IUniswapV3Factory factory = IUniswapV3Factory(uniV3Factory);
+        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(rocketTokenRETHAddress, wETH, 500));
+        (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
+        return (sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18)) >> (96 * 2);
+    }
 }
