@@ -72,7 +72,7 @@ describe("Integration Test 1", function () {
 
     const owner = await strategy.owner();
     const derivativeCount = await strategy.derivativeCount();
-    const underlyingValue = await strategy.underlyingValue();
+    const underlyingValue = await strategyUnderlyingValue();
     const safEthMinter = await safEth.minter();
 
     expect(owner).eq((await getAdminAccount()).address);
@@ -206,7 +206,7 @@ describe("Integration Test 1", function () {
       await getAdminAccount()
     ) as SafETH;
 
-    const underlyingValueBefore = await strategy.underlyingValue();
+    const underlyingValueBefore = await strategyUnderlyingValue();
 
     const userAccounts = await getUserAccounts();
 
@@ -224,7 +224,7 @@ describe("Integration Test 1", function () {
       totalUnstaked = totalUnstaked.add(amountUnstaked);
     }
 
-    const underlyingValueAfter = await strategy.underlyingValue();
+    const underlyingValueAfter = await strategyUnderlyingValue();
 
     const underlyingValueChange = underlyingValueBefore
       .sub(underlyingValueAfter)
@@ -256,12 +256,7 @@ describe("Integration Test 1", function () {
   });
 
   const testRandomStakes = async () => {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
-
-    const underlyingValueBefore = await strategy.underlyingValue();
+    const underlyingValueBefore = await strategyUnderlyingValue();
 
     const totalStaked = await randomStakes(
       strategyContractAddress,
@@ -269,7 +264,7 @@ describe("Integration Test 1", function () {
       totalStakedPerAccount
     );
 
-    const underlyingValueAfter = await strategy.underlyingValue();
+    const underlyingValueAfter = await strategyUnderlyingValue();
 
     const underlyingValueChange = underlyingValueAfter.sub(
       underlyingValueBefore
@@ -278,23 +273,37 @@ describe("Integration Test 1", function () {
   };
 
   const testRandomUnstakes = async () => {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
-    const underlyingValueBefore = await strategy.underlyingValue();
+    const underlyingValueBefore = await strategyUnderlyingValue();
     const totalUnstaked = await randomUnstakes(
       strategyContractAddress,
       safEthContractAddress,
       networkFeesPerAccount
     );
-    const underlyingValueAfter = await strategy.underlyingValue();
+    const underlyingValueAfter = await strategyUnderlyingValue();
     const underlyingValueChange = underlyingValueAfter.sub(
       underlyingValueBefore
     );
     expect(within1Percent(underlyingValueChange.mul(-1), totalUnstaked)).eq(
       true
     );
+  };
+
+  // Underlying value of all derivatives in the strategy contract
+  const strategyUnderlyingValue = async () => {
+    const strategy = await getLatestContract(
+      strategyContractAddress,
+      "AfStrategy"
+    );
+
+    const derivativeCount = await strategy.derivativeCount();
+
+    let derivativeValue = BigNumber.from(0);
+
+    for (let i = 0; i < derivativeCount; i++) {
+      derivativeValue = derivativeValue.add(await strategy.derivativeValue(i));
+    }
+
+    return derivativeValue;
   };
 });
 
