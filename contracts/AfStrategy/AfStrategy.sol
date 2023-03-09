@@ -27,10 +27,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     );
     event Rebalanced();
 
-    /**
-        As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-        @custom:oz-upgrades-unsafe-allow constructor
-    */
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -47,10 +45,17 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         maxAmount = 200 ** 18;
     }
 
-    function derivativeValue(uint256 index) public view returns (uint256) {
-        return derivatives[index].totalEthValue();
+    /**
+        @notice - Gets derivative value in regards to ETH for a specific index
+        @param _index - index of the derivative to get ETH value
+    */
+    function derivativeValue(uint256 _index) public view returns (uint256) {
+        return derivatives[_index].totalEthValue();
     }
 
+    /**
+        @notice - Stake your ETH into safETH
+    */
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
@@ -83,6 +88,10 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Staked(msg.sender, msg.value, mintAmount);
     }
 
+    /**
+        @notice - Unstake your safETH into ETH
+        @param safEthAmount - amount of safETH to unstake into ETH
+    */
     function unstake(uint256 safEthAmount) public {
         require(pauseUnstaking == false, "unstaking is paused");
         uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
@@ -104,6 +113,10 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
+    /**
+        @notice - Rebalance each derivative to resemble the weight set for it
+        @dev - Depending on the balance of the derivative this could cause max slippage
+    */
     function rebalanceToWeights() public onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
 
@@ -184,7 +197,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     /**
-        @notice - Sets the maximum amount a user is allowed to stake
+        @notice - Owner only function that sets the maximum amount a user is allowed to stake
         @param _maxAmount - amount to set as maximum stake value
     */
     function setMaxAmount(uint256 _maxAmount) public onlyOwner {
@@ -193,7 +206,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     /**
-        @notice - Enables/Disables the stake function
+        @notice - Owner only function that Enables/Disables the stake function
         @param _pause - true disables staking / false enables staking
     */
     function setPauseStaking(bool _pause) public onlyOwner {
@@ -202,7 +215,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     /**
-        @notice - Enables/Disables the unstake function
+        @notice - Owner only function that enables/disables the unstake function
         @param _pause - true disables unstaking / false enables unstaking
     */
     function setPauseUnstaking(bool _pause) public onlyOwner {

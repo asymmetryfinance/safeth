@@ -3,11 +3,11 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./IDerivativeMock.sol";
-import "../../../interfaces/frax/IsFrxEth.sol";
+import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../../interfaces/curve/ICrvEthPool.sol";
-import "../../../interfaces/frax/IFrxETHMinter.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
 
 contract DerivativeMock is IDerivativeMock, Initializable, OwnableUpgradeable {

@@ -2,21 +2,21 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/IWETH.sol";
-import "../../interfaces/IAfETH.sol";
-import "../../interfaces/uniswap/ISwapRouter.sol";
-import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
-import "../../interfaces/rocketpool/RocketStorageInterface.sol";
-import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
-import "../../interfaces/lido/IWStETH.sol";
-import "../../interfaces/lido/IstETH.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/IAfETH.sol";
+import "../interfaces/uniswap/ISwapRouter.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../interfaces/rocketpool/RocketStorageInterface.sol";
+import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
+import "../interfaces/lido/IWStETH.sol";
+import "../interfaces/lido/IstETH.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyV2MockStorage.sol";
-import "../derivatives/SfrxEth.sol";
-import "../derivatives/Reth.sol";
-import "../derivatives/WstEth.sol";
+import "../AfStrategy/derivatives/SfrxEth.sol";
+import "../AfStrategy/derivatives/Reth.sol";
+import "../AfStrategy/derivatives/WstEth.sol";
 
 contract AfStrategyV2Mock is
     Initializable,
