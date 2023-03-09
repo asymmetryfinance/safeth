@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 interface IDerivative {
     function deposit() external payable returns (uint256);
 
-    function withdraw(uint amount) external;
+    function withdraw(uint256 amount) external;
 
-    function ethPerDerivative() external view returns (uint256);
+    function ethPerDerivative(uint256 amount) external view returns (uint256);
 
     function totalEthValue() external view returns (uint256);
 

@@ -42,7 +42,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
 
-        uint256 minOut = (((ethPerDerivative() * amount) / 10 ** 18) *
+        uint256 minOut = (((ethPerDerivative(amount) * amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
@@ -64,14 +64,14 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         return sfrxBalancePost - sfrxBalancePre;
     }
 
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivative(uint256 amount) public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(10 ** 18);
         return ((10 ** 18 * frxAmount) /
             ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
     }
 
     function totalEthValue() public view returns (uint256) {
-        return (ethPerDerivative() * balance()) / 10 ** 18;
+        return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
     function balance() public view returns (uint256) {
