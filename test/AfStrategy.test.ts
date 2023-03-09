@@ -79,7 +79,7 @@ describe("Af Strategy", function () {
     });
   });
 
-  describe("Pause", function () {
+  describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       await strategyProxy.setPauseStaking(true);
@@ -107,6 +107,38 @@ describe("Af Strategy", function () {
 
       // dont stay paused
       await snapshot.restore();
+    });
+    it("Should only allow owner to call pausing functions", async function () {
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = strategyProxy.connect(accounts[2]);
+      await expect(nonOwnerSigner.setPauseStaking(true)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+      await expect(nonOwnerSigner.setPauseUnstaking(true)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Should be able to change min/max", async function () {
+      snapshot = await takeSnapshot();
+      await strategyProxy.setMinAmount(100);
+      const minAmount = await strategyProxy.minAmount();
+      expect(minAmount).eq(100);
+
+      await strategyProxy.setMaxAmount(999);
+      const maxAmount = await strategyProxy.maxAmount();
+      expect(maxAmount).eq(999);
+
+      await snapshot.restore();
+    });
+    it("Should only allow owner to call min/max functions", async function () {
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = strategyProxy.connect(accounts[2]);
+      await expect(nonOwnerSigner.setMinAmount(100000000)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+      await expect(nonOwnerSigner.setMinAmount(900000000)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
