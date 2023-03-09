@@ -62,6 +62,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         require(msg.value <= maxAmount, "amount too high");
 
         uint256 underlyingValue = 0;
+
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue += derivatives[i].totalEthValue();
 
@@ -72,12 +73,14 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
         uint256 totalStakeValueEth = 0;
         for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0) continue;
-            uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
+            uint256 weight = weights[i];
+            IDerivative derivative = derivatives[i];
+            if (weight == 0) continue;
+            uint256 ethAmount = (msg.value * weight) / totalWeight;
 
             // This is slightly less than ethAmount because slippage
-            uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivatives[i].ethPerDerivative(
+            uint256 depositAmount = derivative.deposit{value: ethAmount}();
+            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
                 depositAmount
             ) * depositAmount) / 10 ** 18;
             totalStakeValueEth += derivativeReceivedEthValue;
