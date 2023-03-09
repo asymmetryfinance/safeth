@@ -25,47 +25,22 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     );
     event Rebalanced();
 
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
+    /**
+        As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+        @custom:oz-upgrades-unsafe-allow constructor
+    */
     constructor() {
         _disableInitializers();
     }
 
-    // This replaces the constructor for upgradeable contracts
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _safETH - address of erc20 safETH contract
+    */
     function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
         safETH = _safETH;
-    }
-
-    function setMaxSlippage(
-        uint derivativeIndex,
-        uint slippage
-    ) public onlyOwner {
-        derivatives[derivativeIndex].setMaxSlippage(slippage);
-    }
-
-    function addDerivative(
-        address contractAddress,
-        uint256 weight
-    ) public onlyOwner {
-        derivatives[derivativeCount] = IDerivative(contractAddress);
-        weights[derivativeCount] = weight;
-        derivativeCount++;
-
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
-        totalWeight = localTotalWeight;
-        emit DerivativeAdded(contractAddress, weight, derivativeCount);
-    }
-
-    function adjustWeight(uint256 index, uint256 weight) public onlyOwner {
-        weights[index] = weight;
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
-        totalWeight = localTotalWeight;
-        emit WeightChange(index, weight);
     }
 
     function rebalanceToWeights() public onlyOwner {
@@ -148,11 +123,90 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
+<<<<<<< Updated upstream
+=======
+    /**
+        @notice - Adds new derivative to the index fund
+        @dev - Weights are only in regards to each other, if you want exact weights either do the math off chain or set all derivates to the weights you want
+        @param _derivativeIndex - index of the derivative you want to update the weight
+        @param _weight - new weight for this derivative.
+    */
+    function adjustWeight(
+        uint256 _derivativeIndex,
+        uint256 _weight
+    ) public onlyOwner {
+        weights[_derivativeIndex] = _weight;
+        uint256 localTotalWeight = 0;
+        for (uint256 i = 0; i < derivativeCount; i++)
+            localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
+        emit WeightChange(_derivativeIndex, _weight);
+    }
+
+    /**
+        @notice - Adds new derivative to the index fund
+        @param _contractAddress - Address of the derivative contract launched by AF
+        @param _weight - new weight for this derivative. 
+    */
+    function addDerivative(
+        address _contractAddress,
+        uint256 _weight
+    ) public onlyOwner {
+        derivatives[derivativeCount] = IDerivative(_contractAddress);
+        weights[derivativeCount] = _weight;
+        derivativeCount++;
+
+        uint256 localTotalWeight = 0;
+        for (uint256 i = 0; i < derivativeCount; i++)
+            localTotalWeight += weights[i];
+        totalWeight = localTotalWeight;
+        emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
+    }
+
+    /**
+        @notice - Sets the max slippage for a certain derivative index
+        @param _derivativeIndex - index of the derivative you want to update the slippage
+        @param _slippage - new slippage amount in wei
+    */
+    function setMaxSlippage(
+        uint _derivativeIndex,
+        uint _slippage
+    ) public onlyOwner {
+        derivatives[_derivativeIndex].setMaxSlippage(_slippage);
+    }
+
+    /**
+        @notice - Sets the minimum amount a user is allowed to stake
+        @param _minAmount - amount to set as minimum stake value
+    */
+    function setMinAmount(uint256 _minAmount) public onlyOwner {
+        minAmount = _minAmount;
+        emit ChangeMinAmount(minAmount);
+    }
+
+    /**
+        @notice - Sets the maximum amount a user is allowed to stake
+        @param _maxAmount - amount to set as maximum stake value
+    */
+    function setMaxAmount(uint256 _maxAmount) public onlyOwner {
+        maxAmount = _maxAmount;
+        emit ChangeMaxAmount(maxAmount);
+    }
+
+    /**
+        @notice - Enables/Disables the stake function
+        @param _pause - true disables staking / false enables staking
+    */
+>>>>>>> Stashed changes
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
         emit StakingPaused(_pause);
     }
 
+    /**
+        @notice - Enables/Disables the unstake function
+        @param _pause - true disables unstaking / false enables unstaking
+    */
     function setPauseUnstaking(bool _pause) public onlyOwner {
         pauseUnstaking = _pause;
         emit UnstakingPaused(_pause);
