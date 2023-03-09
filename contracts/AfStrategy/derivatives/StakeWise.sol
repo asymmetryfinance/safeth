@@ -75,7 +75,6 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         return balanceAfter - balanceBefore;
     }
 
-    // TODO fix this to work like the other derivatives
     function ethPerDerivative() public view returns (uint256) {
         uint256 wethOutput = estimatedSellSeth2Output(10 ** 18); // we can assume weth is always 1-1 with eth
         return wethOutput;
