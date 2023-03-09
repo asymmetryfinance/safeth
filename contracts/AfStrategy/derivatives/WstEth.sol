@@ -38,10 +38,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         IWStETH(wstETH).unwrap(amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
-
-        uint256 minOut = (ethPerDerivative(amount) * (10 ** 18 - maxSlippage)) /
-            10 ** 18;
-
+        uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
         ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
@@ -60,12 +57,11 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (amount == 0) return 0;
-        return IWStETH(wstETH).getStETHByWstETH(amount);
+        return IWStETH(wstETH).getStETHByWstETH(10 ** 18);
     }
 
     function totalEthValue() public view returns (uint256) {
-        return ethPerDerivative(balance());
+        return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
     function balance() public view returns (uint256) {
