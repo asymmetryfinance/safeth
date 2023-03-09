@@ -56,13 +56,12 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         return (wstEthAmount);
     }
 
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (amount == 0) return 0;
-        return IWStETH(wstETH).getStETHByWstETH(amount);
+    function ethPerDerivative() public view returns (uint256) {
+        return IWStETH(wstETH).getStETHByWstETH(10 ** 18);
     }
 
     function totalEthValue() public view returns (uint256) {
-        return ethPerDerivative(balance());
+        return (ethPerDerivative() * balance()) / 10 ** 18;
     }
 
     function balance() public view returns (uint256) {

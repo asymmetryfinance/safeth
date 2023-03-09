@@ -48,4 +48,6 @@ interface ICrvEthPool {
     ) external view returns (uint256);
 
     function coins(uint256 index) external view returns (address);
+
+    function price_oracle() external view returns (uint256);
 }

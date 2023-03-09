@@ -59,35 +59,32 @@ contract AfStrategyV2Mock is
         weights[index] = weight;
     }
 
-    function underlyingValue() public view returns (uint256) {
-        uint256 total = 0;
-        for (uint i = 0; i < derivativeCount; i++)
-            total += derivatives[i].totalEthValue();
-        return total;
-    }
-
-    function valueBySupply() public view returns (uint256) {
-        uint256 totalSupply = IAfETH(safETH).totalSupply();
-        if (totalSupply == 0) return 10 ** 18;
-        return (10 ** 18 * underlyingValue()) / totalSupply;
-    }
-
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
-        uint256 preDepositPrice = valueBySupply();
 
-        uint totalWeight = 0;
-        for (uint i = 0; i < derivativeCount; i++) totalWeight += weights[i];
+        uint256 underlyingValue = 0;
+        for (uint i = 0; i < derivativeCount; i++)
+            underlyingValue += derivatives[i].totalEthValue();
+
+        uint256 totalSupply = IAfETH(safETH).totalSupply();
+        uint256 preDepositPrice;
+        if (totalSupply == 0) preDepositPrice = 10 ** 18;
+        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
 
         uint256 totalStakeValueEth = 0;
         for (uint i = 0; i < derivativeCount; i++) {
+            if (weights[i] == 0) continue;
             uint256 ethAmount = (msg.value * weights[i]) / totalWeight;
-            totalStakeValueEth += derivatives[i].ethPerDerivative(
-                derivatives[i].deposit{value: ethAmount}()
-            );
+
+            // This is slightly less than ethAmount because slippage
+            uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
+            uint derivativeReceivedEthValue = (derivatives[i].ethPerDerivative() * depositAmount) / 10 ** 18;
+            totalStakeValueEth += derivativeReceivedEthValue;
         }
+
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
         IAfETH(safETH).mint(msg.sender, mintAmount);
+        emit Staked(msg.sender, msg.value, mintAmount);
     }
 
     function unstake(uint256 safEthAmount) public {

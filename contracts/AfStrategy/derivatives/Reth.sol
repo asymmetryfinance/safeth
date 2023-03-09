@@ -167,21 +167,21 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     // eth price for acquiring the derivative
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (poolCanDeposit(amount))
-            return RocketTokenRETHInterface(rethAddress()).getEthValue(amount);
-        else return (poolPrice() * amount) / (10 ** 18);
+    function ethPerDerivative() public view returns (uint256) {
+        if (poolCanDeposit(10 ** 18))
+            return RocketTokenRETHInterface(rethAddress()).getEthValue(10 ** 18);
+        else return (poolPrice() * 10 ** 18) / (10 ** 18);
     }
 
     // inverse of ethPerDerivative
-    function derivativePerEth(uint256 amount) public view returns (uint256) {
-        if (poolCanDeposit(amount))
-            return RocketTokenRETHInterface(rethAddress()).getRethValue(amount);
-        else return (amount * 10 ** 18) / poolPrice();
+    function derivativePerEth() public view returns (uint256) {
+        if (poolCanDeposit(10 ** 18))
+            return RocketTokenRETHInterface(rethAddress()).getRethValue(10 ** 18);
+        else return (10 ** 18 * 10 ** 18) / poolPrice();
     }
 
     function totalEthValue() public view returns (uint256) {
-        return ethPerDerivative(balance());
+        return (ethPerDerivative() * balance()) / 10 ** 18;
     }
 
     function balance() public view returns (uint256) {

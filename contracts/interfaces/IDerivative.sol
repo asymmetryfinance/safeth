@@ -6,7 +6,7 @@ interface IDerivative {
 
     function withdraw(uint amount) external;
 
-    function ethPerDerivative(uint amount) external view returns (uint256);
+    function ethPerDerivative() external view returns (uint256);
 
     function totalEthValue() external view returns (uint256);
 

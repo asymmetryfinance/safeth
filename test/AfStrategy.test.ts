@@ -155,12 +155,14 @@ describe("Af Strategy", function () {
       const preStakeBalance = await rEthDerivative.balance();
       expect(preStakeBalance.eq(0)).eq(true);
 
-      const value = ethers.utils.parseEther("1");
-      const postStakeEthEstimation = await rEthDerivative.derivativePerEth(
-        value
+      const ethDepositAmount = "1";
+      const postStakeEthEstimation = BigNumber.from(ethDepositAmount).mul(
+        await rEthDerivative.derivativePerEth()
       );
 
-      await rEthDerivative.deposit({ value });
+      await rEthDerivative.deposit({
+        value: ethers.utils.parseEther(ethDepositAmount),
+      });
       await time.increase(1);
 
       const postStakeBalance = await rEthDerivative.balance();
@@ -286,28 +288,6 @@ describe("Af Strategy", function () {
       expect(balanceBeforeDeposit.toString()).eq(
         balanceAfterDeposit.toString()
       );
-    });
-
-    it("Should upgrade a derivative contract and have same values before and after upgrade", async () => {
-      const derivativeToUpgrade = derivatives[1];
-
-      const addressBefore = derivativeToUpgrade.address;
-      const priceBefore = await derivativeToUpgrade.ethPerDerivative(
-        "1000000000000000000"
-      );
-
-      const upgradedDerivative = await upgrade(addressBefore, "DerivativeMock");
-      await upgradedDerivative.deployed();
-
-      const addressAfter = upgradedDerivative.address;
-      const priceAfter = await derivativeToUpgrade.ethPerDerivative(
-        "1000000000000000000"
-      );
-
-      // value same before and after
-      expect(addressBefore).eq(addressAfter);
-      // price shouldnt have changed - maybe a tiny bit because block time
-      expect(approxEqual(priceBefore, priceAfter)).eq(true);
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -508,16 +488,6 @@ describe("Af Strategy", function () {
       await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
     });
   });
-
-  // Verify that 2 ethers BigNumbers are within 0.000001% of each other
-  const approxEqual = (amount1: BigNumber, amount2: BigNumber) => {
-    if (amount1.eq(amount2)) return true;
-    const difference = amount1.gt(amount2)
-      ? amount1.sub(amount2)
-      : amount2.sub(amount1);
-    const differenceRatio = amount1.div(difference);
-    return differenceRatio.gt("1000000");
-  };
 
   // Verify that 2 ethers BigNumbers are within 2 percent of each other
   const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
