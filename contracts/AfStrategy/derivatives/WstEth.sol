@@ -24,9 +24,14 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    // This replaces the constructor for upgradeable contracts
-    function initialize() public initializer {
-        _transferOwnership(msg.sender);
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _owner - owner of the contract which handles stake/unstake
+    */ function initialize(
+        address _owner
+    ) public initializer {
+        _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
 
