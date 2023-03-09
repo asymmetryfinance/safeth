@@ -13,6 +13,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
+    event ChangeMinAmount(uint256 indexed minAmount);
+    event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event Staked(address indexed recipient, uint ethIn, uint safEthOut);
@@ -41,6 +43,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
         safETH = _safETH;
+        minAmount = 5 ** 17;
+        maxAmount = 200 ** 18;
     }
 
     function derivativeValue(uint256 index) public view returns (uint256) {
@@ -49,6 +53,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
+        require(msg.value >= minAmount, "amount too low");
+        require(msg.value <= maxAmount, "amount too high");
 
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++)
@@ -192,7 +198,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     */
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
-        emit StakingPaused(_pause);
+        emit StakingPaused(pauseStaking);
     }
 
     /**
@@ -201,7 +207,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     */
     function setPauseUnstaking(bool _pause) public onlyOwner {
         pauseUnstaking = _pause;
-        emit UnstakingPaused(_pause);
+        emit UnstakingPaused(pauseUnstaking);
     }
 
     receive() external payable {}

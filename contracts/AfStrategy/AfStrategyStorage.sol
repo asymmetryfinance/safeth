@@ -18,6 +18,8 @@ contract AfStrategyStorage {
     bool public pauseUnstaking;
     uint256 public derivativeCount;
     uint256 public totalWeight;
+    uint256 public minAmount;
+    uint256 public maxAmount;
     mapping(uint256 => IDerivative) public derivatives;
     mapping(uint256 => uint256) public weights;
 }
