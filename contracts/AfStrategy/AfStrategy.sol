@@ -13,6 +13,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
 
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
+    event ChangeMinAmount(uint256 indexed minAmount);
+    event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event Staked(address indexed recipient, uint ethIn, uint safEthOut);
@@ -35,6 +37,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function initialize(address _safETH) public initializer {
         _transferOwnership(msg.sender);
         safETH = _safETH;
+        minAmount = 5 ** 17;
+        maxAmount = 200 ** 18;
     }
 
     function setMaxSlippage(
@@ -94,6 +98,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
     function stake() public payable {
         require(pauseStaking == false, "staking is paused");
+        require(msg.value >= minAmount, "amount too low");
+        require(msg.value <= maxAmount, "amount too high");
 
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++)
@@ -143,14 +149,24 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
+    function setMinAmount(uint256 _minAmount) public onlyOwner {
+        minAmount = _minAmount;
+        emit ChangeMinAmount(minAmount);
+    }
+
+    function setMaxAmount(uint256 _maxAmount) public onlyOwner {
+        maxAmount = _maxAmount;
+        emit ChangeMaxAmount(maxAmount);
+    }
+
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
-        emit StakingPaused(_pause);
+        emit StakingPaused(pauseStaking);
     }
 
     function setPauseUnstaking(bool _pause) public onlyOwner {
         pauseUnstaking = _pause;
-        emit UnstakingPaused(_pause);
+        emit UnstakingPaused(pauseUnstaking);
     }
 
     receive() external payable {}

@@ -15,6 +15,8 @@ contract AfStrategyV2MockStorage {
     bool public pauseUnstaking;
     uint256 public derivativeCount;
     uint256 public totalWeight;
+    uint256 public minAmount;
+    uint256 public maxAmount;
     mapping(uint => IDerivative) public derivatives;
     mapping(uint => uint) public weights;
 
