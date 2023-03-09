@@ -40,15 +40,17 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which handles stake/unstake
-    */ function initialize(
-        address _owner
-    ) public initializer {
+    */
+    function initialize(address _owner) public initializer {
         _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
 
-    function setMaxSlippage(uint slippage) public onlyOwner {
-        maxSlippage = slippage;
+    /**
+        @notice - Owner only function to set max slippage for derivative
+    */
+    function setMaxSlippage(uint256 _slippage) public onlyOwner {
+        maxSlippage = _slippage;
     }
 
     function withdraw(uint256 amount) public onlyOwner {
