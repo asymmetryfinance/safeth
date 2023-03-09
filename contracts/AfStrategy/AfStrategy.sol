@@ -43,26 +43,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         safETH = _safETH;
     }
 
-    function rebalanceToWeights() public onlyOwner {
-        uint256 ethAmountBefore = address(this).balance;
-
-        for (uint i = 0; i < derivativeCount; i++) {
-            if (derivatives[i].balance() > 0)
-                derivatives[i].withdraw(derivatives[i].balance());
-        }
-        uint256 ethAmountAfter = address(this).balance;
-        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
-
-        for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0) continue;
-            uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
-                totalWeight;
-            // Price will change due to slippage
-            derivatives[i].deposit{value: ethAmount}();
-        }
-        emit Rebalanced();
-    }
-
     function derivativeValue(uint256 index) public view returns (uint256) {
         return derivatives[index].totalEthValue();
     }
@@ -118,8 +98,26 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
     }
 
-<<<<<<< Updated upstream
-=======
+    function rebalanceToWeights() public onlyOwner {
+        uint256 ethAmountBefore = address(this).balance;
+
+        for (uint i = 0; i < derivativeCount; i++) {
+            if (derivatives[i].balance() > 0)
+                derivatives[i].withdraw(derivatives[i].balance());
+        }
+        uint256 ethAmountAfter = address(this).balance;
+        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
+
+        for (uint i = 0; i < derivativeCount; i++) {
+            if (weights[i] == 0) continue;
+            uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
+                totalWeight;
+            // Price will change due to slippage
+            derivatives[i].deposit{value: ethAmount}();
+        }
+        emit Rebalanced();
+    }
+
     /**
         @notice - Adds new derivative to the index fund
         @dev - Weights are only in regards to each other, if you want exact weights either do the math off chain or set all derivates to the weights you want
@@ -192,7 +190,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Enables/Disables the stake function
         @param _pause - true disables staking / false enables staking
     */
->>>>>>> Stashed changes
     function setPauseStaking(bool _pause) public onlyOwner {
         pauseStaking = _pause;
         emit StakingPaused(_pause);
