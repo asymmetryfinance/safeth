@@ -76,7 +76,8 @@ contract DerivativeMock is IDerivativeMock, Initializable, OwnableUpgradeable {
 
     function ethPerDerivative() public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(10 ** 18);
-        return (10 ** 18 * frxAmount / ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
+        return ((10 ** 18 * frxAmount) /
+            ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
     }
 
     function totalEthValue() public view returns (uint256) {
