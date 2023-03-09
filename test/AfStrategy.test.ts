@@ -188,9 +188,16 @@ describe("Af Strategy", function () {
       expect(preStakeBalance.eq(0)).eq(true);
 
       const ethDepositAmount = "1";
-      const postStakeEthEstimation = BigNumber.from(ethDepositAmount).mul(
-        await rEthDerivative.derivativePerEth()
+
+      const ethPerDerivative = await rEthDerivative.ethPerDerivative(
+        ethDepositAmount
       );
+      const derivativePerEth = BigNumber.from(
+        "1000000000000000000000000000000000000"
+      ).div(ethPerDerivative);
+
+      const postStakeEthEstimation =
+        BigNumber.from(ethDepositAmount).mul(derivativePerEth);
 
       await rEthDerivative.deposit({
         value: ethers.utils.parseEther(ethDepositAmount),
