@@ -38,7 +38,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @dev - This replaces the constructor for upgradeable contracts
         @param _safETH - address of erc20 safETH contract
     */
-    function initialize(address _safETH) public initializer {
+    function initialize(address _safETH) external initializer {
         _transferOwnership(msg.sender);
         safETH = _safETH;
         minAmount = 5 ** 17;
@@ -49,14 +49,14 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Gets derivative value in regards to ETH for a specific index
         @param _index - index of the derivative to get ETH value
     */
-    function derivativeValue(uint256 _index) public view returns (uint256) {
+    function derivativeValue(uint256 _index) external view returns (uint256) {
         return derivatives[_index].totalEthValue();
     }
 
     /**
         @notice - Stake your ETH into safETH
     */
-    function stake() public payable {
+    function stake() external payable {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
@@ -92,7 +92,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Unstake your safETH into ETH
         @param safEthAmount - amount of safETH to unstake into ETH
     */
-    function unstake(uint256 safEthAmount) public {
+    function unstake(uint256 safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
         uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
         uint256 ethAmountBefore = address(this).balance;
@@ -117,7 +117,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Rebalance each derivative to resemble the weight set for it
         @dev - Depending on the balance of the derivative this could cause max slippage
     */
-    function rebalanceToWeights() public onlyOwner {
+    function rebalanceToWeights() external onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
 
         for (uint i = 0; i < derivativeCount; i++) {
@@ -146,7 +146,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function adjustWeight(
         uint256 _derivativeIndex,
         uint256 _weight
-    ) public onlyOwner {
+    ) external onlyOwner {
         weights[_derivativeIndex] = _weight;
         uint256 localTotalWeight = 0;
         for (uint256 i = 0; i < derivativeCount; i++)
@@ -163,7 +163,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function addDerivative(
         address _contractAddress,
         uint256 _weight
-    ) public onlyOwner {
+    ) external onlyOwner {
         derivatives[derivativeCount] = IDerivative(_contractAddress);
         weights[derivativeCount] = _weight;
         derivativeCount++;
@@ -183,7 +183,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     function setMaxSlippage(
         uint _derivativeIndex,
         uint _slippage
-    ) public onlyOwner {
+    ) external onlyOwner {
         derivatives[_derivativeIndex].setMaxSlippage(_slippage);
     }
 
@@ -191,7 +191,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Sets the minimum amount a user is allowed to stake
         @param _minAmount - amount to set as minimum stake value
     */
-    function setMinAmount(uint256 _minAmount) public onlyOwner {
+    function setMinAmount(uint256 _minAmount) external onlyOwner {
         minAmount = _minAmount;
         emit ChangeMinAmount(minAmount);
     }
@@ -200,7 +200,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Owner only function that sets the maximum amount a user is allowed to stake
         @param _maxAmount - amount to set as maximum stake value
     */
-    function setMaxAmount(uint256 _maxAmount) public onlyOwner {
+    function setMaxAmount(uint256 _maxAmount) external onlyOwner {
         maxAmount = _maxAmount;
         emit ChangeMaxAmount(maxAmount);
     }
@@ -209,7 +209,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Owner only function that Enables/Disables the stake function
         @param _pause - true disables staking / false enables staking
     */
-    function setPauseStaking(bool _pause) public onlyOwner {
+    function setPauseStaking(bool _pause) external onlyOwner {
         pauseStaking = _pause;
         emit StakingPaused(pauseStaking);
     }
@@ -218,7 +218,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         @notice - Owner only function that enables/disables the unstake function
         @param _pause - true disables unstaking / false enables unstaking
     */
-    function setPauseUnstaking(bool _pause) public onlyOwner {
+    function setPauseUnstaking(bool _pause) external onlyOwner {
         pauseUnstaking = _pause;
         emit UnstakingPaused(pauseUnstaking);
     }

@@ -9,6 +9,8 @@ import "../../interfaces/frax/IFrxETHMinter.sol";
 import "hardhat/console.sol";
 import "../../interfaces/lido/IWStETH.sol";
 
+/// @title Derivative contract for wstETH
+/// @author Asymmetry Finance
 contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address public constant lidoCrvPool =
@@ -29,7 +31,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which handles stake/unstake
     */
-    function initialize(address _owner) public initializer {
+    function initialize(address _owner) external initializer {
         _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
@@ -37,11 +39,15 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Owner only function to set max slippage for derivative
     */
-    function setMaxSlippage(uint256 _slippage) public onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyOwner {
         maxSlippage = _slippage;
     }
 
-    function withdraw(uint256 amount) public onlyOwner {
+    /**
+        @notice - Owner only function to Convert derivative into ETH
+        @dev - Owner is set to afStrategy contract
+     */
+    function withdraw(uint256 amount) external onlyOwner {
         IWStETH(wstETH).unwrap(amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
@@ -53,9 +59,13 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         require(sent, "Failed to send Ether");
     }
 
-    function deposit() public payable onlyOwner returns (uint256) {
+    /**
+        @notice - Owner only function to Deposit ETH into derivative
+        @dev - Owner is set to afStrategy contract
+     */
+    function deposit() external payable onlyOwner returns (uint256) {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
-        // solhint-disable-next-line
+
         (bool sent, ) = wstETH.call{value: msg.value}("");
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
@@ -63,14 +73,23 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         return (wstEthAmount);
     }
 
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
+    /**
+        @notice - Get price of derivative in terms of ETH
+     */
+    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
         return IWStETH(wstETH).getStETHByWstETH(10 ** 18);
     }
 
-    function totalEthValue() public view returns (uint256) {
+    /**
+        @notice - Total ETH value of derivative contract
+     */
+    function totalEthValue() external view returns (uint256) {
         return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
+    /**
+        @notice - Total derivative balance
+     */
     function balance() public view returns (uint256) {
         return IERC20(wstETH).balanceOf(address(this));
     }

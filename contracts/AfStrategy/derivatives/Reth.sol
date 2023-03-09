@@ -17,6 +17,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/uniswap/IUniswapV3Factory.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 
+/// @title Derivative contract for rETH
+/// @author Asymmetry Finance
 contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant rocketStorageAddress =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
@@ -39,7 +41,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which handles stake/unstake
     */
-    function initialize(address _owner) public initializer {
+    function initialize(address _owner) external initializer {
         _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
@@ -48,7 +50,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - new slippage amount in wei
     */
-    function setMaxSlippage(uint256 _slippage) public onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyOwner {
         maxSlippage = _slippage;
     }
 
@@ -95,9 +97,9 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Convert rETH into ETH by burning rETH
+        @notice - Convert derivative into ETH
      */
-    function withdraw(uint256 amount) public onlyOwner {
+    function withdraw(uint256 amount) external onlyOwner {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
@@ -107,10 +109,10 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Check whether or not rETH deposit pool has room users amount
-        @param msgValue - amount that will be deposited
+        @param _amount - amount that will be deposited
      */
     function poolCanDeposit(
-        uint256 msgValue
+        uint256 _amount
     ) private view onlyOwner returns (bool) {
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
@@ -138,16 +140,16 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             );
 
         return
-            rocketDepositPool.getBalance() + msgValue <=
+            rocketDepositPool.getBalance() + _amount <=
             rocketDAOProtocolSettingsDeposit.getMaximumDepositPoolSize() &&
-            msgValue >= rocketDAOProtocolSettingsDeposit.getMinimumDeposit();
+            _amount >= rocketDAOProtocolSettingsDeposit.getMinimumDeposit();
     }
 
     /**
-        @notice - Deposit into rETH
+        @notice - Deposit into derivative
         @dev - will either get rETH on exchange or deposit into contract depending on availability
      */
-    function deposit() public payable onlyOwner returns (uint256) {
+    function deposit() external payable onlyOwner returns (uint256) {
         // Per RocketPool Docs query addresses each time it is used
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
@@ -200,32 +202,31 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
         @dev - we need to pass amount so that it gets price from the same source that it buys or mints the rEth
-        @dev - this is ONLY called from AfStrategy.stake()
-        @param - amount to check for ETH price
+        @param _amount - amount to check for ETH price
      */
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        if (poolCanDeposit(amount))
+    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+        if (poolCanDeposit(_amount))
             return
                 RocketTokenRETHInterface(rethAddress()).getEthValue(10 ** 18);
         else return (poolPrice() * 10 ** 18) / (10 ** 18);
     }
 
     /**
-        @notice - Total ETH value of rETH contract
+        @notice - Total ETH value of derivative contract
      */
-    function totalEthValue() public view returns (uint256) {
+    function totalEthValue() external view returns (uint256) {
         return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
     /**
-        @notice - Total rETH balance
+        @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
         return IERC20(rethAddress()).balanceOf(address(this));
     }
 
     /**
-        @notice - Price of rETH in liquidity pool
+        @notice - Price of derivative in liquidity pool
      */
     function poolPrice() private view returns (uint256) {
         address rocketTokenRETHAddress = RocketStorageInterface(
