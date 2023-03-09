@@ -77,9 +77,9 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
 
             // This is slightly less than ethAmount because slippage
             uint256 depositAmount = derivatives[i].deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = derivatives[i].ethPerDerivative(
+            uint derivativeReceivedEthValue = (derivatives[i].ethPerDerivative(
                 depositAmount
-            );
+            ) * depositAmount) / 10 ** 18;
             totalStakeValueEth += derivativeReceivedEthValue;
         }
 
