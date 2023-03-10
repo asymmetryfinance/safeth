@@ -49,13 +49,14 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Owner only function to Convert derivative into ETH
         @dev - Owner is set to afStrategy contract
+        @param _amount - Amount to withdraw
      */
-    function withdraw(uint256 amount) external onlyOwner {
-        IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
+    function withdraw(uint256 _amount) external onlyOwner {
+        IsFrxEth(sfrxEthAddress).redeem(_amount, address(this), address(this));
         uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
 
-        uint256 minOut = (((ethPerDerivative(amount) * amount) / 10 ** 18) *
+        uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);

@@ -142,14 +142,15 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - How much seth2 we expect to get for a given reth2 input amount
         @dev - how much weth we expect to get for a given seth2 input amount
+        @param _amount - amount of sETH2 to sell for wETH
      */
-    function sellSeth2ForWeth(uint256 amount) private returns (uint) {
+    function sellSeth2ForWeth(uint256 _amount) private returns (uint) {
         IERC20(sEth2).approve(
             uniswapRouter,
             IERC20(sEth2).balanceOf(address(this))
         );
 
-        uint256 minOut = (estimatedSellSeth2Output(amount) *
+        uint256 minOut = (estimatedSellSeth2Output(_amount) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -158,7 +159,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
                 tokenOut: wEth,
                 fee: 500,
                 recipient: address(this),
-                amountIn: amount,
+                amountIn: _amount,
                 amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
@@ -168,6 +169,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - How much seth2 we expect to get for a given reth2 input amount
         @dev - how much weth we expect to get for a given seth2 input amount
+        @param _amount - amount of sETH2 to sell for wETH
      */
     function estimatedSellSeth2Output(
         uint256 _amount

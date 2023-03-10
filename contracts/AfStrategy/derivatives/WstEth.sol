@@ -47,8 +47,8 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Owner only function to Convert derivative into ETH
         @dev - Owner is set to afStrategy contract
      */
-    function withdraw(uint256 amount) external onlyOwner {
-        IWStETH(wstETH).unwrap(amount);
+    function withdraw(uint256 _amount) external onlyOwner {
+        IWStETH(wstETH).unwrap(_amount);
         uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
