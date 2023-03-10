@@ -2,8 +2,7 @@
 pragma solidity ^0.8.13;
 
 interface IDerivative {
-
-    function name() external pure returns(string memory);
+    function name() external pure returns (string memory);
 
     function deposit() external payable returns (uint256);
 
