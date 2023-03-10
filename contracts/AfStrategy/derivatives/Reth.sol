@@ -47,6 +47,13 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
+        @notice - Return derivative name
+    */
+    function name() public pure returns (string memory) {
+        return "Reth";
+    }
+
+    /**
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - new slippage amount in wei
     */

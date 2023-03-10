@@ -46,6 +46,13 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
+        @notice - Return derivative name
+    */
+    function name() public pure returns (string memory) {
+        return "StakeWise";
+    }
+
+    /**
         @notice - Owner only function to set max slippage for derivative
     */
     function setMaxSlippage(uint256 _slippage) external onlyOwner {

@@ -39,6 +39,13 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
+        @notice - Return derivative name
+    */
+    function name() public pure returns (string memory) {
+        return "AnkrEth";
+    }
+
+    /**
         @notice - Owner only function to set max slippage for derivative
     */
     function setMaxSlippage(uint _slippage) public onlyOwner {
