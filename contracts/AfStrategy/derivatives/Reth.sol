@@ -50,7 +50,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Return derivative name
     */
     function name() public pure returns (string memory) {
-        return "Reth";
+        return "RocketPool";
     }
 
     /**
