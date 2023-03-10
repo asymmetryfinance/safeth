@@ -40,7 +40,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Return derivative name
     */
     function name() public pure returns (string memory) {
-        return "WstEth";
+        return "Lido";
     }
 
     /**
