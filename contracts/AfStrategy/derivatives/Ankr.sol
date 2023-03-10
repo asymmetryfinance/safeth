@@ -10,10 +10,12 @@ import "../../interfaces/curve/ICrvEthPool.sol";
 import "hardhat/console.sol";
 
 contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
-
-    address public constant ankrEthAddress = 0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
-    address public constant ankrStakerAddress = 0x84db6eE82b7Cf3b47E8F19270abdE5718B936670;
-    address public constant ankrEthPool = 0xA96A65c051bF88B4095Ee1f2451C2A9d43F53Ae2;
+    address public constant ankrEthAddress =
+        0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
+    address public constant ankrStakerAddress =
+        0x84db6eE82b7Cf3b47E8F19270abdE5718B936670;
+    address public constant ankrEthPool =
+        0xA96A65c051bF88B4095Ee1f2451C2A9d43F53Ae2;
 
     uint256 public maxSlippage;
 
@@ -34,7 +36,9 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     function withdraw(uint256 amount) public onlyOwner {
-        uint256 ankrEthBalance = IERC20(ankrEthAddress).balanceOf(address(this));
+        uint256 ankrEthBalance = IERC20(ankrEthAddress).balanceOf(
+            address(this)
+        );
         IERC20(ankrEthAddress).approve(ankrEthPool, ankrEthBalance);
 
         uint256 virtualPrice = ICrvEthPool(ankrEthPool).get_virtual_price();

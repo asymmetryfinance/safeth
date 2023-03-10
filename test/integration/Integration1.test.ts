@@ -15,7 +15,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe.skip("Integration Test 1", function () {
+describe("Integration Test 1", function () {
   let safEthContractAddress: string;
   let strategyContractAddress: string;
 
@@ -35,7 +35,7 @@ describe.skip("Integration Test 1", function () {
     totalStakedPerAccount = startingBalances.map(() => BigNumber.from(0));
   });
 
-  it("Should deploy safEth token", async function () {
+  it.only("Should deploy safEth token", async function () {
     const safETHFactory = await ethers.getContractFactory("safETH");
     const safEth = (await safETHFactory.deploy(
       "Asymmetry Finance safETH",
@@ -52,7 +52,7 @@ describe.skip("Integration Test 1", function () {
     expect(totalSupply).eq("0");
   });
 
-  it("Should deploy the strategy contract and set it as the afEth minter", async function () {
+  it.only("Should deploy the strategy contract and set it as the afEth minter", async function () {
     const afStrategyFactory = await ethers.getContractFactory("AfStrategy");
     const strategy = (await upgrades.deployProxy(afStrategyFactory, [
       safEthContractAddress,
@@ -81,12 +81,20 @@ describe.skip("Integration Test 1", function () {
     expect(safEthMinter).eq(strategyContractAddress);
   });
 
-  it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "StakeWise"];
+  it.only("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
+    const supportedDerivatives = [
+      "Reth",
+      "SfrxEth",
+      "WstEth",
+      "StakeWise",
+      "Ankr",
+    ];
     const strategy = await getLatestContract(
       strategyContractAddress,
       "AfStrategy"
     );
+
+    console.log('blah1')
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
       const derivativeFactory = await ethers.getContractFactory(
@@ -100,8 +108,10 @@ describe.skip("Integration Test 1", function () {
       await strategy.addDerivative(derivative.address, "1000000000000000000");
       await time.increase(1);
     }
+    console.log('blah2')
 
     const derivativeCount = await strategy.derivativeCount();
+    console.log('blah3', derivativeCount, supportedDerivatives.length)
 
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
