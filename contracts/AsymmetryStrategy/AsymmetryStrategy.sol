@@ -10,7 +10,6 @@ import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/convex/ICvxLockerV2.sol";
 
 import "../interfaces/IAfETH.sol";
-import "../interfaces/IAf1155.sol";
 import "../interfaces/frax/IFrxETHMinter.sol";
 import "../interfaces/frax/IsFrxEth.sol";
 
@@ -28,10 +27,9 @@ import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 // Lido
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
+import "../interfaces/IAf1155.sol";
 // Balancer
 // balancer Vault interface: https://github.com/balancer-labs/balancer-v2-monorepo/blob/weighted-deployment/contracts/vault/interfaces/IVault.sol
-import "../interfaces/balancer/IVault.sol";
-import "../interfaces/balancer/IBalancerHelpers.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
@@ -386,36 +384,36 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         }
     }
 
-    function depositBalTokens(
-        uint256 amount
-    ) public returns (uint256 lpAmount) {
-        address[] memory _assets = new address[](2);
-        uint256[] memory _amounts = new uint256[](2);
-        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        _assets[1] = 0x0000000000000000000000000000000000000000;
-        _amounts[0] = amount;
-        _amounts[1] = 0;
-        uint256 joinKind = 1;
-        bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
-        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
-        IWStETH(wstETH).approve(afBalancerPool, amount);
-        IVault(afBalancerPool).joinPool(
-            balPoolId,
-            address(this),
-            address(this),
-            request
-        );
-        return (
-            ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230).balanceOf(
-                address(this)
-            )
-        );
-    }
+    // function depositBalTokens(
+    //     uint256 amount
+    // ) public returns (uint256 lpAmount) {
+    //     address[] memory _assets = new address[](2);
+    //     uint256[] memory _amounts = new uint256[](2);
+    //     _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    //     _assets[1] = 0x0000000000000000000000000000000000000000;
+    //     _amounts[0] = amount;
+    //     _amounts[1] = 0;
+    //     uint256 joinKind = 1;
+    //     bytes memory userDataEncoded = abi.encode(joinKind, _amounts);
+    //     IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest(
+    //         _assets,
+    //         _amounts,
+    //         userDataEncoded,
+    //         false
+    //     );
+    //     IWStETH(wstETH).approve(afBalancerPool, amount);
+    //     IVault(afBalancerPool).joinPool(
+    //         balPoolId,
+    //         address(this),
+    //         address(this),
+    //         request
+    //     );
+    //     return (
+    //         ERC20(0x32296969Ef14EB0c6d29669C550D4a0449130230).balanceOf(
+    //             address(this)
+    //         )
+    //     );
+    // }
 
     function withdrawREth() public {
         uint256 rethBalance1 = RocketTokenRETHInterface(rETH).balanceOf(
@@ -466,43 +464,43 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         return (poolTokensMinted);
     }
 
-    function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
-        // bal lp amount
-        uint256 amount = positions[msg.sender].balancerBalances;
-        address[] memory _assets = new address[](2);
-        uint256[] memory _amounts = new uint256[](2);
-        _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-        _assets[1] = 0x0000000000000000000000000000000000000000;
-        // account for slippage from Balancer withdrawal
-        _amounts[0] = (positions[msg.sender].lidoBalances * 99) / 100;
-        _amounts[1] = 0;
-        uint256 exitKind = 0;
-        uint256 exitTokenIndex = 0;
-        bytes memory userDataEncoded = abi.encode(
-            exitKind,
-            amount,
-            exitTokenIndex
-        );
-        IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest(
-            _assets,
-            _amounts,
-            userDataEncoded,
-            false
-        );
-        // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
-        uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
-        positions[msg.sender].balancerBalances = 0;
-        IVault(afBalancerPool).exitPool(
-            balPoolId,
-            address(this),
-            address(this),
-            request
-        );
-        uint256 wBalance2 = IWStETH(wstETH).balanceOf(address(this));
-        require(wBalance2 > wBalance1, "No wstETH was withdrawn");
-        uint256 wstETHWithdrawn = wBalance2 - wBalance1;
-        return (wstETHWithdrawn);
-    }
+    // function withdrawBalTokens() public returns (uint256 wstETH2Unwrap) {
+    //     // bal lp amount
+    //     uint256 amount = positions[msg.sender].balancerBalances;
+    //     address[] memory _assets = new address[](2);
+    //     uint256[] memory _amounts = new uint256[](2);
+    //     _assets[0] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    //     _assets[1] = 0x0000000000000000000000000000000000000000;
+    //     // account for slippage from Balancer withdrawal
+    //     _amounts[0] = (positions[msg.sender].lidoBalances * 99) / 100;
+    //     _amounts[1] = 0;
+    //     uint256 exitKind = 0;
+    //     uint256 exitTokenIndex = 0;
+    //     bytes memory userDataEncoded = abi.encode(
+    //         exitKind,
+    //         amount,
+    //         exitTokenIndex
+    //     );
+    //     IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest(
+    //         _assets,
+    //         _amounts,
+    //         userDataEncoded,
+    //         false
+    //     );
+    //     // (uint256 balIn, uint256[] memory amountsOut) = IBalancerHelpers(balancerHelpers).queryExit(balPoolId,address(this),address(this),request);
+    //     uint256 wBalance1 = IWStETH(wstETH).balanceOf(address(this));
+    //     positions[msg.sender].balancerBalances = 0;
+    //     IVault(afBalancerPool).exitPool(
+    //         balPoolId,
+    //         address(this),
+    //         address(this),
+    //         request
+    //     );
+    //     uint256 wBalance2 = IWStETH(wstETH).balanceOf(address(this));
+    //     require(wBalance2 > wBalance1, "No wstETH was withdrawn");
+    //     uint256 wstETHWithdrawn = wBalance2 - wBalance1;
+    //     return (wstETHWithdrawn);
+    // }
 
     function withdrawCRVPool(address _pool, uint256 _amount) public {
         address afETHPool = _pool;

@@ -153,19 +153,27 @@ describe("Af Strategy", function () {
       const factory3 = await ethers.getContractFactory("StakeWise");
       const factory4 = await ethers.getContractFactory("Ankr");
 
-      const derivative0 = await upgrades.deployProxy(factory0);
+      const derivative0 = await upgrades.deployProxy(factory0, [
+        adminAccount.address,
+      ]);
       await derivative0.deployed();
       derivatives.push(derivative0);
 
-      const derivative1 = await upgrades.deployProxy(factory1);
+      const derivative1 = await upgrades.deployProxy(factory1, [
+        adminAccount.address,
+      ]);
       await derivative1.deployed();
       derivatives.push(derivative1);
 
-      const derivative2 = await upgrades.deployProxy(factory2);
+      const derivative2 = await upgrades.deployProxy(factory2, [
+        adminAccount.address,
+      ]);
       await derivative2.deployed();
       derivatives.push(derivative2);
 
-      const derivative3 = await upgrades.deployProxy(factory3);
+      const derivative3 = await upgrades.deployProxy(factory3, [
+        adminAccount.address,
+      ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
 
@@ -177,7 +185,9 @@ describe("Af Strategy", function () {
     it("Should use reth deposit contract", async () => {
       await resetToBlock(15430855); // Deposit contract not full here
       const factory = await ethers.getContractFactory("Reth");
-      const rEthDerivative = await upgrades.deployProxy(factory);
+      const rEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
       await rEthDerivative.deployed();
 
       const depositPoolAddress = "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4";
@@ -316,7 +326,9 @@ describe("Af Strategy", function () {
       await resetToBlock(13637030); // 32 eth min at this block
       const factory = await ethers.getContractFactory("StakeWise");
 
-      const stakewise = await upgrades.deployProxy(factory);
+      const stakewise = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
       await stakewise.deployed();
 
       const balanceBeforeDeposit = await stakewise.balance();

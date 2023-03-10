@@ -33,9 +33,8 @@ async function main() {
 
   // Deploy derivatives
   const rethDeployment = await ethers.getContractFactory("Reth");
-  const reth = await upgrades.deployProxy(rethDeployment, []);
+  const reth = await upgrades.deployProxy(rethDeployment, [afStrategy.address]);
   await reth.deployed();
-  await reth.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(reth.address, "1000000000000000000");
   console.log("RETH deployed to:", reth.address);
 
@@ -45,10 +44,9 @@ async function main() {
   });
 
   const SfrxDeployment = await ethers.getContractFactory("SfrxEth");
-  const sfrx = await upgrades.deployProxy(SfrxDeployment, []);
+  const sfrx = await upgrades.deployProxy(SfrxDeployment, [afStrategy.address]);
   await sfrx.deployed();
 
-  await sfrx.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(sfrx.address, "1000000000000000000");
   console.log("sfrx deployed to:", sfrx.address);
   await hre.ethernal.push({
@@ -57,10 +55,9 @@ async function main() {
   });
 
   const WstDeployment = await ethers.getContractFactory("WstEth");
-  const wst = await upgrades.deployProxy(WstDeployment, []);
+  const wst = await upgrades.deployProxy(WstDeployment, [afStrategy.address]);
   await wst.deployed();
 
-  await wst.transferOwnership(afStrategy.address);
   await afStrategy.addDerivative(wst.address, "1000000000000000000");
   console.log("wst deployed to:", wst.address);
   await hre.ethernal.push({

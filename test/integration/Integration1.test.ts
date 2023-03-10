@@ -92,9 +92,10 @@ describe.skip("Integration Test 1", function () {
       const derivativeFactory = await ethers.getContractFactory(
         supportedDerivatives[i]
       );
-      const derivative = await upgrades.deployProxy(derivativeFactory);
+      const derivative = await upgrades.deployProxy(derivativeFactory, [
+        strategyContractAddress,
+      ]);
       await derivative.deployed();
-      await derivative.transferOwnership(strategyContractAddress);
       await time.increase(1);
       await strategy.addDerivative(derivative.address, "1000000000000000000");
       await time.increase(1);
