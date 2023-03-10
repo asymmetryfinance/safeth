@@ -10,12 +10,11 @@ import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/stakewise/IStakewiseStaker.sol";
 
-// Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.
-// both are stable(ish) to eth but you receive rewards in rEth2
-
-// There is also an "activation period" that applies to larger deposits.
-// For simplicity we should throw if our deposit requires an activation period
-// This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
+/// @title Derivative contract for sfrxETH
+/// @author Asymmetry Finance
+/// @dev Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.  Both are stable(ish) to eth but you receive rewards in rEth2
+/// @dev There is also an "activation period" that applies to larger deposits.  For simplicity we should throw if our deposit requires an activation period
+/// @dev This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
 contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
@@ -36,25 +35,35 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    // This replaces the constructor for upgradeable contracts
-    function initialize() public initializer {
-        _transferOwnership(msg.sender);
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _owner - owner of the contract which handles stake/unstake
+    */
+    function initialize(address _owner) external initializer {
+        _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
 
-    function setMaxSlippage(uint slippage) public onlyOwner {
-        maxSlippage = slippage;
+    /**
+        @notice - Owner only function to set max slippage for derivative
+    */
+    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+        maxSlippage = _slippage;
     }
 
-    function withdraw(uint256 amount) public onlyOwner {
+    /**
+        @notice - Convert derivative into ETH
+     */
+    function withdraw(uint256 _amount) external onlyOwner {
         sellAllReth2();
 
         // Theres a chance balance() returns more than they actually have to withdraew because of rEth2/sEth2 price variations
         // if they tried to withdraw more than they have just set it to their balance
         uint256 withdrawAmount;
-        if (amount > IERC20(sEth2).balanceOf(address(this)))
+        if (_amount > IERC20(sEth2).balanceOf(address(this)))
             withdrawAmount = IERC20(sEth2).balanceOf(address(this));
-        else withdrawAmount = amount;
+        else withdrawAmount = _amount;
         uint256 wEthReceived = sellSeth2ForWeth(withdrawAmount);
         IWETH(wEth).withdraw(wEthReceived);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
@@ -63,7 +72,11 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         require(sent, "Failed to send Ether");
     }
 
-    function deposit() public payable onlyOwner returns (uint256) {
+    /**
+        @notice - Deposit into derivative
+        @dev - will either get sETH2 on exchange or deposit into contract depending on availability
+     */
+    function deposit() external payable onlyOwner returns (uint256) {
         if (msg.value > IStakewiseStaker(staker).minActivatingDeposit()) {
             (bool sent, ) = address(msg.sender).call{value: msg.value}("");
             require(sent, "Failed to send Ether");
@@ -75,16 +88,25 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         return balanceAfter - balanceBefore;
     }
 
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
+    /**
+        @notice - Get price of derivative in terms of ETH
+     */
+    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
         uint256 wethOutput = estimatedSellSeth2Output(10 ** 18); // we can assume weth is always 1-1 with eth
         return wethOutput;
     }
 
-    function totalEthValue() public view returns (uint256) {
+    /**
+        @notice - Total ETH value of derivative contract
+     */
+    function totalEthValue() external view returns (uint256) {
         return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
-    // This is more like virtualBalance because its estimating total sEth2 holding based on rEth price2
+    /**
+        @notice - Total derivative balance
+        @dev - This is more like virtualBalance because its estimating total sEth2 holding based on rEth price2
+     */
     function balance() public view returns (uint256) {
         // seth2Balance + estimated seth2 value of reth holdings
         return
@@ -92,7 +114,10 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
             estimatedSellReth2Output(IERC20(rEth2).balanceOf(address(this)));
     }
 
-    function sellAllReth2() public returns (uint) {
+    /**
+        @notice - Convert rewards into derivative
+     */
+    function sellAllReth2() private returns (uint) {
         uint256 rEth2Balance = IERC20(rEth2).balanceOf(address(this));
 
         if (rEth2Balance == 0) return 0;
@@ -114,13 +139,18 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
     }
 
-    function sellSeth2ForWeth(uint256 amount) public returns (uint) {
+    /**
+        @notice - How much seth2 we expect to get for a given reth2 input amount
+        @dev - how much weth we expect to get for a given seth2 input amount
+        @param _amount - amount of sETH2 to sell for wETH
+     */
+    function sellSeth2ForWeth(uint256 _amount) private returns (uint) {
         IERC20(sEth2).approve(
             uniswapRouter,
             IERC20(sEth2).balanceOf(address(this))
         );
 
-        uint256 minOut = (estimatedSellSeth2Output(amount) *
+        uint256 minOut = (estimatedSellSeth2Output(_amount) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -129,29 +159,38 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
                 tokenOut: wEth,
                 fee: 500,
                 recipient: address(this),
-                amountIn: amount,
+                amountIn: _amount,
                 amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
         return ISwapRouter(uniswapRouter).exactInputSingle(params);
     }
 
-    // how much weth we expect to get for a given seth2 input amount
+    /**
+        @notice - How much seth2 we expect to get for a given reth2 input amount
+        @dev - how much weth we expect to get for a given seth2 input amount
+        @param _amount - amount of sETH2 to sell for wETH
+     */
     function estimatedSellSeth2Output(
-        uint256 amount
-    ) public view returns (uint) {
-        return (amount * 10 ** 18) / poolPrice(seth2WethPool);
+        uint256 _amount
+    ) private view returns (uint) {
+        return (_amount * 10 ** 18) / poolPrice(seth2WethPool);
     }
 
-    // how much seth2 we expect to get for a given reth2 input amount
+    /**
+        @notice - How much seth2 we expect to get for a given reth2 input amount
+     */
     function estimatedSellReth2Output(
-        uint256 amount
-    ) public view returns (uint) {
-        return (amount * 10 ** 18) / poolPrice(rEth2Seth2Pool);
+        uint256 _amount
+    ) private view returns (uint) {
+        return (_amount * 10 ** 18) / poolPrice(rEth2Seth2Pool);
     }
 
-    function poolPrice(address poolAddress) public view returns (uint256) {
-        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
+    /**
+        @notice - Price of sETH2 in liquidity pool
+     */
+    function poolPrice(address _poolAddress) private view returns (uint256) {
+        IUniswapV3Pool pool = IUniswapV3Pool(_poolAddress);
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
         return (sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18)) >> (96 * 2);
     }
