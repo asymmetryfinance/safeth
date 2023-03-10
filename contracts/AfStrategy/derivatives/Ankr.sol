@@ -9,7 +9,7 @@ import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
 import "hardhat/console.sol";
 
-/// @title Derivative contract for sfrxETH
+/// @title Derivative contract for ankr
 /// @author Asymmetry Finance
 /// @dev This derivative's liquidity is too low to pass the automated tests and we wont be enabling this derivative in the initial release.
 contract Ankr is IDerivative, Initializable, OwnableUpgradeable {

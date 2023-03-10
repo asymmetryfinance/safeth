@@ -10,6 +10,8 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "hardhat/console.sol";
 import "../AfStrategy/derivatives/SfrxEth.sol";
 
+/// @title Derivative contract for testing contract upgrades
+/// @author Asymmetry Finance
 contract DerivativeMock is SfrxEth {
     /**
         @notice - New function to test upgrading a contract and using new functionality
