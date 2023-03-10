@@ -41,14 +41,14 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Owner only function to set max slippage for derivative
     */
-    function setMaxSlippage(uint slippage) public onlyOwner {
-        maxSlippage = slippage;
+    function setMaxSlippage(uint _slippage) public onlyOwner {
+        maxSlippage = _slippage;
     }
 
     /**
         @notice - Convert derivative into ETH
      */
-    function withdraw(uint256 amount) public onlyOwner {
+    function withdraw(uint256 _amount) public onlyOwner {
         uint256 ankrEthBalance = IERC20(ankrEthAddress).balanceOf(
             address(this)
         );
@@ -56,7 +56,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
 
         uint256 virtualPrice = ICrvEthPool(ankrEthPool).get_virtual_price();
 
-        uint256 minOut = (((virtualPrice * amount) / 10 ** 18) *
+        uint256 minOut = (((virtualPrice * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(ankrEthPool).exchange(1, 0, ankrEthBalance, minOut);
@@ -85,7 +85,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 amount) public view returns (uint256) {
+    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
         return AnkrEth(ankrEthAddress).sharesToBonds(10 ** 18);
     }
 
