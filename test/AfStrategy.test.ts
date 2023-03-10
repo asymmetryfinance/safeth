@@ -151,7 +151,6 @@ describe("Af Strategy", function () {
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
       const factory3 = await ethers.getContractFactory("StakeWise");
-      const factory4 = await ethers.getContractFactory("Ankr");
 
       const derivative0 = await upgrades.deployProxy(factory0, [
         adminAccount.address,
@@ -176,10 +175,6 @@ describe("Af Strategy", function () {
       ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
-
-      const derivative4 = await upgrades.deployProxy(factory4);
-      await derivative4.deployed();
-      derivatives.push(derivative4);
     });
 
     it("Should use reth deposit contract", async () => {

@@ -9,6 +9,9 @@ import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
 import "hardhat/console.sol";
 
+/// @title Derivative contract for sfrxETH
+/// @author Asymmetry Finance
+/// @dev This derivative's liquidity is too low to pass the automated tests and we wont be enabling this derivative in the initial release.
 contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     address public constant ankrEthAddress =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
@@ -25,16 +28,26 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    // This replaces the constructor for upgradeable contracts
-    function initialize() public initializer {
-        _transferOwnership(msg.sender);
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _owner - owner of the contract which handles stake/unstake
+    */
+    function initialize(address _owner) public initializer {
+        _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
     }
 
+    /**
+        @notice - Owner only function to set max slippage for derivative
+    */
     function setMaxSlippage(uint slippage) public onlyOwner {
         maxSlippage = slippage;
     }
 
+    /**
+        @notice - Convert derivative into ETH
+     */
     function withdraw(uint256 amount) public onlyOwner {
         uint256 ankrEthBalance = IERC20(ankrEthAddress).balanceOf(
             address(this)
@@ -54,6 +67,10 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         require(sent, "Failed to send Ether");
     }
 
+    /**
+        @notice - Owner only function to Deposit into derivative
+        @dev - Owner is set to afStrategy contract
+     */
     function deposit() public payable onlyOwner returns (uint256) {
         uint256 ankrBalancePre = IERC20(ankrEthAddress).balanceOf(
             address(this)
@@ -65,14 +82,23 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         return ankrBalancePost - ankrBalancePre;
     }
 
+    /**
+        @notice - Get price of derivative in terms of ETH
+     */
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
         return AnkrEth(ankrEthAddress).sharesToBonds(10 ** 18);
     }
 
+    /**
+        @notice - Total ETH value of derivative contract
+     */
     function totalEthValue() public view returns (uint256) {
         return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
+    /**
+        @notice - Total derivative balance
+     */
     function balance() public view returns (uint256) {
         return IERC20(ankrEthAddress).balanceOf(address(this));
     }
