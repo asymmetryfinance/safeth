@@ -12,6 +12,8 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
 
+/// @title Contract that mints/burns safETH
+/// @author Asymmetry Finance
 contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     event ChangeMinAmount(uint256 indexed minAmount);
     event ChangeMaxAmount(uint256 indexed maxAmount);

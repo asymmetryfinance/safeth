@@ -10,7 +10,6 @@ import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/stakewise/IStakewiseStaker.sol";
 
-
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
 /// @dev Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.  Both are stable(ish) to eth but you receive rewards in rEth2
