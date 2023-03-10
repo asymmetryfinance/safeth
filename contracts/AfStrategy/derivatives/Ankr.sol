@@ -5,14 +5,15 @@ import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ankr/AnkrStaker.sol";
+import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
 import "hardhat/console.sol";
 
 contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
 
-    address ankrEthAddress = 0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
-    address ankrStakerAddress = 0x84db6eE82b7Cf3b47E8F19270abdE5718B936670;
-    address ankrEthPool = 0xA96A65c051bF88B4095Ee1f2451C2A9d43F53Ae2;
+    address public constant ankrEthAddress = 0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
+    address public constant ankrStakerAddress = 0x84db6eE82b7Cf3b47E8F19270abdE5718B936670;
+    address public constant ankrEthPool = 0xA96A65c051bF88B4095Ee1f2451C2A9d43F53Ae2;
 
     uint256 public maxSlippage;
 
@@ -36,10 +37,13 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         uint256 ankrEthBalance = IERC20(ankrEthAddress).balanceOf(address(this));
         IERC20(ankrEthAddress).approve(ankrEthPool, ankrEthBalance);
 
-        uint256 minOut = (((ethPerDerivative(amount) * amount) / 10 ** 18) *
+        uint256 virtualPrice = ICrvEthPool(ankrEthPool).get_virtual_price();
+
+        uint256 minOut = (((virtualPrice * amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(ankrEthPool).exchange(1, 0, ankrEthBalance, minOut);
+
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -58,8 +62,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
-        return ((10 ** 18 * amount) /
-            ICrvEthPool(ankrEthPool).price_oracle());
+        return AnkrEth(ankrEthAddress).sharesToBonds(10 ** 18);
     }
 
     function totalEthValue() public view returns (uint256) {

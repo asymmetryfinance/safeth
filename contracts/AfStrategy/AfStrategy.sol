@@ -102,8 +102,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         require(msg.value <= maxAmount, "amount too high");
 
         uint256 underlyingValue = 0;
-        for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue += derivatives[i].totalEthValue();
+        for (uint i = 0; i < derivativeCount; i++) underlyingValue += derivatives[i].totalEthValue();
 
         uint256 totalSupply = IAfETH(safETH).totalSupply();
         uint256 preDepositPrice;

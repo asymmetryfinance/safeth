@@ -32,19 +32,6 @@ contract DerivativeMock is IDerivativeMock, Initializable, OwnableUpgradeable {
         maxSlippage = slippage;
     }
 
-    function withdraw(uint256 amount) public onlyOwner {
-        IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
-        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
-        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
-        // TODO figure out if we want a min receive amount and what it should be
-        // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
-        require(sent, "Failed to send Ether");
-    }
-
     function withdrawAll() public onlyOwner {
         IsFrxEth(sfrxEthAddress).redeem(
             balance(),
@@ -56,6 +43,21 @@ contract DerivativeMock is IDerivativeMock, Initializable, OwnableUpgradeable {
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
         ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
+            ""
+        );
+        require(sent, "Failed to send Ether");
+    }
+
+    function withdraw(uint256 amount) public onlyOwner {
+        IsFrxEth(sfrxEthAddress).redeem(amount, address(this), address(this));
+        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
+        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+
+        uint256 minOut = (((ethPerDerivative(amount) * amount) / 10 ** 18) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -77,7 +79,7 @@ contract DerivativeMock is IDerivativeMock, Initializable, OwnableUpgradeable {
     function ethPerDerivative(uint256 amount) public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(10 ** 18);
         return ((10 ** 18 * frxAmount) /
-            ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
+            ICrvEthPool(frxEthCrvPoolAddress).get_virtual_price());
     }
 
     function totalEthValue() public view returns (uint256) {
