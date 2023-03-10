@@ -13,8 +13,8 @@ import "../../interfaces/stakewise/IStakewiseStaker.sol";
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
 /// @dev Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.  Both are stable(ish) to eth but you receive rewards in rEth2
-/// @dev There is also an "activation period" that applies to larger deposits.  For simplicity we should throw if our deposit requires an activation period
-/// @dev This brings up another issue -- the strategy contract needs to deal with derivatives throwing (maybe just return their funds for that derivative???)
+/// @dev There is also an "activation period" that applies to larger deposits.
+/// @dev This derivative wont be enabled for the initial release
 contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     address public constant uniswapRouter =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
@@ -43,6 +43,13 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     function initialize(address _owner) external initializer {
         _transferOwnership(_owner);
         maxSlippage = (5 * 10 ** 16); // 5%
+    }
+
+    /**
+        @notice - Return derivative name
+    */
+    function name() public pure returns (string memory) {
+        return "StakeWise";
     }
 
     /**
@@ -90,6 +97,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Get price of derivative in terms of ETH
+        @dev - TODO: This should return the rate being used for IStakewiseStaker(staker).stake().
      */
     function ethPerDerivative(uint256 _amount) public view returns (uint256) {
         uint256 wethOutput = estimatedSellSeth2Output(10 ** 18); // we can assume weth is always 1-1 with eth
