@@ -41,7 +41,6 @@ export const initialUpgradeableDeploy = async function () {
   ]);
   await derivative3.deployed();
   await afStrategy.addDerivative(derivative3.address, "1000000000000000000");
-
   return afStrategy;
 };
 

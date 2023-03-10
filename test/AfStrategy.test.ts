@@ -427,23 +427,14 @@ describe("Af Strategy", function () {
       await upgradedDerivative.deployed();
 
       const depositAmount = ethers.utils.parseEther("1");
-      const stakeTx = await strategy2.stake({ value: depositAmount });
-      const stakeResult = await stakeTx.wait();
-      const networkFeeStake = stakeResult.gasUsed.mul(stakeResult.effectiveGasPrice);
+      await strategy2.stake({ value: depositAmount });
       await time.increase(1);
 
       const balanceBeforeWithdraw = await adminAccount.getBalance();
-      const unstakeTx = await strategy2.unstake(await afEth.balanceOf(adminAccount.address));
-      const unstakeResult = await unstakeTx.wait();
-      const networkFeeUnstake = unstakeResult.gasUsed.mul(
-        stakeResult.effectiveGasPrice
-      );
+      await strategy2.unstake(await afEth.balanceOf(adminAccount.address));
       const balanceAfterWithdraw = await adminAccount.getBalance();
 
-      const withdrawAmount = balanceAfterWithdraw
-        .sub(balanceBeforeWithdraw)
-        .add(networkFeeStake)
-        .add(networkFeeUnstake);
+      const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
 
       // Value in and out approx same
       // 2% tolerance because slippage

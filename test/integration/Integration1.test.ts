@@ -252,7 +252,6 @@ describe("Integration Test 1", function () {
         totalSlippagePerAccount[i]
       );
       const staked = totalStakedPerAccount[i];
-
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });
@@ -271,7 +270,6 @@ describe("Integration Test 1", function () {
     const underlyingValueChange = underlyingValueAfter.sub(
       underlyingValueBefore
     );
-
     expect(within1Percent(underlyingValueChange, totalStaked)).eq(true);
   };
 
