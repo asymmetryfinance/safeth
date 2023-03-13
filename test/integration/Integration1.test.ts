@@ -8,7 +8,7 @@ import {
   randomStakes,
   randomUnstakes,
 } from "./integrationHelpers";
-import { getLatestContract } from "../../helpers/upgradeHelpers";
+import { getLatestContract } from "../helpers/upgradeHelpers";
 import { afEthAbi } from "../abi/afEthAbi";
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
@@ -36,7 +36,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should deploy safEth token", async function () {
-    const safETHFactory = await ethers.getContractFactory("safETH");
+    const safETHFactory = await ethers.getContractFactory("SafETH");
     const safEth = (await safETHFactory.deploy(
       "Asymmetry Finance safETH",
       "safETH"

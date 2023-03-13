@@ -11,7 +11,7 @@ import {
   initialUpgradeableDeploy,
   upgrade,
   getLatestContract,
-} from "../helpers/upgradeHelpers";
+} from "./helpers/upgradeHelpers";
 import {
   SnapshotRestorer,
   takeSnapshot,

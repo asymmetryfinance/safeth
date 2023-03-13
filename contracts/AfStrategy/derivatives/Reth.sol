@@ -5,8 +5,6 @@ import "../../interfaces/IDerivative.sol";
 import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
-import "hardhat/console.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
