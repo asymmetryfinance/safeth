@@ -35,12 +35,6 @@ export const initialUpgradeableDeploy = async function () {
   await derivative2.deployed();
   await afStrategy.addDerivative(derivative2.address, "1000000000000000000");
 
-  const derivativeFactory3 = await ethers.getContractFactory("StakeWise");
-  const derivative3 = await upgrades.deployProxy(derivativeFactory3, [
-    afStrategy.address,
-  ]);
-  await derivative3.deployed();
-  await afStrategy.addDerivative(derivative3.address, "1000000000000000000");
   return afStrategy;
 };
 
