@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IWETH.sol";
-import "../interfaces/IAfETH.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/lido/IWStETH.sol";
@@ -24,6 +23,7 @@ contract AfStrategy is
     event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
+    event SetMaxSlippage(uint256 indexed index, uint256 slippage);
     event Staked(address indexed recipient, uint ethIn, uint safEthOut);
     event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
     event WeightChange(uint indexed index, uint weight);
@@ -77,7 +77,7 @@ contract AfStrategy is
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue += derivatives[i].totalEthValue();
 
-        uint256 totalSupply = IAfETH(safETH).totalSupply();
+        uint256 totalSupply = totalSupply();
         uint256 preDepositPrice;
         if (totalSupply == 0) preDepositPrice = 10 ** 18;
         else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
@@ -108,7 +108,7 @@ contract AfStrategy is
     */
     function unstake(uint256 safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
-        uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
+        uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         for (uint256 i = 0; i < derivativeCount; i++) {
             uint256 derivativeAmount = (derivatives[i].balance() *
@@ -199,6 +199,7 @@ contract AfStrategy is
         uint _slippage
     ) external onlyOwner {
         derivatives[_derivativeIndex].setMaxSlippage(_slippage);
+        emit SetMaxSlippage(_derivativeIndex, _slippage);
     }
 
     /**
