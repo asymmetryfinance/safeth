@@ -3,11 +3,10 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "hardhat/console.sol";
 // AF Interfaces
 import "../interfaces/IWETH.sol";
-import "../interfaces/convex/ILockedCvx.sol";
-import "../interfaces/convex/ICvxLockerV2.sol";
+import "./interfaces/convex/ILockedCvx.sol";
+import "./interfaces/convex/ICvxLockerV2.sol";
 
 import "../interfaces/IAfETH.sol";
 import "../interfaces/frax/IFrxETHMinter.sol";
@@ -27,7 +26,8 @@ import "../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 // Lido
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
-import "../interfaces/IAf1155.sol";
+import "./interfaces/IAf1155.sol";
+import "hardhat/console.sol";
 // Balancer
 // balancer Vault interface: https://github.com/balancer-labs/balancer-v2-monorepo/blob/weighted-deployment/contracts/vault/interfaces/IVault.sol
 

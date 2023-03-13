@@ -8,7 +8,6 @@ import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
-import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
 
