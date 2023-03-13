@@ -1,23 +1,10 @@
 import hre, { upgrades, ethers } from "hardhat";
 
 async function main() {
-  const SafTokenDeployment = await ethers.getContractFactory("SafETH");
-  const safETH = await SafTokenDeployment.deploy(
-    "Asymmetry Finance ETH",
-    "safETH"
-  );
-  await safETH.deployed();
-
-  await hre.ethernal.push({
-    name: "safETH",
-    address: safETH.address,
-  });
-
-  console.log("safETH deployed to:", safETH.address);
-
   const AfStrategyDeployment = await ethers.getContractFactory("AfStrategy");
   const afStrategy = await upgrades.deployProxy(AfStrategyDeployment, [
-    safETH.address,
+    "Asymmetry Finance ETH",
+    "safETH",
   ]);
 
   await afStrategy.deployed();
@@ -28,8 +15,6 @@ async function main() {
     name: "AfStrategy",
     address: afStrategy.address,
   });
-
-  await safETH.setMinter(afStrategy.address);
 
   // Deploy derivatives
   const rethDeployment = await ethers.getContractFactory("Reth");

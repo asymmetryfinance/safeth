@@ -10,10 +10,16 @@ import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Contract that mints/burns safETH
 /// @author Asymmetry Finance
-contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
+contract AfStrategy is
+    Initializable,
+    ERC20Upgradeable,
+    OwnableUpgradeable,
+    AfStrategyStorage
+{
     event ChangeMinAmount(uint256 indexed minAmount);
     event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
@@ -37,11 +43,15 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _safETH - address of erc20 safETH contract
+        @param _tokenName - name of erc20
+        @param _tokenSymbol - symbol of erc20
     */
-    function initialize(address _safETH) external initializer {
+    function initialize(
+        string memory _tokenName,
+        string memory _tokenSymbol
+    ) external initializer {
+        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         _transferOwnership(msg.sender);
-        safETH = _safETH;
         minAmount = 5 ** 17;
         maxAmount = 200 ** 18;
     }
@@ -88,7 +98,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         }
 
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        IAfETH(safETH).mint(msg.sender, mintAmount);
+        _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, mintAmount);
     }
 
@@ -106,7 +116,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
             if (derivativeAmount == 0) continue;
             derivatives[i].withdraw(derivativeAmount);
         }
-        IAfETH(safETH).burn(msg.sender, safEthAmount);
+        _burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line

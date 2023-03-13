@@ -1,4 +1,4 @@
-import { AfStrategy, SafETH } from "../../typechain-types";
+import { AfStrategy } from "../../typechain-types";
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import {
@@ -9,7 +9,6 @@ import {
   randomUnstakes,
 } from "./integrationHelpers";
 import { getLatestContract } from "../helpers/upgradeHelpers";
-import { afEthAbi } from "../abi/afEthAbi";
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -35,50 +34,25 @@ describe("Integration Test 1", function () {
     totalStakedPerAccount = startingBalances.map(() => BigNumber.from(0));
   });
 
-  it("Should deploy safEth token", async function () {
-    const safETHFactory = await ethers.getContractFactory("SafETH");
-    const safEth = (await safETHFactory.deploy(
-      "Asymmetry Finance safETH",
-      "safETH"
-    )) as SafETH;
-    await safEth.deployed();
-
-    const owner = await safEth.owner();
-    const totalSupply = await safEth.totalSupply();
-
-    safEthContractAddress = safEth.address;
-
-    expect(owner).eq((await getAdminAccount()).address);
-    expect(totalSupply).eq("0");
-  });
-
-  it("Should deploy the strategy contract and set it as the afEth minter", async function () {
+  it("Should deploy the strategy contract", async function () {
     const afStrategyFactory = await ethers.getContractFactory("AfStrategy");
     const strategy = (await upgrades.deployProxy(afStrategyFactory, [
-      safEthContractAddress,
+      "Asymmetry Finance ETH",
+      "safETH",
     ])) as AfStrategy;
     await strategy.deployed();
 
     strategyContractAddress = strategy.address;
 
-    const safEth = new ethers.Contract(
-      safEthContractAddress,
-      afEthAbi,
-      await getAdminAccount()
-    ) as SafETH;
-
-    await safEth.setMinter(strategyContractAddress);
     await time.increase(1);
 
     const owner = await strategy.owner();
     const derivativeCount = await strategy.derivativeCount();
     const underlyingValue = await strategyUnderlyingValue();
-    const safEthMinter = await safEth.minter();
 
     expect(owner).eq((await getAdminAccount()).address);
     expect(derivativeCount).eq("0");
     expect(underlyingValue).eq("0");
-    expect(safEthMinter).eq(strategyContractAddress);
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
@@ -201,19 +175,12 @@ describe("Integration Test 1", function () {
       strategyContractAddress,
       "AfStrategy"
     );
-    const safEth = new ethers.Contract(
-      safEthContractAddress,
-      afEthAbi,
-      await getAdminAccount()
-    ) as SafETH;
-
     const underlyingValueBefore = await strategyUnderlyingValue();
-
     const userAccounts = await getUserAccounts();
-
     let totalUnstaked = BigNumber.from(0);
+
     for (let i = 0; i < userAccounts.length; i++) {
-      const withdrawAmount = await safEth.balanceOf(userAccounts[i].address);
+      const withdrawAmount = await strategy.balanceOf(userAccounts[i].address);
       if (withdrawAmount.eq(0)) continue;
       const userStrategySigner = strategy.connect(userAccounts[i]);
       const balanceBefore = await userAccounts[i].getBalance();

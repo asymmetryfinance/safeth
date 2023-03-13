@@ -3,8 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { AfStrategy, SafETH } from "../typechain-types";
-import { afEthAbi } from "./abi/afEthAbi";
+import { AfStrategy } from "../typechain-types";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 import {
@@ -22,7 +21,6 @@ import { RETH_MAX } from "./constants";
 
 describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
-  let afEth: SafETH;
   let strategyProxy: AfStrategy;
   let snapshot: SnapshotRestorer;
   let initialHardhatBlock: number; // incase we need to reset to where we started
@@ -43,9 +41,6 @@ describe("Af Strategy", function () {
     strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
-    const afEthAddress = await strategyProxy.safETH();
-    afEth = new ethers.Contract(afEthAddress, afEthAbi, accounts[0]) as SafETH;
-    await afEth.setMinter(strategyProxy.address);
   };
 
   before(async () => {
@@ -57,7 +52,6 @@ describe("Af Strategy", function () {
   describe("Slippage", function () {
     it("Set slippage derivatives via the strategy contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-
       const derivativeCount = (
         await strategyProxy.derivativeCount()
       ).toNumber();
@@ -74,7 +68,6 @@ describe("Af Strategy", function () {
       for (let i = 0; i < derivativeCount; i++) {
         await strategyProxy.setMaxSlippage(i, ethers.utils.parseEther("0.05")); // 5%
       }
-
       await strategyProxy.stake({ value: depositAmount });
     });
   });
@@ -431,7 +424,9 @@ describe("Af Strategy", function () {
       await time.increase(1);
 
       const balanceBeforeWithdraw = await adminAccount.getBalance();
-      await strategy2.unstake(await afEth.balanceOf(adminAccount.address));
+      await strategy2.unstake(
+        await strategyProxy.balanceOf(adminAccount.address)
+      );
       const balanceAfterWithdraw = await adminAccount.getBalance();
 
       const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
@@ -536,7 +531,9 @@ describe("Af Strategy", function () {
       // derivative0 should now have 0 value
       expect(derivative0ValueAfter.toString() === "0").eq(true);
 
-      await strategyProxy.unstake(await afEth.balanceOf(adminAccount.address));
+      await strategyProxy.unstake(
+        await strategyProxy.balanceOf(adminAccount.address)
+      );
     });
   });
 

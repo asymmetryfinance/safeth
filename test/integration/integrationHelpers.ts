@@ -1,8 +1,6 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { getLatestContract } from "../helpers/upgradeHelpers";
-import { SafETH } from "../../typechain-types";
-import { afEthAbi } from "../abi/afEthAbi";
 
 let randomSeed = 2;
 export const stakeMinimum = 0.1;
@@ -90,12 +88,6 @@ export const randomUnstakes = async (
     "AfStrategy"
   );
 
-  const safEth = new ethers.Contract(
-    safEthContractAddress,
-    afEthAbi,
-    await getAdminAccount()
-  ) as SafETH;
-
   const userAccounts = await getUserAccounts();
 
   let totalUnstaked = BigNumber.from(0);
@@ -103,7 +95,9 @@ export const randomUnstakes = async (
   for (let i = 0; i < userAccounts.length; i++) {
     const userStrategySigner = strategy.connect(userAccounts[i]);
     for (let j = 0; j < 3; j++) {
-      const safEthBalanceWei = await safEth.balanceOf(userAccounts[i].address);
+      const safEthBalanceWei = await strategy.balanceOf(
+        userAccounts[i].address
+      );
       const safEthBalance = ethers.utils.formatEther(safEthBalanceWei);
       // withdraw a random portion of their balance
       const withdrawAmount = ethers.utils.parseEther(

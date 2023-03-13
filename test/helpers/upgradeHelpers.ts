@@ -1,15 +1,11 @@
 import { ethers, upgrades } from "hardhat";
-import { SafETH } from "../../typechain-types";
 
 export const initialUpgradeableDeploy = async function () {
-  const afETHFactory = await ethers.getContractFactory("SafETH");
-  const afEth = (await afETHFactory.deploy(
-    "Asymmetry Finance ETH",
-    "safETH"
-  )) as SafETH;
-
   const AfStrategy = await ethers.getContractFactory("AfStrategy");
-  const afStrategy = await upgrades.deployProxy(AfStrategy, [afEth.address]);
+  const afStrategy = await upgrades.deployProxy(AfStrategy, [
+    "Asymmetry Finance ETH",
+    "safETH",
+  ]);
   await afStrategy.deployed();
 
   // deploy derivatives and add to strategy
