@@ -8,7 +8,7 @@ import {
   randomStakes,
   randomUnstakes,
 } from "./integrationHelpers";
-import { getLatestContract } from "../../helpers/upgradeHelpers";
+import { getLatestContract } from "../helpers/upgradeHelpers";
 import { afEthAbi } from "../abi/afEthAbi";
 import { BigNumber } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";

@@ -1,5 +1,5 @@
 import { ethers, upgrades } from "hardhat";
-import { SafETH } from "../typechain-types";
+import { SafETH } from "../../typechain-types";
 
 export const initialUpgradeableDeploy = async function () {
   const afETHFactory = await ethers.getContractFactory("safETH");

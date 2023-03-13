@@ -1,6 +1,6 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { getLatestContract } from "../../helpers/upgradeHelpers";
+import { getLatestContract } from "../helpers/upgradeHelpers";
 import { SafETH } from "../../typechain-types";
 import { afEthAbi } from "../abi/afEthAbi";
 
