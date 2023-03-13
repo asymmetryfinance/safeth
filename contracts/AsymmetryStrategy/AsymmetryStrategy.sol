@@ -614,8 +614,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     function mintAfEth(uint256 amount) private {
         // IAfETH afEthToken = IAfETH(afETH);
         // afEthToken.mint(address(this), amount);
-                positions[msg.sender].afETH = 0;
-
+        positions[msg.sender].afETH = 0;
     }
 
     // burn afETH

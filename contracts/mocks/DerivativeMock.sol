@@ -7,7 +7,7 @@ import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
-import "../AfStrategy/derivatives/SfrxEth.sol";
+import "../SafEth/derivatives/SfrxEth.sol";
 
 /// @title Derivative contract for testing contract upgrades
 /// @author Asymmetry Finance

@@ -75,7 +75,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Deposit into derivative
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
      */
     function deposit() public payable onlyOwner returns (uint256) {
         uint256 ankrBalancePre = IERC20(ankrEthAddress).balanceOf(

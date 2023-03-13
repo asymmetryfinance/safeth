@@ -1,4 +1,4 @@
-import { AfStrategy } from "../../typechain-types";
+import { SafEth } from "../typechain-types";
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import {
@@ -7,8 +7,8 @@ import {
   getUserBalances,
   randomStakes,
   randomUnstakes,
-} from "./integrationHelpers";
-import { getLatestContract } from "../helpers/upgradeHelpers";
+} from "./helpers/integrationHelpers";
+import { getLatestContract } from "./helpers/upgradeHelpers";
 import { BigNumber } from "ethers";
 
 // These tests are intended to run in-order.
@@ -34,11 +34,11 @@ describe("Integration Test 1", function () {
   });
 
   it("Should deploy the strategy contract", async function () {
-    const afStrategyFactory = await ethers.getContractFactory("AfStrategy");
-    const strategy = (await upgrades.deployProxy(afStrategyFactory, [
+    const safEthFactory = await ethers.getContractFactory("SafEth");
+    const strategy = (await upgrades.deployProxy(safEthFactory, [
       "Asymmetry Finance ETH",
       "safETH",
-    ])) as AfStrategy;
+    ])) as SafEth;
     await strategy.deployed();
 
     strategyContractAddress = strategy.address;
@@ -54,10 +54,7 @@ describe("Integration Test 1", function () {
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
     const supportedDerivatives = ["Reth", "SfrxEth", "WstEth"];
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
+    const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
       const derivativeFactory = await ethers.getContractFactory(
@@ -89,10 +86,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should change weights and rebalance", async function () {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
+    const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     // set weight of derivative0 to 0 and derivative1 to 2 * 10^18
     // this is like going from 33/33/33 -> 0/66/33
@@ -121,10 +115,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should change weights and rebalance", async function () {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
+    const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     // set weight of derivative0 to 2 * 10^18
     // this is like going from 0/50/25/25 -> 33/33/16/16
@@ -151,10 +142,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should unstake everything for all users", async function () {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
+    const strategy = await getLatestContract(strategyContractAddress, "SafEth");
     const underlyingValueBefore = await strategyUnderlyingValue();
     const userAccounts = await getUserAccounts();
     let totalUnstaked = BigNumber.from(0);
@@ -238,10 +226,7 @@ describe("Integration Test 1", function () {
 
   // Underlying value of all derivatives in the strategy contract
   const strategyUnderlyingValue = async () => {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
+    const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     const derivativeCount = await strategy.derivativeCount();
 

@@ -8,16 +8,16 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./AfStrategyStorage.sol";
+import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Contract that mints/burns safETH
 /// @author Asymmetry Finance
-contract AfStrategy is
+contract SafEth is
     Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
-    AfStrategyStorage
+    SafEthStorage
 {
     event ChangeMinAmount(uint256 indexed minAmount);
     event ChangeMaxAmount(uint256 indexed maxAmount);

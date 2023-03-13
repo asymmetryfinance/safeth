@@ -50,7 +50,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Convert derivative into ETH
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
         IWStETH(wstETH).unwrap(_amount);
@@ -66,7 +66,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Deposit ETH into derivative
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));

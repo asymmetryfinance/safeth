@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { AfStrategy } from "../typechain-types";
+import { SafEth } from "../typechain-types";
 
 import {
   initialUpgradeableDeploy,
@@ -15,11 +15,11 @@ import {
   takeSnapshot,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
-import { RETH_MAX } from "./constants";
+import { RETH_MAX } from "./helpers/constants";
 
 describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
-  let strategyProxy: AfStrategy;
+  let strategyProxy: SafEth;
   let snapshot: SnapshotRestorer;
   let initialHardhatBlock: number; // incase we need to reset to where we started
 
@@ -36,7 +36,7 @@ describe("Af Strategy", function () {
       ],
     });
 
-    strategyProxy = (await initialUpgradeableDeploy()) as AfStrategy;
+    strategyProxy = (await initialUpgradeableDeploy()) as SafEth;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
   };
@@ -291,7 +291,7 @@ describe("Af Strategy", function () {
       const addressBefore = strategyProxy.address;
       const strategy2 = await upgrade(
         strategyProxy.address,
-        "AfStrategyV2Mock"
+        "SafEthV2Mock"
       );
       await strategy2.deployed();
       const addressAfter = strategy2.address;
@@ -300,7 +300,7 @@ describe("Af Strategy", function () {
     it("Should allow v2 functionality to be used after upgrading", async () => {
       const strategy2 = await upgrade(
         strategyProxy.address,
-        "AfStrategyV2Mock"
+        "SafEthV2Mock"
       );
       await strategy2.deployed();
       expect(await strategy2.newFunctionCalled()).eq(false);
@@ -310,10 +310,10 @@ describe("Af Strategy", function () {
     });
 
     it("Should get latest version of an already upgraded contract and use new functionality", async () => {
-      await upgrade(strategyProxy.address, "AfStrategyV2Mock");
+      await upgrade(strategyProxy.address, "SafEthV2Mock");
       const latestContract = await getLatestContract(
         strategyProxy.address,
-        "AfStrategyV2Mock"
+        "SafEthV2Mock"
       );
       await latestContract.deployed();
       expect(await latestContract.newFunctionCalled()).eq(false);
@@ -325,7 +325,7 @@ describe("Af Strategy", function () {
     it("Should be able to upgrade both the strategy contract and its derivatives and still function correctly", async () => {
       const strategy2 = await upgrade(
         strategyProxy.address,
-        "AfStrategyV2Mock"
+        "SafEthV2Mock"
       );
 
       const derivativeAddressToUpgrade = await strategy2.derivatives(1);

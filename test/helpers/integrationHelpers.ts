@@ -1,6 +1,6 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { getLatestContract } from "../helpers/upgradeHelpers";
+import { getLatestContract } from "./upgradeHelpers";
 
 let randomSeed = 2;
 export const stakeMinimum = 0.1;
@@ -49,10 +49,7 @@ export const randomStakes = async (
   networkFeesPerAccount: BigNumber[],
   totalStakedPerAccount: BigNumber[]
 ) => {
-  const strategy = await getLatestContract(
-    strategyContractAddress,
-    "AfStrategy"
-  );
+  const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
   const userAccounts = await getUserAccounts();
 
@@ -83,10 +80,7 @@ export const randomUnstakes = async (
   safEthContractAddress: string,
   networkFeesPerAccount: BigNumber[]
 ) => {
-  const strategy = await getLatestContract(
-    strategyContractAddress,
-    "AfStrategy"
-  );
+  const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
   const userAccounts = await getUserAccounts();
 

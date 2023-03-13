@@ -54,7 +54,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Convert derivative into ETH
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
@@ -74,7 +74,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Deposit into derivative
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
