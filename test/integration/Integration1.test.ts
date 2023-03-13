@@ -36,7 +36,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should deploy safEth token", async function () {
-    const safETHFactory = await ethers.getContractFactory("safETH");
+    const safETHFactory = await ethers.getContractFactory("SafETH");
     const safEth = (await safETHFactory.deploy(
       "Asymmetry Finance safETH",
       "safETH"
