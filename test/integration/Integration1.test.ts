@@ -11,7 +11,6 @@ import {
 import { getLatestContract } from "../helpers/upgradeHelpers";
 import { afEthAbi } from "../abi/afEthAbi";
 import { BigNumber } from "ethers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
@@ -67,8 +66,8 @@ describe("Integration Test 1", function () {
       await getAdminAccount()
     ) as SafETH;
 
-    await safEth.setMinter(strategyContractAddress);
-    await time.increase(1);
+    const tx1 = await safEth.setMinter(strategyContractAddress);
+    await tx1.wait();
 
     const owner = await strategy.owner();
     const derivativeCount = await strategy.derivativeCount();
@@ -96,9 +95,12 @@ describe("Integration Test 1", function () {
         strategyContractAddress,
       ]);
       await derivative.deployed();
-      await time.increase(1);
-      await strategy.addDerivative(derivative.address, "1000000000000000000");
-      await time.increase(1);
+
+      const tx1 = await strategy.addDerivative(
+        derivative.address,
+        "1000000000000000000"
+      );
+      await tx1.wait();
     }
 
     const derivativeCount = await strategy.derivativeCount();
@@ -122,12 +124,12 @@ describe("Integration Test 1", function () {
 
     // set weight of derivative0 to 0 and derivative1 to 2 * 10^18
     // this is like going from 33/33/33 -> 0/66/33
-    await strategy.adjustWeight(0, 0);
-    await time.increase(1);
-    await strategy.adjustWeight(1, "2000000000000000000");
-    await time.increase(1);
-    await strategy.rebalanceToWeights();
-    await time.increase(1);
+    const tx1 = await strategy.adjustWeight(0, 0);
+    await tx1.wait();
+    const tx2 = await strategy.adjustWeight(1, "2000000000000000000");
+    await tx2.wait();
+    const tx3 = await strategy.rebalanceToWeights();
+    await tx3.wait();
 
     const derivative0Value = await strategy.derivativeValue(0);
     const derivative1Value = await strategy.derivativeValue(1);
@@ -154,10 +156,10 @@ describe("Integration Test 1", function () {
 
     // set weight of derivative0 to 2 * 10^18
     // this is like going from 0/50/25/25 -> 33/33/16/16
-    await strategy.adjustWeight(0, "2000000000000000000");
-    await time.increase(1);
-    await strategy.rebalanceToWeights();
-    await time.increase(1);
+    const tx1 = await strategy.adjustWeight(0, "2000000000000000000");
+    await tx1.wait();
+    const tx2 = await strategy.rebalanceToWeights();
+    await tx2.wait();
 
     const derivative0Value = await strategy.derivativeValue(0);
     const derivative1Value = await strategy.derivativeValue(1);
