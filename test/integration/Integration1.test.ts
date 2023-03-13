@@ -82,7 +82,7 @@ describe("Integration Test 1", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "StakeWise"];
+    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth"];
     const strategy = await getLatestContract(
       strategyContractAddress,
       "AfStrategy"
@@ -121,7 +121,7 @@ describe("Integration Test 1", function () {
     );
 
     // set weight of derivative0 to 0 and derivative1 to 2 * 10^18
-    // this is like going from 25/25/25/25 -> 0/50/25/25
+    // this is like going from 33/33/33 -> 0/66/33
     await strategy.adjustWeight(0, 0);
     await time.increase(1);
     await strategy.adjustWeight(1, "2000000000000000000");
@@ -132,13 +132,10 @@ describe("Integration Test 1", function () {
     const derivative0Value = await strategy.derivativeValue(0);
     const derivative1Value = await strategy.derivativeValue(1);
     const derivative2Value = await strategy.derivativeValue(2);
-    const derivative3Value = await strategy.derivativeValue(3);
 
     expect(derivative0Value).eq(BigNumber.from(0));
-    expect(
-      within1Percent(derivative1Value, derivative2Value.add(derivative3Value))
-    ).eq(true);
-    expect(within1Percent(derivative2Value, derivative3Value)).eq(true);
+
+    expect(within1Percent(derivative1Value, derivative2Value.mul(2))).eq(true);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
@@ -165,27 +162,10 @@ describe("Integration Test 1", function () {
     const derivative0Value = await strategy.derivativeValue(0);
     const derivative1Value = await strategy.derivativeValue(1);
     const derivative2Value = await strategy.derivativeValue(2);
-    const derivative3Value = await strategy.derivativeValue(3);
 
-    // derivative0 ~= derivative1
-    // 33.33% = 33.33%
-    expect(within2Percent(derivative0Value, derivative1Value)).eq(true);
-
-    // derivative2 ~= derivative3
-    // 16.66% ~= 16.66%
-    expect(within2Percent(derivative2Value, derivative3Value)).eq(true);
-
-    // derivative0 ~= derivative2+derivative3
-    // 33.33% ~= 16.66% + 16.66%
-    expect(
-      within2Percent(derivative0Value, derivative2Value.add(derivative3Value))
-    ).eq(true);
-
-    // derivative1 ~= derivative2+derivative3
-    // 33% ~= 16.66% + 16.66%
-    expect(
-      within2Percent(derivative1Value, derivative2Value.add(derivative3Value))
-    ).eq(true);
+    expect(within1Percent(derivative0Value, derivative1Value)).eq(true);
+    expect(within1Percent(derivative0Value, derivative2Value.mul(2))).eq(true);
+    expect(within1Percent(derivative1Value, derivative2Value.mul(2))).eq(true);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
@@ -307,11 +287,6 @@ describe("Integration Test 1", function () {
     return derivativeValue;
   };
 });
-
-const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.eq(amount2)) return true;
-  return getDifferenceRatio(amount1, amount2).gt("50");
-};
 
 const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;

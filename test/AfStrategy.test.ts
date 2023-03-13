@@ -5,7 +5,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { AfStrategy, SafETH } from "../typechain-types";
 import { afEthAbi } from "./abi/afEthAbi";
-import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 import {
   initialUpgradeableDeploy,
@@ -150,7 +149,6 @@ describe("Af Strategy", function () {
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
-      const factory3 = await ethers.getContractFactory("StakeWise");
 
       const derivative0 = await upgrades.deployProxy(factory0, [
         adminAccount.address,
@@ -169,12 +167,6 @@ describe("Af Strategy", function () {
       ]);
       await derivative2.deployed();
       derivatives.push(derivative2);
-
-      const derivative3 = await upgrades.deployProxy(factory3, [
-        adminAccount.address,
-      ]);
-      await derivative3.deployed();
-      derivatives.push(derivative3);
     });
 
     it("Should use reth deposit contract", async () => {
@@ -253,92 +245,6 @@ describe("Af Strategy", function () {
         const postWithdrawValue = await derivatives[i].totalEthValue();
         expect(postWithdrawValue.eq(0)).eq(true);
       }
-    });
-
-    it("Should test Stakewise withdraw when an rEth2 balance has accumulated", async () => {
-      const stakewise = derivatives[3];
-
-      const rEth2WhaleAddress = "0x7BdDb2C97AF91f97E73F07dEB976fdFC2d2Ee93c";
-
-      const rEth2Address = "0x20bc832ca081b91433ff6c17f85701b6e92486c5";
-      const rEth2 = new ethers.Contract(rEth2Address, ERC20.abi, adminAccount);
-
-      await network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: [rEth2WhaleAddress],
-      });
-
-      const transferAmount = ethers.utils.parseEther("0.1");
-      const whaleSigner = await ethers.getSigner(rEth2WhaleAddress);
-      const rEth2Whale = rEth2.connect(whaleSigner);
-
-      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
-
-      // simulate rEth2 reward accumulation
-      await rEth2Whale.transfer(stakewise.address, transferAmount);
-
-      // balance is in sEth2 which stable to eth
-      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
-
-      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
-      await stakewise.withdraw(await stakewise.balance());
-      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
-
-      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
-        ethBalanceBeforeWithdraw
-      );
-
-      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
-      // 2% tolerance from slippage
-      expect(
-        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
-      ).eq(true);
-    });
-
-    it("Should withdraw the full balance from stakewise if more than the balance is passed in", async () => {
-      const stakewise = derivatives[3];
-
-      await stakewise.deposit({ value: ethers.utils.parseEther("0.1") });
-
-      const derivativeBalanceBeforeWithdraw = await stakewise.balance();
-
-      const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
-      await stakewise.withdraw((await stakewise.balance()).mul(2));
-      const ethBalanceAfterWithdraw = await adminAccount.getBalance();
-
-      const balanceWithdrawn = ethBalanceAfterWithdraw.sub(
-        ethBalanceBeforeWithdraw
-      );
-
-      // expect the derivative balance (which is in sEth) to approx equal the total amount withdrawn
-      // 2% tolerance from slippage
-      expect(
-        within2Percent(balanceWithdrawn, derivativeBalanceBeforeWithdraw)
-      ).eq(true);
-    });
-
-    it("Should not deposit if more than the minActivatingDeposit on Stakewise", async () => {
-      await resetToBlock(13637030); // 32 eth min at this block
-      const factory = await ethers.getContractFactory("StakeWise");
-
-      const stakewise = await upgrades.deployProxy(factory, [
-        adminAccount.address,
-      ]);
-      await stakewise.deployed();
-
-      const balanceBeforeDeposit = await stakewise.balance();
-
-      const depositResult = await stakewise.deposit({
-        value: ethers.utils.parseEther("33"),
-      });
-      await depositResult.wait();
-
-      const balanceAfterDeposit = await stakewise.balance();
-
-      // deposit doesnt happen because exceeded minActivatingDeposit at this block
-      expect(balanceBeforeDeposit.toString()).eq(
-        balanceAfterDeposit.toString()
-      );
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -468,7 +374,7 @@ describe("Af Strategy", function () {
       await time.increase(1);
 
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
-      // this is like 33/33/33 -> 50/25/25 (3 derivatives) or 25/25/25/25 -> 50/16.66/16.66/16.66 (4 derivatives)
+      // this is like 33/33/33 -> 50/25/25 (3 derivatives)
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await strategyProxy.rebalanceToWeights();
       await time.increase(1);
