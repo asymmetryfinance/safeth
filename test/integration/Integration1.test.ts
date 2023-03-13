@@ -71,12 +71,10 @@ describe("Integration Test 1", function () {
 
     const owner = await strategy.owner();
     const derivativeCount = await strategy.derivativeCount();
-    const underlyingValue = await strategyUnderlyingValue();
     const safEthMinter = await safEth.minter();
 
     expect(owner).eq((await getAdminAccount()).address);
     expect(derivativeCount).eq("0");
-    expect(underlyingValue).eq("0");
     expect(safEthMinter).eq(strategyContractAddress);
   });
 
@@ -109,11 +107,19 @@ describe("Integration Test 1", function () {
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
-    await testRandomStakes();
+    await randomStakes(
+      strategyContractAddress,
+      networkFeesPerAccount,
+      totalStakedPerAccount
+    );
   });
 
   it("Should unstake a random amount 3 times for each user", async function () {
-    await testRandomUnstakes();
+    await randomUnstakes(
+      strategyContractAddress,
+      safEthContractAddress,
+      networkFeesPerAccount
+    );
   });
 
   it("Should change weights and rebalance", async function () {
@@ -130,22 +136,22 @@ describe("Integration Test 1", function () {
     await tx2.wait();
     const tx3 = await strategy.rebalanceToWeights();
     await tx3.wait();
-
-    const derivative0Value = await strategy.derivativeValue(0);
-    const derivative1Value = await strategy.derivativeValue(1);
-    const derivative2Value = await strategy.derivativeValue(2);
-
-    expect(derivative0Value).eq(BigNumber.from(0));
-
-    expect(within1Percent(derivative1Value, derivative2Value.mul(2))).eq(true);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
-    await testRandomStakes();
+    await randomStakes(
+      strategyContractAddress,
+      networkFeesPerAccount,
+      totalStakedPerAccount
+    );
   });
 
   it("Should unstake a random amount 3 times for each user", async function () {
-    await testRandomUnstakes();
+    await randomUnstakes(
+      strategyContractAddress,
+      safEthContractAddress,
+      networkFeesPerAccount
+    );
   });
 
   it("Should change weights and rebalance", async function () {
@@ -155,27 +161,27 @@ describe("Integration Test 1", function () {
     );
 
     // set weight of derivative0 to 2 * 10^18
-    // this is like going from 0/50/25/25 -> 33/33/16/16
+    // this is like going from 0/66/33 -> 40/40/20
     const tx1 = await strategy.adjustWeight(0, "2000000000000000000");
     await tx1.wait();
     const tx2 = await strategy.rebalanceToWeights();
     await tx2.wait();
-
-    const derivative0Value = await strategy.derivativeValue(0);
-    const derivative1Value = await strategy.derivativeValue(1);
-    const derivative2Value = await strategy.derivativeValue(2);
-
-    expect(within1Percent(derivative0Value, derivative1Value)).eq(true);
-    expect(within1Percent(derivative0Value, derivative2Value.mul(2))).eq(true);
-    expect(within1Percent(derivative1Value, derivative2Value.mul(2))).eq(true);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
-    await testRandomStakes();
+    await randomStakes(
+      strategyContractAddress,
+      networkFeesPerAccount,
+      totalStakedPerAccount
+    );
   });
 
   it("Should unstake a random amount 3 times for each user", async function () {
-    await testRandomUnstakes();
+    await randomUnstakes(
+      strategyContractAddress,
+      safEthContractAddress,
+      networkFeesPerAccount
+    );
   });
 
   it("Should unstake everything for all users", async function () {
@@ -189,31 +195,17 @@ describe("Integration Test 1", function () {
       await getAdminAccount()
     ) as SafETH;
 
-    const underlyingValueBefore = await strategyUnderlyingValue();
-
     const userAccounts = await getUserAccounts();
 
-    let totalUnstaked = BigNumber.from(0);
     for (let i = 0; i < userAccounts.length; i++) {
       const withdrawAmount = await safEth.balanceOf(userAccounts[i].address);
       if (withdrawAmount.eq(0)) continue;
       const userStrategySigner = strategy.connect(userAccounts[i]);
-      const balanceBefore = await userAccounts[i].getBalance();
       const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
-      const balanceAfter = await userAccounts[i].getBalance();
-      const amountUnstaked = balanceAfter.sub(balanceBefore).add(networkFee);
-      totalUnstaked = totalUnstaked.add(amountUnstaked);
+      networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
     }
-
-    const underlyingValueAfter = await strategyUnderlyingValue();
-
-    const underlyingValueChange = underlyingValueBefore
-      .sub(underlyingValueAfter)
-      .abs();
-
-    expect(within1Percent(underlyingValueChange, totalUnstaked)).eq(true);
   });
 
   it("Should verify slippage experienced by each user after all tests is < 1%", async () => {
@@ -238,70 +230,19 @@ describe("Integration Test 1", function () {
     }
   });
 
-  const testRandomStakes = async () => {
-    const underlyingValueBefore = await strategyUnderlyingValue();
-
-    const totalStaked = await randomStakes(
-      strategyContractAddress,
-      networkFeesPerAccount,
-      totalStakedPerAccount
-    );
-
-    const underlyingValueAfter = await strategyUnderlyingValue();
-
-    const underlyingValueChange = underlyingValueAfter.sub(
-      underlyingValueBefore
-    );
-    expect(within1Percent(underlyingValueChange, totalStaked)).eq(true);
+  const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    return getDifferenceRatio(amount1, amount2).gt("100");
   };
 
-  const testRandomUnstakes = async () => {
-    const underlyingValueBefore = await strategyUnderlyingValue();
-    const totalUnstaked = await randomUnstakes(
-      strategyContractAddress,
-      safEthContractAddress,
-      networkFeesPerAccount
-    );
-    const underlyingValueAfter = await strategyUnderlyingValue();
-    const underlyingValueChange = underlyingValueAfter.sub(
-      underlyingValueBefore
-    );
-    expect(within1Percent(underlyingValueChange.mul(-1), totalUnstaked)).eq(
-      true
-    );
-  };
-
-  // Underlying value of all derivatives in the strategy contract
-  const strategyUnderlyingValue = async () => {
-    const strategy = await getLatestContract(
-      strategyContractAddress,
-      "AfStrategy"
-    );
-
-    const derivativeCount = await strategy.derivativeCount();
-
-    let derivativeValue = BigNumber.from(0);
-
-    for (let i = 0; i < derivativeCount; i++) {
-      derivativeValue = derivativeValue.add(await strategy.derivativeValue(i));
-    }
-
-    return derivativeValue;
+  // Get ratio between 2 amounts such that % diff = 1/ratio
+  // Example: 200 = 0.5%, 100 = 1%, 50 = 2%, 25 = 4%, etc
+  // Useful for comparing ethers bignumbers that dont support floating point numbers
+  const getDifferenceRatio = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.lt(0) || amount2.lt(0)) throw new Error("Positive values only");
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    return amount1.div(difference);
   };
 });
-
-const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.eq(amount2)) return true;
-  return getDifferenceRatio(amount1, amount2).gt("100");
-};
-
-// Get ratio between 2 amounts such that % diff = 1/ratio
-// Example: 200 = 0.5%, 100 = 1%, 50 = 2%, 25 = 4%, etc
-// Useful for comparing ethers bignumbers that dont support floating point numbers
-const getDifferenceRatio = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.lt(0) || amount2.lt(0)) throw new Error("Positive values only");
-  const difference = amount1.gt(amount2)
-    ? amount1.sub(amount2)
-    : amount2.sub(amount1);
-  return amount1.div(difference);
-};

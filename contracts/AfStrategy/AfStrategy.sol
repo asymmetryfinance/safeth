@@ -10,6 +10,7 @@ import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns safETH
 /// @author Asymmetry Finance
@@ -47,14 +48,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     }
 
     /**
-        @notice - Gets derivative value in regards to ETH for a specific index
-        @param _index - index of the derivative to get ETH value
-    */
-    function derivativeValue(uint256 _index) external view returns (uint256) {
-        return derivatives[_index].totalEthValue();
-    }
-
-    /**
         @notice - Stake your ETH into safETH
     */
     function stake() external payable {
@@ -65,7 +58,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 underlyingValue = 0;
 
         for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue += derivatives[i].totalEthValue();
+        underlyingValue +=(derivatives[i].ethPerDerivative(derivatives[i].balance()) * derivatives[i].balance()) / 10 ** 18;
 
         uint256 totalSupply = IAfETH(safETH).totalSupply();
         uint256 preDepositPrice;
@@ -123,7 +116,6 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     */
     function rebalanceToWeights() external onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
-
         for (uint i = 0; i < derivativeCount; i++) {
             if (derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
@@ -132,7 +124,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
         for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0) continue;
+            if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
                 totalWeight;
             // Price will change due to slippage

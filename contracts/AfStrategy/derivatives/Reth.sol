@@ -14,6 +14,7 @@ import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/uniswap/IUniswapV3Factory.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
+import "hardhat/console.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance

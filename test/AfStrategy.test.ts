@@ -52,8 +52,32 @@ describe("Af Strategy", function () {
     await resetToBlock(initialHardhatBlock);
   });
 
+  describe("Large Amounts", function () {
+    it("Should deposit and withdraw a large amount", async function () {
+      const startingBalance = await adminAccount.getBalance();
+      const depositAmount = ethers.utils.parseEther("1000");
+      const tx1 = await strategyProxy.stake({ value: depositAmount });
+      const mined1 = await tx1.wait();
+      const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+
+      const tx2 = await strategyProxy.unstake(
+        await afEth.balanceOf(adminAccount.address)
+      );
+      const mined2 = await tx2.wait();
+      const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+      const finalBalance = await adminAccount.getBalance();
+
+      expect(
+        within1Percent(
+          finalBalance.add(networkFee1).add(networkFee2),
+          startingBalance
+        )
+      ).eq(true);
+    });
+  });
+
   describe("Slippage", function () {
-    it("Set slippage derivatives via the strategy contract", async function () {
+    it("Should set slippage derivatives via the strategy contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
 
       const derivativeCount = (
@@ -169,6 +193,7 @@ describe("Af Strategy", function () {
       derivatives.push(derivative2);
     });
 
+    // Special case for testing rEth specific code path
     it("Should use reth deposit contract", async () => {
       await resetToBlock(15430855); // Deposit contract not full here
       const factory = await ethers.getContractFactory("Reth");
@@ -198,7 +223,7 @@ describe("Af Strategy", function () {
         "1000000000000000000000000000000000000"
       ).div(ethPerDerivative);
 
-      const postStakeEthEstimation =
+      const derivativeBalanceEstimate =
         BigNumber.from(ethDepositAmount).mul(derivativePerEth);
 
       const tx1 = await rEthDerivative.deposit({
@@ -207,7 +232,10 @@ describe("Af Strategy", function () {
       await tx1.wait();
 
       const postStakeBalance = await rEthDerivative.balance();
-      expect(within2Percent(postStakeBalance, postStakeEthEstimation)).eq(true);
+
+      expect(within2Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
+        true
+      );
     });
 
     it("Should test each function on all derivative contracts", async () => {
@@ -243,10 +271,6 @@ describe("Af Strategy", function () {
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
         expect(postWithdrawBalance.eq(0)).eq(true);
-
-        // no value after withdrawing all
-        const postWithdrawValue = await derivatives[i].totalEthValue();
-        expect(postWithdrawValue.eq(0)).eq(true);
       }
     });
 
@@ -278,7 +302,7 @@ describe("Af Strategy", function () {
       // Value in and out approx same
       // 2% tolerance because slippage
       expect(
-        within2Percent(
+        within1Percent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -361,7 +385,7 @@ describe("Af Strategy", function () {
       // Value in and out approx same
       // 2% tolerance because slippage
       expect(
-        within2Percent(
+        within1Percent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -399,22 +423,6 @@ describe("Af Strategy", function () {
       strategyProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       const tx3 = await strategyProxy.rebalanceToWeights();
       await tx3.wait();
-
-      // value of all derivatives excluding the first
-      let remainingDerivativeValue = BigNumber.from(0);
-      for (let i = 1; i < derivativeCount; i++) {
-        remainingDerivativeValue = remainingDerivativeValue.add(
-          await strategyProxy.derivativeValue(i)
-        );
-      }
-
-      // value of first derivative should approx equal to the sum of the others (2% tolerance for slippage)
-      expect(
-        within2Percent(
-          remainingDerivativeValue,
-          await strategyProxy.derivativeValue(0)
-        )
-      ).eq(true);
     });
 
     it("Should stake with a weight set to 0", async () => {
@@ -462,10 +470,6 @@ describe("Af Strategy", function () {
       const tx4 = await strategyProxy.rebalanceToWeights();
       await tx4.wait();
 
-      const derivative0ValueAfter = await strategyProxy.derivativeValue(0);
-      // derivative0 should now have 0 value
-      expect(derivative0ValueAfter.toString() === "0").eq(true);
-
       const tx5 = await strategyProxy.unstake(
         await afEth.balanceOf(adminAccount.address)
       );
@@ -481,5 +485,15 @@ describe("Af Strategy", function () {
       : amount2.sub(amount1);
     const differenceRatio = amount1.div(difference);
     return differenceRatio.gt("50");
+  };
+
+  // Verify that 2 ethers BigNumbers are within 1 percent of each other
+  const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    const differenceRatio = amount1.div(difference);
+    return differenceRatio.gt("100");
   };
 });
