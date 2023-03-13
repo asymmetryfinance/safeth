@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ankr/AnkrStaker.sol";
 import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
-import "hardhat/console.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance

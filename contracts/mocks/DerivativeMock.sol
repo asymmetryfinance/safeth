@@ -7,7 +7,6 @@ import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
-import "hardhat/console.sol";
 import "../AfStrategy/derivatives/SfrxEth.sol";
 
 /// @title Derivative contract for testing contract upgrades
