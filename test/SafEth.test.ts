@@ -63,8 +63,10 @@ describe("Af Strategy", function () {
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
       const finalBalance = await adminAccount.getBalance();
 
+      console.log('finalBalance', finalBalance.add(networkFee1).add(networkFee2));
+      console.log('startingBalance', startingBalance);
       expect(
-        within1Percent(
+        withinHalfPercent(
           finalBalance.add(networkFee1).add(networkFee2),
           startingBalance
         )
@@ -227,7 +229,7 @@ describe("Af Strategy", function () {
 
       const postStakeBalance = await rEthDerivative.balance();
 
-      expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
+      expect(withinHalfPercent(postStakeBalance, derivativeBalanceEstimate)).eq(
         true
       );
     });
@@ -254,9 +256,9 @@ describe("Af Strategy", function () {
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
         // roughly expected balance after deposit
-        expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
-          true
-        );
+        expect(
+          withinHalfPercent(postStakeBalance, derivativeBalanceEstimate)
+        ).eq(true);
 
         const tx2 = await derivatives[i].withdraw(
           await derivatives[i].balance()
@@ -295,9 +297,8 @@ describe("Af Strategy", function () {
       const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
 
       // Value in and out approx same
-      // 2% tolerance because slippage
       expect(
-        within1Percent(
+        withinHalfPercent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -370,9 +371,8 @@ describe("Af Strategy", function () {
       const withdrawAmount = balanceAfterWithdraw.sub(balanceBeforeWithdraw);
 
       // Value in and out approx same
-      // 2% tolerance because slippage
       expect(
-        within1Percent(
+        withinHalfPercent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -414,8 +414,8 @@ describe("Af Strategy", function () {
       const ethBalances = await estimatedDerivativeValues();
 
       // TODO make this test work for any number of derivatives
-      expect(within1Percent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
-      expect(within1Percent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
+      expect(withinHalfPercent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
+      expect(withinHalfPercent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
     });
 
     it("Should stake with a weight set to 0", async () => {
@@ -492,7 +492,7 @@ describe("Af Strategy", function () {
       const balanceAfter = await adminAccount.getBalance();
 
       expect(
-        within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))
+        withinHalfPercent(balanceBefore, balanceAfter.add(totalNetworkFee))
       ).eq(true);
     });
   });
@@ -531,5 +531,15 @@ describe("Af Strategy", function () {
       : amount2.sub(amount1);
     const differenceRatio = amount1.div(difference);
     return differenceRatio.gt("100");
+  };
+
+  // Verify that 2 ethers BigNumbers are within 0.5 percent of each other
+  const withinHalfPercent = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    const difference = amount1.gt(amount2)
+      ? amount1.sub(amount2)
+      : amount2.sub(amount1);
+    const differenceRatio = amount1.div(difference);
+    return differenceRatio.gt("200");
   };
 });
