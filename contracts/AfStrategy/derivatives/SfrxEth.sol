@@ -98,13 +98,6 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Total ETH value of derivative contract
-     */
-    function totalEthValue() external view returns (uint256) {
-        return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
-    }
-
-    /**
         @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
