@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 interface IDerivative {
-
     /// Returns human readable identifier string
     function name() external pure returns (string memory);
 
