@@ -35,7 +35,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     */
     function initialize(address _owner) external initializer {
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 5%
+        maxSlippage = (1 * 10 ** 16); // 1%
     }
 
     /**
