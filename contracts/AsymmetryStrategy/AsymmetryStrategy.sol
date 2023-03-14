@@ -8,7 +8,7 @@ import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/ICvxLockerV2.sol";
 
-import "../interfaces/IAfETH.sol";
+// import "../interfaces/IAfETH.sol";
 import "../interfaces/frax/IFrxETHMinter.sol";
 import "../interfaces/frax/IsFrxEth.sol";
 
@@ -452,8 +452,8 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IWETH(wETH).deposit{value: _ethAmount}();
         IWETH(wETH).approve(_pool, _ethAmount);
 
-        IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.approve(_pool, _afEthAmount);
+        // IAfETH afEthToken = IAfETH(afETH);
+        // afEthToken.approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
@@ -612,14 +612,15 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     }
 
     function mintAfEth(uint256 amount) private {
-        IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.mint(address(this), amount);
+        // IAfETH afEthToken = IAfETH(afETH);
+        // afEthToken.mint(address(this), amount);
+        positions[msg.sender].afETH = 0;
     }
 
     // burn afETH
     function burnAfEth(uint256 amount) private {
-        IAfETH afEthToken = IAfETH(afETH);
-        afEthToken.burn(address(this), amount);
+        // IAfETH afEthToken = IAfETH(afETH);
+        // afEthToken.burn(address(this), amount);
         positions[msg.sender].afETH = 0;
     }
 
