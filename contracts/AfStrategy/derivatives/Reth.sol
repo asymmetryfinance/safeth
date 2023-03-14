@@ -14,7 +14,6 @@ import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/uniswap/IUniswapV3Factory.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
-import "hardhat/console.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
@@ -117,9 +116,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Check whether or not rETH deposit pool has room users amount
         @param _amount - amount that will be deposited
      */
-    function poolCanDeposit(
-        uint256 _amount
-    ) private view returns (bool) {
+    function poolCanDeposit(uint256 _amount) private view returns (bool) {
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
         ).getAddress(

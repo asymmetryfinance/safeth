@@ -10,7 +10,6 @@ import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./AfStrategyStorage.sol";
-import "hardhat/console.sol";
 
 /// @title Contract that mints/burns safETH
 /// @author Asymmetry Finance
@@ -58,7 +57,10 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint256 underlyingValue = 0;
 
         for (uint i = 0; i < derivativeCount; i++)
-        underlyingValue +=(derivatives[i].ethPerDerivative(derivatives[i].balance()) * derivatives[i].balance()) / 10 ** 18;
+            underlyingValue +=
+                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
+                    derivatives[i].balance()) /
+                10 ** 18;
 
         uint256 totalSupply = IAfETH(safETH).totalSupply();
         uint256 preDepositPrice;
