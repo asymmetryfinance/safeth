@@ -234,7 +234,7 @@ describe("Af Strategy", function () {
 
       const postStakeBalance = await rEthDerivative.balance();
 
-      expect(within2Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
+      expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
         true
       );
     });
@@ -536,16 +536,6 @@ describe("Af Strategy", function () {
       ethBalances.push(ethBalanceEstimate);
     }
     return ethBalances;
-  };
-
-  // Verify that 2 ethers BigNumbers are within 2 percent of each other
-  const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
-    if (amount1.eq(amount2)) return true;
-    const difference = amount1.gt(amount2)
-      ? amount1.sub(amount2)
-      : amount2.sub(amount1);
-    const differenceRatio = amount1.div(difference);
-    return differenceRatio.gt("50");
   };
 
   // Verify that 2 ethers BigNumbers are within 1 percent of each other
