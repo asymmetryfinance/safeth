@@ -17,6 +17,7 @@ import {
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
 import { RETH_MAX } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
+import { getDifferenceRatio } from "./Integration.test";
 
 describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
@@ -443,7 +444,7 @@ describe("Af Strategy", function () {
       // TODO make this test work for any number of derivatives
       expect(ethBalances[0]).eq(BigNumber.from(0));
       expect(
-        within1Percent(initialDeposit, ethBalances[1].add(ethBalances[1]))
+        withinHalfPercent(initialDeposit, ethBalances[1].add(ethBalances[1]))
       ).eq(true);
     });
 
@@ -523,23 +524,8 @@ describe("Af Strategy", function () {
     return ethBalances;
   };
 
-  // Verify that 2 ethers BigNumbers are within 1 percent of each other
-  const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
-    if (amount1.eq(amount2)) return true;
-    const difference = amount1.gt(amount2)
-      ? amount1.sub(amount2)
-      : amount2.sub(amount1);
-    const differenceRatio = amount1.div(difference);
-    return differenceRatio.gt("100");
-  };
-
-  // Verify that 2 ethers BigNumbers are within 0.5 percent of each other
   const withinHalfPercent = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
-    const difference = amount1.gt(amount2)
-      ? amount1.sub(amount2)
-      : amount2.sub(amount1);
-    const differenceRatio = amount1.div(difference);
-    return differenceRatio.gt("200");
+    return getDifferenceRatio(amount1, amount2).gt("200");
   };
 });
