@@ -239,7 +239,7 @@ describe("Af Strategy", function () {
       );
     });
 
-    it.only("Should test deposit & withdraw on each derivative contract", async () => {
+    it("Should test deposit & withdraw on each derivative contract", async () => {
       const depositAmount = ethers.utils.parseEther("1");
 
       for (let i = 0; i < derivatives.length; i++) {
