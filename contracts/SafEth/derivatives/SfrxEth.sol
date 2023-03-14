@@ -2,19 +2,23 @@
 pragma solidity ^0.8.13;
 
 import "../../interfaces/IDerivative.sol";
+import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/ICrvEthPool.sol";
-import "../../interfaces/lido/IWStETH.sol";
+import "../../interfaces/frax/IFrxETHMinter.sol";
 
-/// @title Derivative contract for wstETH
+/// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
-    address public constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant lidoCrvPool =
-        0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address public constant stEthToken =
-        0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
+    address public constant sfrxEthAddress =
+        0xac3E018457B222d93114458476f3E3416Abbe38F;
+    address public constant frxEthAddress =
+        0x5E8422345238F34275888049021821E8E08CAa1f;
+    address public constant frxEthCrvPoolAddress =
+        0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+    address public constant frxEthMinterAddress =
+        0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
 
@@ -38,7 +42,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Return derivative name
     */
     function name() public pure returns (string memory) {
-        return "Lido";
+        return "Frax";
     }
 
     /**
@@ -50,14 +54,18 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to Convert derivative into ETH
-        @dev - Owner is set to afStrategy contract
+        @dev - Owner is set to SafEth contract
+        @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        IWStETH(wstETH).unwrap(_amount);
-        uint256 stEthBal = IERC20(stEthToken).balanceOf(address(this));
-        IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
-        uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
-        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, minOut);
+        IsFrxEth(sfrxEthAddress).redeem(_amount, address(this), address(this));
+        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
+        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+
+        uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
+            (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -65,31 +73,35 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Owner only function to Deposit ETH into derivative
-        @dev - Owner is set to afStrategy contract
+        @notice - Owner only function to Deposit into derivative
+        @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 wstEthBalancePre = IWStETH(wstETH).balanceOf(address(this));
-
-        (bool sent, ) = wstETH.call{value: msg.value}("");
-        require(sent, "Failed to send Ether");
-        uint256 wstEthBalancePost = IWStETH(wstETH).balanceOf(address(this));
-        uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
-        return (wstEthAmount);
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
+        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
+        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(
+            address(this)
+        );
+        return sfrxBalancePost - sfrxBalancePre;
     }
 
     /**
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        return IWStETH(wstETH).getStETHByWstETH(10 ** 18);
+        uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(10 ** 18);
+        return ((10 ** 18 * frxAmount) /
+            ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
     }
 
     /**
         @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
-        return IERC20(wstETH).balanceOf(address(this));
+        return IERC20(sfrxEthAddress).balanceOf(address(this));
     }
 
     receive() external payable {}

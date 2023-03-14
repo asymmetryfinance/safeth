@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "../interfaces/IDerivative.sol";
 
 /**
- @notice - Storage abstraction for AfStrategy contract
+ @notice - Storage abstraction for SafEth contract
  @dev - Upgradeability Rules:
         DO NOT change existing variable names or types
         DO NOT change order of variables
@@ -12,7 +12,7 @@ import "../interfaces/IDerivative.sol";
         ONLY add new variables at the end
         Constant values CAN be modified on upgrade
 */
-contract AfStrategyStorage {
+contract SafEthStorage {
     address public safETH;
     bool public pauseStaking;
     bool public pauseUnstaking;

@@ -1,41 +1,37 @@
 import { ethers, upgrades } from "hardhat";
-import { SafETH } from "../../typechain-types";
 
 export const initialUpgradeableDeploy = async function () {
-  const afETHFactory = await ethers.getContractFactory("SafETH");
-  const afEth = (await afETHFactory.deploy(
+  const SafEth = await ethers.getContractFactory("SafEth");
+  const safEth = await upgrades.deployProxy(SafEth, [
     "Asymmetry Finance ETH",
-    "safETH"
-  )) as SafETH;
-
-  const AfStrategy = await ethers.getContractFactory("AfStrategy");
-  const afStrategy = await upgrades.deployProxy(AfStrategy, [afEth.address]);
-  await afStrategy.deployed();
+    "safETH",
+  ]);
+  await safEth.deployed();
 
   // deploy derivatives and add to strategy
 
   const derivativeFactory0 = await ethers.getContractFactory("Reth");
   const derivative0 = await upgrades.deployProxy(derivativeFactory0, [
-    afStrategy.address,
+    safEth.address,
   ]);
   await derivative0.deployed();
-  await afStrategy.addDerivative(derivative0.address, "1000000000000000000");
+  await safEth.addDerivative(derivative0.address, "1000000000000000000");
 
   const derivativeFactory1 = await ethers.getContractFactory("SfrxEth");
   const derivative1 = await upgrades.deployProxy(derivativeFactory1, [
-    afStrategy.address,
+    safEth.address,
   ]);
   await derivative1.deployed();
-  await afStrategy.addDerivative(derivative1.address, "1000000000000000000");
+  await safEth.addDerivative(derivative1.address, "1000000000000000000");
 
   const derivativeFactory2 = await ethers.getContractFactory("WstEth");
   const derivative2 = await upgrades.deployProxy(derivativeFactory2, [
-    afStrategy.address,
+    safEth.address,
   ]);
   await derivative2.deployed();
-  await afStrategy.addDerivative(derivative2.address, "1000000000000000000");
+  await safEth.addDerivative(derivative2.address, "1000000000000000000");
 
-  return afStrategy;
+  return safEth;
 };
 
 export const getLatestContract = async function (

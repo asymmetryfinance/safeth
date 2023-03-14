@@ -3,21 +3,27 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IWETH.sol";
-import "../interfaces/IAfETH.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/lido/IWStETH.sol";
 import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./AfStrategyStorage.sol";
+import "./SafEthStorage.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Contract that mints/burns safETH
 /// @author Asymmetry Finance
-contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
+contract SafEth is
+    Initializable,
+    ERC20Upgradeable,
+    OwnableUpgradeable,
+    SafEthStorage
+{
     event ChangeMinAmount(uint256 indexed minAmount);
     event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
+    event SetMaxSlippage(uint256 indexed index, uint256 slippage);
     event Staked(address indexed recipient, uint ethIn, uint safEthOut);
     event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
     event WeightChange(uint indexed index, uint weight);
@@ -37,11 +43,15 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _safETH - address of erc20 safETH contract
+        @param _tokenName - name of erc20
+        @param _tokenSymbol - symbol of erc20
     */
-    function initialize(address _safETH) external initializer {
+    function initialize(
+        string memory _tokenName,
+        string memory _tokenSymbol
+    ) external initializer {
+        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         _transferOwnership(msg.sender);
-        safETH = _safETH;
         minAmount = 5 ** 17;
         maxAmount = 200 ** 18;
     }
@@ -62,7 +72,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
                     derivatives[i].balance()) /
                 10 ** 18;
 
-        uint256 totalSupply = IAfETH(safETH).totalSupply();
+        uint256 totalSupply = totalSupply();
         uint256 preDepositPrice;
         if (totalSupply == 0) preDepositPrice = 10 ** 18;
         else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
@@ -83,7 +93,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         }
 
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        IAfETH(safETH).mint(msg.sender, mintAmount);
+        _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, mintAmount);
     }
 
@@ -93,7 +103,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
     */
     function unstake(uint256 safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
-        uint256 safEthTotalSupply = IAfETH(safETH).totalSupply();
+        uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         for (uint256 i = 0; i < derivativeCount; i++) {
             uint256 derivativeAmount = (derivatives[i].balance() *
@@ -101,7 +111,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
             if (derivativeAmount == 0) continue;
             derivatives[i].withdraw(derivativeAmount);
         }
-        IAfETH(safETH).burn(msg.sender, safEthAmount);
+        _burn(msg.sender, safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
@@ -183,6 +193,7 @@ contract AfStrategy is Initializable, OwnableUpgradeable, AfStrategyStorage {
         uint _slippage
     ) external onlyOwner {
         derivatives[_derivativeIndex].setMaxSlippage(_slippage);
+        emit SetMaxSlippage(_derivativeIndex, _slippage);
     }
 
     /**
