@@ -218,7 +218,7 @@ describe("Af Strategy", function () {
       const ethDepositAmount = "1";
 
       const ethPerDerivative = await rEthDerivative.ethPerDerivative(
-        ethDepositAmount
+        ethers.utils.parseEther(ethDepositAmount)
       );
       const derivativePerEth = BigNumber.from(
         "1000000000000000000000000000000000000"
