@@ -116,9 +116,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Check whether or not rETH deposit pool has room users amount
         @param _amount - amount that will be deposited
      */
-    function poolCanDeposit(
-        uint256 _amount
-    ) private view onlyOwner returns (bool) {
+    function poolCanDeposit(uint256 _amount) private view returns (bool) {
         address rocketDepositPoolAddress = RocketStorageInterface(
             rocketStorageAddress
         ).getAddress(
@@ -214,13 +212,6 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             return
                 RocketTokenRETHInterface(rethAddress()).getEthValue(10 ** 18);
         else return (poolPrice() * 10 ** 18) / (10 ** 18);
-    }
-
-    /**
-        @notice - Total ETH value of derivative contract
-     */
-    function totalEthValue() external view returns (uint256) {
-        return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
     }
 
     /**

@@ -57,14 +57,6 @@ contract SafEth is
     }
 
     /**
-        @notice - Gets derivative value in regards to ETH for a specific index
-        @param _index - index of the derivative to get ETH value
-    */
-    function derivativeValue(uint256 _index) external view returns (uint256) {
-        return derivatives[_index].totalEthValue();
-    }
-
-    /**
         @notice - Stake your ETH into safETH
     */
     function stake() external payable {
@@ -75,7 +67,10 @@ contract SafEth is
         uint256 underlyingValue = 0;
 
         for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue += derivatives[i].totalEthValue();
+            underlyingValue +=
+                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
+                    derivatives[i].balance()) /
+                10 ** 18;
 
         uint256 totalSupply = totalSupply();
         uint256 preDepositPrice;
@@ -133,7 +128,6 @@ contract SafEth is
     */
     function rebalanceToWeights() external onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
-
         for (uint i = 0; i < derivativeCount; i++) {
             if (derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
@@ -142,7 +136,7 @@ contract SafEth is
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
         for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0) continue;
+            if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
                 totalWeight;
             // Price will change due to slippage
