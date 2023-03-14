@@ -34,7 +34,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     */
     function initialize(address _owner) public initializer {
         _transferOwnership(_owner);
-        maxSlippage = (5 * 10 ** 16); // 5%
+        maxSlippage = (1 * 10 ** 16); // 1%
     }
 
     /**
