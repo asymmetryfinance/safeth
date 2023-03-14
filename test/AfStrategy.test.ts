@@ -240,14 +240,14 @@ describe("Af Strategy", function () {
     });
 
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const depositAmount = ethers.utils.parseEther("1");
+      const ethDepositAmount = "1";
+
+      const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
 
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
         expect(preStakeBalance.eq(0)).eq(true);
-
-        const ethDepositAmount = "1";
 
         const ethPerDerivative = await derivatives[i].ethPerDerivative(
           ethDepositAmount
@@ -257,7 +257,7 @@ describe("Af Strategy", function () {
         ).div(ethPerDerivative);
         const derivativeBalanceEstimate =
           BigNumber.from(ethDepositAmount).mul(derivativePerEth);
-        const tx1 = await derivatives[i].deposit({ value: depositAmount });
+        const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
         // roughly expected balance after deposit
