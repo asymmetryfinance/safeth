@@ -8,8 +8,6 @@ interface IDerivativeMock {
 
     function ethPerDerivative(uint amount) external view returns (uint256);
 
-    function totalEthValue() external view returns (uint256);
-
     function balance() external view returns (uint256);
 
     function withdrawAll() external;

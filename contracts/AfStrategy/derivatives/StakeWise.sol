@@ -104,13 +104,6 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Total ETH value of derivative contract
-     */
-    function totalEthValue() external view returns (uint256) {
-        return (ethPerDerivative(balance()) * balance()) / 10 ** 18;
-    }
-
-    /**
         @notice - Total derivative balance
         @dev - This is more like virtualBalance because its estimating total sEth2 holding based on rEth price2
      */
