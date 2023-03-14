@@ -53,6 +53,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to set max slippage for derivative
+        @param _slippage - Amount of slippage to set in wei
     */
     function setMaxSlippage(uint256 _slippage) external onlyOwner {
         maxSlippage = _slippage;
