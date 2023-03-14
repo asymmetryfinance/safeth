@@ -211,7 +211,7 @@ describe("Af Strategy", function () {
       const ethDepositAmount = "1";
 
       const ethPerDerivative = await rEthDerivative.ethPerDerivative(
-        ethDepositAmount
+        ethers.utils.parseEther(ethDepositAmount)
       );
       const derivativePerEth = BigNumber.from(
         "1000000000000000000000000000000000000"
@@ -227,20 +227,20 @@ describe("Af Strategy", function () {
 
       const postStakeBalance = await rEthDerivative.balance();
 
-      expect(within2Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
+      expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
         true
       );
     });
 
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const depositAmount = ethers.utils.parseEther("1");
+      const ethDepositAmount = "1";
+
+      const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
 
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
         expect(preStakeBalance.eq(0)).eq(true);
-
-        const ethDepositAmount = "1";
 
         const ethPerDerivative = await derivatives[i].ethPerDerivative(
           ethDepositAmount
@@ -250,7 +250,7 @@ describe("Af Strategy", function () {
         ).div(ethPerDerivative);
         const derivativeBalanceEstimate =
           BigNumber.from(ethDepositAmount).mul(derivativePerEth);
-        const tx1 = await derivatives[i].deposit({ value: depositAmount });
+        const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
         // roughly expected balance after deposit
@@ -521,16 +521,6 @@ describe("Af Strategy", function () {
       ethBalances.push(ethBalanceEstimate);
     }
     return ethBalances;
-  };
-
-  // Verify that 2 ethers BigNumbers are within 2 percent of each other
-  const within2Percent = (amount1: BigNumber, amount2: BigNumber) => {
-    if (amount1.eq(amount2)) return true;
-    const difference = amount1.gt(amount2)
-      ? amount1.sub(amount2)
-      : amount2.sub(amount1);
-    const differenceRatio = amount1.div(difference);
-    return differenceRatio.gt("50");
   };
 
   // Verify that 2 ethers BigNumbers are within 1 percent of each other
