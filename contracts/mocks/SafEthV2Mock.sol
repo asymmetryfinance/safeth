@@ -10,12 +10,18 @@ contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
     }
 
     /// Show we can upgrade to withdraw from any derivative in case of emergency
-    function adminWithdrawDerivative(uint256 index, uint256 amount) public onlyOwner {
-            derivatives[index].withdraw(amount);
+    function adminWithdrawDerivative(
+        uint256 index,
+        uint256 amount
+    ) public onlyOwner {
+        derivatives[index].withdraw(amount);
     }
 
     // Show we can upgrade to withdraw erc20 tokens that were accidentally sent to this contract
-    function adminWithdrawErc20(address tokenAddress, uint256 amount) public onlyOwner {
+    function adminWithdrawErc20(
+        address tokenAddress,
+        uint256 amount
+    ) public onlyOwner {
         IERC20(tokenAddress).transfer(msg.sender, amount);
     }
 }
