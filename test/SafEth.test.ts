@@ -289,19 +289,13 @@ describe("Af Strategy", function () {
 
     it("Should have the same proxy address before and after upgrading", async () => {
       const addressBefore = strategyProxy.address;
-      const strategy2 = await upgrade(
-        strategyProxy.address,
-        "SafEthV2Mock"
-      );
+      const strategy2 = await upgrade(strategyProxy.address, "SafEthV2Mock");
       await strategy2.deployed();
       const addressAfter = strategy2.address;
       expect(addressBefore).eq(addressAfter);
     });
     it("Should allow v2 functionality to be used after upgrading", async () => {
-      const strategy2 = await upgrade(
-        strategyProxy.address,
-        "SafEthV2Mock"
-      );
+      const strategy2 = await upgrade(strategyProxy.address, "SafEthV2Mock");
       await strategy2.deployed();
       expect(await strategy2.newFunctionCalled()).eq(false);
       const tx = await strategy2.newFunction();
@@ -323,10 +317,7 @@ describe("Af Strategy", function () {
     });
 
     it("Should be able to upgrade both the strategy contract and its derivatives and still function correctly", async () => {
-      const strategy2 = await upgrade(
-        strategyProxy.address,
-        "SafEthV2Mock"
-      );
+      const strategy2 = await upgrade(strategyProxy.address, "SafEthV2Mock");
 
       const derivativeAddressToUpgrade = await strategy2.derivatives(1);
 
