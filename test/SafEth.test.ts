@@ -50,9 +50,9 @@ describe("Af Strategy", function () {
   });
 
   describe("Large Amounts", function () {
-    it("Should deposit and withdraw a large amount", async function () {
+    it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("1000");
+      const depositAmount = ethers.utils.parseEther("500");
       const tx1 = await safEthProxy.stake({ value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
@@ -228,7 +228,7 @@ describe("Af Strategy", function () {
     });
 
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const ethDepositAmount = "1";
+      const ethDepositAmount = "200";
 
       const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
 
@@ -248,15 +248,25 @@ describe("Af Strategy", function () {
         const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
-        // roughly expected balance after deposit
+        // roughly expected derivative balance after deposit
         expect(
           withinHalfPercent(postStakeBalance, derivativeBalanceEstimate)
         ).eq(true);
 
+        const preWithdrawEthBalance = await adminAccount.getBalance();
         const tx2 = await derivatives[i].withdraw(
           await derivatives[i].balance()
         );
-        await tx2.wait();
+        const mined2 = await tx2.wait();
+        const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+        const postWithdrawEthBalance = await adminAccount.getBalance();
+
+        const ethReceived = postWithdrawEthBalance
+          .sub(preWithdrawEthBalance)
+          .add(networkFee2);
+
+        // roughly same amount of eth received as originally deposited
+        expect(withinHalfPercent(ethReceived, weiDepositAmount)).eq(true);
 
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
