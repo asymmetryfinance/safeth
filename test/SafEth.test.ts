@@ -15,9 +15,10 @@ import {
   takeSnapshot,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
-import { RETH_MAX } from "./helpers/constants";
+import { RETH_MAX, WSTETH_ADRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./Integration.test";
+import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 describe("Af Strategy", function () {
   let adminAccount: SignerWithAddress;
@@ -380,6 +381,67 @@ describe("Af Strategy", function () {
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
       ).eq(true);
+    });
+
+    it("Should allow owner to use admin features on upgraded contracts", async () => {
+      const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+      await safEth2.deployed();
+      const depositAmount = ethers.utils.parseEther("1");
+      const tx1 = await safEth2.stake({ value: depositAmount });
+      await tx1.wait();
+
+      const derivativeCount = await safEth2.derivativeCount();
+
+      for (let i = 0; i < derivativeCount; i++) {
+        const derivativeAddress = await safEth2.derivatives(i);
+
+        const derivative = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          adminAccount
+        );
+        const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
+
+        // admin withdraw from the derivatives in case of emergency
+        const tx2 = await safEth2.adminWithdrawDerivative(
+          i,
+          derivative.balance()
+        );
+        const mined2 = await tx2.wait();
+        const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+        const ethBalanceAfterWithdraw = await adminAccount.getBalance();
+
+        const amountWithdrawn = ethBalanceAfterWithdraw
+          .sub(ethBalanceBeforeWithdraw)
+          .add(networkFee2);
+
+        expect(withinHalfPercent(depositAmount, amountWithdrawn));
+      }
+
+      // accidentally send the contract some erc20
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [WSTETH_WHALE],
+      });
+      const whaleSigner = await ethers.getSigner(WSTETH_WHALE);
+      const erc20 = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, adminAccount);
+      const erc20Whale = erc20.connect(whaleSigner);
+      const erc20Amount = ethers.utils.parseEther("1000");
+      await erc20Whale.transfer(safEth2.address, erc20Amount);
+
+      const erc20BalanceBefore = await erc20.balanceOf(adminAccount.address);
+
+      // recover accidentally deposited erc20 with new admin functionality
+      const tx4 = await safEth2.adminWithdrawErc20(
+        WSTETH_ADRESS,
+        await erc20.balanceOf(safEth2.address)
+      );
+      await tx4.wait();
+      const erc20BalanceAfter = await erc20.balanceOf(adminAccount.address);
+
+      const erc20Received = erc20BalanceAfter.sub(erc20BalanceBefore);
+
+      expect(erc20Received).eq(erc20Amount);
     });
   });
 
