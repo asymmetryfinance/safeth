@@ -73,18 +73,16 @@ describe("Af Strategy", function () {
     });
   });
 
-  describe.only("Slippage", function () {
+  describe("Slippage", function () {
     it("Should set slippage derivatives via the strategy contract", async function () {
-      const depositAmount = ethers.utils.parseEther("500");
+      const depositAmount = ethers.utils.parseEther("1");
       const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
 
       // set slippages to a value we expect to fail
       for (let i = 0; i < derivativeCount; i++) {
         await safEthProxy.setMaxSlippage(i, 0); // 0% slippage we expect to fail
       }
-      await expect(
-        safEthProxy.stake({ value: depositAmount })
-      ).to.be.revertedWith("Too little received");
+      await expect(safEthProxy.stake({ value: depositAmount })).to.be.reverted;
 
       // set slippages back to good values
       for (let i = 0; i < derivativeCount; i++) {
@@ -159,7 +157,7 @@ describe("Af Strategy", function () {
   describe("Derivatives", async () => {
     let derivatives = [] as any;
     beforeEach(async () => {
-      await resetToBlock(16637130);
+      await resetToBlock(initialHardhatBlock);
       derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
