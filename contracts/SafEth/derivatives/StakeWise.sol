@@ -41,7 +41,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     */
     function initialize(address _owner) external initializer {
         _transferOwnership(_owner);
-        maxSlippage = (5 * 10 ** 16); // 1%
+        maxSlippage = (1 * 10 ** 16); // 1%
     }
 
     /**
