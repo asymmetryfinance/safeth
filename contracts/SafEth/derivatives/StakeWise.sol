@@ -15,16 +15,16 @@ import "../../interfaces/stakewise/IStakewiseStaker.sol";
 /// @dev There is also an "activation period" that applies to larger deposits.
 /// @dev This derivative wont be enabled for the initial release
 contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
-    address public constant uniswapRouter =
+    address public constant UNISWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    address public constant sEth2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
-    address public constant rEth2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
-    address public constant rEth2Seth2Pool =
+    address public constant SETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
+    address public constant RETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
+    address public constant RETH2_SETH2_POOL =
         0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA;
-    address public constant seth2WethPool =
+    address public constant SETH2_WETH_POOL =
         0x7379e81228514a1D2a6Cf7559203998E20598346;
-    address public constant wEth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant staker = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant STAKER = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
 
     uint256 public maxSlippage;
 
@@ -68,11 +68,11 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         // Theres a chance balance() returns more than they actually have to withdraew because of rEth2/sEth2 price variations
         // if they tried to withdraw more than they have just set it to their balance
         uint256 withdrawAmount;
-        if (_amount > IERC20(sEth2).balanceOf(address(this)))
-            withdrawAmount = IERC20(sEth2).balanceOf(address(this));
+        if (_amount > IERC20(SETH2).balanceOf(address(this)))
+            withdrawAmount = IERC20(SETH2).balanceOf(address(this));
         else withdrawAmount = _amount;
         uint256 wEthReceived = sellSeth2ForWeth(withdrawAmount);
-        IWETH(wEth).withdraw(wEthReceived);
+        IWETH(WETH).withdraw(wEthReceived);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -84,14 +84,14 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         @dev - will either get sETH2 on exchange or deposit into contract depending on availability
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        if (msg.value > IStakewiseStaker(staker).minActivatingDeposit()) {
+        if (msg.value > IStakewiseStaker(STAKER).minActivatingDeposit()) {
             (bool sent, ) = address(msg.sender).call{value: msg.value}("");
             require(sent, "Failed to send Ether");
             return 0;
         }
-        uint256 balanceBefore = IERC20(sEth2).balanceOf(address(this));
-        IStakewiseStaker(staker).stake{value: msg.value}();
-        uint256 balanceAfter = IERC20(sEth2).balanceOf(address(this));
+        uint256 balanceBefore = IERC20(SETH2).balanceOf(address(this));
+        IStakewiseStaker(STAKER).stake{value: msg.value}();
+        uint256 balanceAfter = IERC20(SETH2).balanceOf(address(this));
         return balanceAfter - balanceBefore;
     }
 
@@ -111,33 +111,33 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     function balance() public view returns (uint256) {
         // seth2Balance + estimated seth2 value of reth holdings
         return
-            IERC20(sEth2).balanceOf(address(this)) +
-            estimatedSellReth2Output(IERC20(rEth2).balanceOf(address(this)));
+            IERC20(SETH2).balanceOf(address(this)) +
+            estimatedSellReth2Output(IERC20(RETH2).balanceOf(address(this)));
     }
 
     /**
         @notice - Convert rewards into derivative
      */
     function sellAllReth2() private returns (uint) {
-        uint256 rEth2Balance = IERC20(rEth2).balanceOf(address(this));
+        uint256 rEth2Balance = IERC20(RETH2).balanceOf(address(this));
 
         if (rEth2Balance == 0) return 0;
 
         uint256 minOut = (estimatedSellReth2Output(rEth2Balance) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-        IERC20(rEth2).approve(uniswapRouter, rEth2Balance);
+        IERC20(RETH2).approve(UNISWAP_ROUTER, rEth2Balance);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
-                tokenIn: rEth2,
-                tokenOut: sEth2,
+                tokenIn: RETH2,
+                tokenOut: SETH2,
                 fee: 500,
                 recipient: address(this),
                 amountIn: rEth2Balance,
                 amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
-        return ISwapRouter(uniswapRouter).exactInputSingle(params);
+        return ISwapRouter(UNISWAP_ROUTER).exactInputSingle(params);
     }
 
     /**
@@ -146,9 +146,9 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         @param _amount - amount of sETH2 to sell for wETH
      */
     function sellSeth2ForWeth(uint256 _amount) private returns (uint) {
-        IERC20(sEth2).approve(
-            uniswapRouter,
-            IERC20(sEth2).balanceOf(address(this))
+        IERC20(SETH2).approve(
+            UNISWAP_ROUTER,
+            IERC20(SETH2).balanceOf(address(this))
         );
 
         uint256 minOut = (estimatedSellSeth2Output(_amount) *
@@ -156,15 +156,15 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
-                tokenIn: sEth2,
-                tokenOut: wEth,
+                tokenIn: SETH2,
+                tokenOut: WETH,
                 fee: 500,
                 recipient: address(this),
                 amountIn: _amount,
                 amountOutMinimum: minOut,
                 sqrtPriceLimitX96: 0
             });
-        return ISwapRouter(uniswapRouter).exactInputSingle(params);
+        return ISwapRouter(UNISWAP_ROUTER).exactInputSingle(params);
     }
 
     /**
@@ -175,7 +175,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     function estimatedSellSeth2Output(
         uint256 _amount
     ) private view returns (uint) {
-        return (_amount * 10 ** 18) / poolPrice(seth2WethPool);
+        return (_amount * 10 ** 18) / poolPrice(SETH2_WETH_POOL);
     }
 
     /**
@@ -184,7 +184,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     function estimatedSellReth2Output(
         uint256 _amount
     ) private view returns (uint) {
-        return (_amount * 10 ** 18) / poolPrice(rEth2Seth2Pool);
+        return (_amount * 10 ** 18) / poolPrice(RETH2_SETH2_POOL);
     }
 
     /**
