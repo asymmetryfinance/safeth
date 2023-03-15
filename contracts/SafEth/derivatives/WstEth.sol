@@ -59,6 +59,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthBal);
         uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
         ICrvEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthBal, minOut);
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -71,7 +72,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 wstEthBalancePre = IWStETH(WST_ETH).balanceOf(address(this));
-
+        // solhint-disable-next-line
         (bool sent, ) = WST_ETH.call{value: msg.value}("");
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(WST_ETH).balanceOf(address(this));

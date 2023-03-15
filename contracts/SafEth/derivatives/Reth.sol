@@ -107,6 +107,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function withdraw(uint256 amount) external onlyOwner {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );

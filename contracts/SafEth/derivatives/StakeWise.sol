@@ -73,6 +73,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         else withdrawAmount = _amount;
         uint256 wEthReceived = sellSeth2ForWeth(withdrawAmount);
         IWETH(WETH).withdraw(wEthReceived);
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -85,6 +86,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
      */
     function deposit() external payable onlyOwner returns (uint256) {
         if (msg.value > IStakewiseStaker(STAKER).minActivatingDeposit()) {
+            // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: msg.value}("");
             require(sent, "Failed to send Ether");
             return 0;

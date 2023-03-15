@@ -80,6 +80,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
             frxEthBalance,
             minOut
         );
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );

@@ -67,7 +67,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         ICrvEthPool(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
-
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
