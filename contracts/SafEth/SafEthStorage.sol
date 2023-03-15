@@ -13,13 +13,12 @@ import "../interfaces/IDerivative.sol";
         Constant values CAN be modified on upgrade
 */
 contract SafEthStorage {
-    address public safETH;
-    bool public pauseStaking;
-    bool public pauseUnstaking;
-    uint256 public derivativeCount;
-    uint256 public totalWeight;
-    uint256 public minAmount;
-    uint256 public maxAmount;
-    mapping(uint256 => IDerivative) public derivatives;
-    mapping(uint256 => uint256) public weights;
+    bool public pauseStaking; // true if staking is paused
+    bool public pauseUnstaking; // true if unstaking is pause
+    uint256 public derivativeCount; // amount of derivatives added to contract
+    uint256 public totalWeight; // total weight of all derivatives (used to calculate percentage of derivative)
+    uint256 public minAmount; // minimum amount to stake
+    uint256 public maxAmount; // maximum amount to stake
+    mapping(uint256 => IDerivative) public derivatives; // derivatives in the system
+    mapping(uint256 => uint256) public weights; // weights for each derivative
 }

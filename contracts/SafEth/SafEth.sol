@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-/// @title Contract that mints/burns safETH
+/// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 contract SafEth is
     Initializable,
@@ -58,6 +58,8 @@ contract SafEth is
 
     /**
         @notice - Stake your ETH into safETH
+        @dev - Deposits into each derivative based on its weight
+        @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
     */
     function stake() external payable {
         require(pauseStaking == false, "staking is paused");
@@ -99,19 +101,20 @@ contract SafEth is
 
     /**
         @notice - Unstake your safETH into ETH
-        @param safEthAmount - amount of safETH to unstake into ETH
+        @dev - unstakes a percentage of safEth based on its total value
+        @param _safEthAmount - amount of safETH to unstake into ETH
     */
-    function unstake(uint256 safEthAmount) external {
+    function unstake(uint256 _safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         for (uint256 i = 0; i < derivativeCount; i++) {
             uint256 derivativeAmount = (derivatives[i].balance() *
-                safEthAmount) / safEthTotalSupply;
+                _safEthAmount) / safEthTotalSupply;
             if (derivativeAmount == 0) continue;
             derivatives[i].withdraw(derivativeAmount);
         }
-        _burn(msg.sender, safEthAmount);
+        _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
@@ -119,7 +122,7 @@ contract SafEth is
             ""
         );
         require(sent, "Failed to send Ether");
-        emit Unstaked(msg.sender, ethAmountToWithdraw, safEthAmount);
+        emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount);
     }
 
     /**
@@ -147,7 +150,9 @@ contract SafEth is
 
     /**
         @notice - Adds new derivative to the index fund
-        @dev - Weights are only in regards to each other, if you want exact weights either do the math off chain or set all derivates to the weights you want
+        @dev - Weights are only in regards to each other, total weight changes with this function
+        @dev - If you want exact weights either do the math off chain or set all derivates to the weights you want
+        @dev - Weights are approximate
         @param _derivativeIndex - index of the derivative you want to update the weight
         @param _weight - new weight for this derivative.
     */

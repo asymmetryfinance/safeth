@@ -46,8 +46,9 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
 
     /**
         @notice - Owner only function to set max slippage for derivative
+        @param _slippage - Amount of slippage to set in wei
     */
-    function setMaxSlippage(uint _slippage) public onlyOwner {
+    function setMaxSlippage(uint256 _slippage) public onlyOwner {
         maxSlippage = _slippage;
     }
 
