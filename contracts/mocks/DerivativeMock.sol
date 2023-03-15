@@ -21,8 +21,13 @@ contract DerivativeMock is SfrxEth {
             address(this),
             address(this)
         );
-        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(address(this));
-        IsFrxEth(FRX_ETH_ADDRESS).approve(FRX_ETH_CRV_POOL_ADDRESS, frxEthBalance);
+        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        IsFrxEth(FRX_ETH_ADDRESS).approve(
+            FRX_ETH_CRV_POOL_ADDRESS,
+            frxEthBalance
+        );
         ICrvEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(1, 0, frxEthBalance, 0);
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
