@@ -11,7 +11,7 @@ In the future, SafEth will be used in conjunction with other smart contracts to 
 
 ## Architecture
 
-[Architecture Diagram](assets/SafEth-Architecture.drawio)
+[Architecture Diagram](assets/SafEth-Architecture.png)
 
 ## Local Development
 
