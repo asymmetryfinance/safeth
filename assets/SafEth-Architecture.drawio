@@ -39,7 +39,7 @@
                     <mxGeometry x="130" y="280" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="12" value="wstETH" style="whiteSpace=wrap;html=1;fontStyle=1;startSize=23;" parent="1" vertex="1">
-                    <mxGeometry x="265" y="280" width="120" height="60" as="geometry"/>
+                    <mxGeometry x="270" y="280" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="15" value="" style="endArrow=none;html=1;" parent="1" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
