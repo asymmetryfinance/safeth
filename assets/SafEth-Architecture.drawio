@@ -23,7 +23,7 @@
                         <mxPoint x="325" y="200" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="8" value="SafEth Contract" style="swimlane;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                <mxCell id="8" value="SafEth Contract" style="swimlane;whiteSpace=wrap;html=1;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" parent="1" vertex="1">
                     <mxGeometry x="200" y="70" width="280" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="24" value="Stake" style="rounded=0;whiteSpace=wrap;html=1;" parent="8" vertex="1">
