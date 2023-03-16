@@ -11,13 +11,13 @@ import "../../interfaces/frax/IFrxETHMinter.sol";
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
 contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
-    address public constant sfrxEthAddress =
+    address public constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
-    address public constant frxEthAddress =
+    address public constant FRX_ETH_ADDRESS =
         0x5E8422345238F34275888049021821E8E08CAa1f;
-    address public constant frxEthCrvPoolAddress =
+    address public constant FRX_ETH_CRV_POOL_ADDRESS =
         0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
-    address public constant frxEthMinterAddress =
+    address public constant FRX_ETH_MINTER_ADDRESS =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
@@ -58,14 +58,29 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        IsFrxEth(sfrxEthAddress).redeem(_amount, address(this), address(this));
-        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
-        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
+        IsFrxEth(SFRX_ETH_ADDRESS).redeem(
+            _amount,
+            address(this),
+            address(this)
+        );
+        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        IsFrxEth(FRX_ETH_ADDRESS).approve(
+            FRX_ETH_CRV_POOL_ADDRESS,
+            frxEthBalance
+        );
 
         uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, minOut);
+        ICrvEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
+            1,
+            0,
+            frxEthBalance,
+            minOut
+        );
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -77,12 +92,14 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(frxEthMinterAddress);
-        uint256 sfrxBalancePre = IERC20(sfrxEthAddress).balanceOf(
+        IFrxETHMinter frxETHMinterContract = IFrxETHMinter(
+            FRX_ETH_MINTER_ADDRESS
+        );
+        uint256 sfrxBalancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
         frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
-        uint256 sfrxBalancePost = IERC20(sfrxEthAddress).balanceOf(
+        uint256 sfrxBalancePost = IERC20(SFRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
         return sfrxBalancePost - sfrxBalancePre;
@@ -92,16 +109,18 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        uint256 frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(10 ** 18);
+        uint256 frxAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
+            10 ** 18
+        );
         return ((10 ** 18 * frxAmount) /
-            ICrvEthPool(frxEthCrvPoolAddress).price_oracle());
+            ICrvEthPool(FRX_ETH_CRV_POOL_ADDRESS).price_oracle());
     }
 
     /**
         @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
-        return IERC20(sfrxEthAddress).balanceOf(address(this));
+        return IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
     }
 
     receive() external payable {}

@@ -18,12 +18,13 @@ import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
 contract Reth is IDerivative, Initializable, OwnableUpgradeable {
-    address public constant rocketStorageAddress =
+    address public constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-    address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant uniswapRouter =
+    address public constant W_ETH_ADDRESS =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant UNISWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    address public constant uniV3Factory =
+    address public constant UNI_V3_FACTORY =
         0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
     uint256 public maxSlippage;
@@ -65,7 +66,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function rethAddress() private view returns (address) {
         return
-            RocketStorageInterface(rocketStorageAddress).getAddress(
+            RocketStorageInterface(ROCKET_STORAGE_ADDRESS).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
@@ -87,7 +88,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         uint256 _amountIn,
         uint256 _minOut
     ) private returns (uint256 amountOut) {
-        IERC20(_tokenIn).approve(uniswapRouter, _amountIn);
+        IERC20(_tokenIn).approve(UNISWAP_ROUTER, _amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: _tokenIn,
@@ -98,7 +99,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
                 amountOutMinimum: _minOut,
                 sqrtPriceLimitX96: 0
             });
-        amountOut = ISwapRouter(uniswapRouter).exactInputSingle(params);
+        amountOut = ISwapRouter(UNISWAP_ROUTER).exactInputSingle(params);
     }
 
     /**
@@ -106,6 +107,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function withdraw(uint256 amount) external onlyOwner {
         RocketTokenRETHInterface(rethAddress()).burn(amount);
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
@@ -118,7 +120,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function poolCanDeposit(uint256 _amount) private view returns (bool) {
         address rocketDepositPoolAddress = RocketStorageInterface(
-            rocketStorageAddress
+            ROCKET_STORAGE_ADDRESS
         ).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketDepositPool")
@@ -129,7 +131,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             );
 
         address rocketProtocolSettingsAddress = RocketStorageInterface(
-            rocketStorageAddress
+            ROCKET_STORAGE_ADDRESS
         ).getAddress(
                 keccak256(
                     abi.encodePacked(
@@ -155,7 +157,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     function deposit() external payable onlyOwner returns (uint256) {
         // Per RocketPool Docs query addresses each time it is used
         address rocketDepositPoolAddress = RocketStorageInterface(
-            rocketStorageAddress
+            ROCKET_STORAGE_ADDRESS
         ).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketDepositPool")
@@ -172,9 +174,9 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
                 ((10 ** 18 - maxSlippage))) / 10 ** 18);
 
-            IWETH(wETH).deposit{value: msg.value}();
+            IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
             uint256 amountSwapped = swapExactInputSingleHop(
-                wETH,
+                W_ETH_ADDRESS,
                 rethAddress(),
                 500,
                 msg.value,
@@ -184,7 +186,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             return amountSwapped;
         } else {
             address rocketTokenRETHAddress = RocketStorageInterface(
-                rocketStorageAddress
+                ROCKET_STORAGE_ADDRESS
             ).getAddress(
                     keccak256(
                         abi.encodePacked("contract.address", "rocketTokenRETH")
@@ -226,15 +228,15 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
      */
     function poolPrice() private view returns (uint256) {
         address rocketTokenRETHAddress = RocketStorageInterface(
-            rocketStorageAddress
+            ROCKET_STORAGE_ADDRESS
         ).getAddress(
                 keccak256(
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
             );
-        IUniswapV3Factory factory = IUniswapV3Factory(uniV3Factory);
+        IUniswapV3Factory factory = IUniswapV3Factory(UNI_V3_FACTORY);
         IUniswapV3Pool pool = IUniswapV3Pool(
-            factory.getPool(rocketTokenRETHAddress, wETH, 500)
+            factory.getPool(rocketTokenRETHAddress, W_ETH_ADDRESS, 500)
         );
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
         return (sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18)) >> (96 * 2);

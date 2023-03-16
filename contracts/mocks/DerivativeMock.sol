@@ -16,14 +16,20 @@ contract DerivativeMock is SfrxEth {
         @notice - New function to test upgrading a contract and using new functionality
         */
     function withdrawAll() public onlyOwner {
-        IsFrxEth(sfrxEthAddress).redeem(
+        IsFrxEth(SFRX_ETH_ADDRESS).redeem(
             balance(),
             address(this),
             address(this)
         );
-        uint256 frxEthBalance = IERC20(frxEthAddress).balanceOf(address(this));
-        IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        IsFrxEth(FRX_ETH_ADDRESS).approve(
+            FRX_ETH_CRV_POOL_ADDRESS,
+            frxEthBalance
+        );
+        ICrvEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(1, 0, frxEthBalance, 0);
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
