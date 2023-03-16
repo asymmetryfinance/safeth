@@ -17,7 +17,7 @@ import {
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
 import { RETH_MAX, WSTETH_ADRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
-import { getDifferenceRatio } from "./Integration.test";
+import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
 describe("Af Strategy", function () {
