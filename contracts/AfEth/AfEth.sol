@@ -39,17 +39,29 @@ contract AfEth is ERC1155Holder, Ownable {
     ISwapRouter constant swapRouter =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
+    address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
+    address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    // cvx NFT ID starts at 0
+    uint256 currentCvxNftId;
+    // Bundle NFT ID starts at 100 // TODO: why?
+    uint256 currentBundleNftId = 100;
+    address afETH;
+    address CVXNFT;
+    address bundleNFT;
+    address crvPool;
+
     constructor(
         address _token,
-        address _rocketStorageAddress,
         address _cvxNft,
         address _bundleNft,
         address _crvPool
     ) {
-        // afETH = _token;
-        // CVXNFT = _cvxNft;
-        // bundleNFT = _bundleNft;
-        // crvPool = _crvPool;
+        afETH = _token;
+        CVXNFT = _cvxNft;
+        bundleNFT = _bundleNft;
+        crvPool = _crvPool;
 
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
@@ -257,7 +269,6 @@ contract AfEth is ERC1155Holder, Ownable {
         uint256[2] memory amounts;
         ids[0] = positions[user].bundleNFTID;
         ids[1] = positions[user].cvxNFTID;
-        amounts[0] = positions[user].balancerBalances;
         amounts[1] = positions[user].convexBalances;
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
