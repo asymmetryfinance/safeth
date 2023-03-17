@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/ICvxLockerV2.sol";
+import "./interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
@@ -43,6 +43,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
@@ -157,7 +159,7 @@ contract AfEth is ERC1155Holder, Ownable {
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
-        ICvxLockerV2(vlCVX).lock(address(this), amountOut, 0);
+        ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
             address(this)
         );
@@ -271,5 +273,12 @@ contract AfEth is ERC1155Holder, Ownable {
         ids[1] = positions[user].cvxNFTID;
         amounts[1] = positions[user].convexBalances;
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+    }
+
+    function claimRewards() public {
+        console.log("claimRewards");
+        address[] memory emptyArray;
+        IClaimZap(cvxClaimZap).claimRewards(emptyArray, emptyArray, emptyArray, emptyArray, 0, 0, 0, 0, 8);
+        return;
     }
 }
