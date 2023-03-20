@@ -3,7 +3,8 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
@@ -13,7 +14,12 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
 
-contract AfEth is ERC1155Holder, Ownable {
+contract AfEth is
+    Initializable,
+    ERC20Upgradeable,
+    ERC1155Holder,
+    OwnableUpgradeable
+{
     struct Position {
         uint256 positionID;
         uint256 curveBalances; // crv Pool LP amount
@@ -43,21 +49,34 @@ contract AfEth is ERC1155Holder, Ownable {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    // cvx NFT ID starts at 0
+
     uint256 currentCvxNftId;
-    // Bundle NFT ID starts at 100 // TODO: why?
-    uint256 currentBundleNftId = 100;
+    uint256 currentBundleNftId;
     address afETH;
     address CVXNFT;
     address bundleNFT;
     address crvPool;
 
-    constructor(
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _tokenName - name of erc20
+        @param _tokenSymbol - symbol of erc20
+    */
+    function initialize(
         address _token,
         address _cvxNft,
         address _bundleNft,
         address _crvPool
-    ) {
+    ) external initializer {
+        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
+
         afETH = _token;
         CVXNFT = _cvxNft;
         bundleNFT = _bundleNft;
@@ -74,6 +93,19 @@ contract AfEth is ERC1155Holder, Ownable {
         emissionsPerYear[8] = 81703072;
         emissionsPerYear[9] = 68703820;
         emissionsPerYear[10] = 57772796;
+    }
+
+    function stake() public payable {
+        uint256 ratio = getAsymmetryRatio();
+        uint256 cvxAmount = (msg.value * ratio) / 10000;
+        uint256 ethAmount = (msg.value - cvxAmount) / 2;
+
+        uint256 cvxAmountReceived = swapCvx(cvxAmount);
+        uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
+        (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
+            msg.sender,
+            amountCvxLocked
+        );
     }
 
     function getCvxPriceData() public view returns (uint256) {
