@@ -23,7 +23,6 @@ interface ICrvEthPool {
         uint256 min_dy
     ) external payable returns (uint256);
 
-
     function exchange_underlying(
         uint256 i,
         uint256 j,

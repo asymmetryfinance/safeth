@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
+
 interface IClaimZap {
-function claimRewards(
+    function claimRewards(
         address[] calldata rewardContracts,
         address[] calldata extraRewardContracts,
         address[] calldata tokenRewardContracts,
@@ -11,5 +12,5 @@ function claimRewards(
         uint256 depositCvxMaxAmount,
         uint256 spendCvxAmount,
         uint256 options
-        ) external;
+    ) external;
 }
