@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import { FXS_ADDRESS } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { claimZapAbi } from "./abi/claimZapAbi";
 
 describe.only("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -25,25 +26,21 @@ describe.only("AfEth", async function () {
       "0x8a65ac0e23f31979db06ec62af62b132a6df4741"
     );
 
-    // This was derived from looking at etherscan claimRewards() transactions.
-    // I couldnt get it working from solidity but this is a start.
-    const data =
-      "0x5a7b87f20000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-    const tx = await rewardSigner.sendTransaction({
-      to: "0x3f29cb4111cbda8081642da1f75b3c12decf2516", // ClaimZap contract
-      data,
-    });
-    const mined = await tx.wait();
-    console.log("mined", mined);
-
     const accounts = await ethers.getSigners();
 
-    const fxs = new ethers.Contract(FXS_ADDRESS, ERC20.abi, accounts[0]);
+    const claimZap = new ethers.Contract(
+      "0x3f29cb4111cbda8081642da1f75b3c12decf2516",
+      claimZapAbi,
+      rewardSigner
+    );
+    const result = await claimZap.claimRewards([], [], [], [], 0, 0, 0, 0, 8);
+    const mined = await result.wait();
+    console.log('mined is', mined);
 
+    const fxs = new ethers.Contract(FXS_ADDRESS, ERC20.abi, accounts[0]);
     const fxsBalance = await fxs.balanceOf(
       "0x8a65ac0e23f31979db06ec62af62b132a6df4741"
     );
-
     console.log("fxsBalance", fxsBalance);
   });
 });
