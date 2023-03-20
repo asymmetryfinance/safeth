@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
-import { FXS_ADDRESS } from "./helpers/constants";
+import { CVX_ADDRESS, CVX_WHALE, FXS_ADDRESS } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import { claimZapAbi } from "./abi/claimZapAbi";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe.only("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -19,28 +19,21 @@ describe.only("AfEth", async function () {
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: ["0x8a65ac0e23f31979db06ec62af62b132a6df4741"],
+      params: [CVX_WHALE],
     });
+    const whaleSigner = await ethers.getSigner(CVX_WHALE);
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
-    const rewardSigner = await ethers.getSigner(
-      "0x8a65ac0e23f31979db06ec62af62b132a6df4741"
-    );
+    const cvxAmount = ethers.utils.parseEther("100");
+    await cvx.transfer(afEth.address, cvxAmount);
 
-    const accounts = await ethers.getSigners();
+    const tx1 = await afEth.lockCvx(cvxAmount);
+    const mined1 = tx1;
+    console.log('mined1 is', mined1);
+    await time.increase(1000);
 
-    const claimZap = new ethers.Contract(
-      "0x3f29cb4111cbda8081642da1f75b3c12decf2516",
-      claimZapAbi,
-      rewardSigner
-    );
-    const result = await claimZap.claimRewards([], [], [], [], 0, 0, 0, 0, 8);
-    const mined = await result.wait();
-    console.log('mined is', mined);
-
-    const fxs = new ethers.Contract(FXS_ADDRESS, ERC20.abi, accounts[0]);
-    const fxsBalance = await fxs.balanceOf(
-      "0x8a65ac0e23f31979db06ec62af62b132a6df4741"
-    );
-    console.log("fxsBalance", fxsBalance);
+    const tx2 = await afEth.claimRewards();
+    const mined2 = await tx2.wait();
+    console.log('mined2 is', mined2);
   });
 });

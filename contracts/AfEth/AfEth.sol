@@ -45,6 +45,16 @@ contract AfEth is ERC1155Holder, Ownable {
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
 
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
+
+    address public constant FXS_ETH_CRV_POOL_ADDRESS = 0x941Eb6F616114e4Ecaa85377945EA306002612FE;
+    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS = 0xd658A338613198204DCa1143Ac3F01A722b5d94A;
+    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS = 0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
+    address public constant CRV_ETH_CRV_POOL_ADDRESS = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
@@ -53,6 +63,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address CVXNFT;
     address bundleNFT;
     address crvPool;
+
+    uint256 public maxSlippage;
 
     constructor(
         address _token,
@@ -275,10 +287,84 @@ contract AfEth is ERC1155Holder, Ownable {
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
-    function claimRewards() public {
-        console.log("claimRewards");
+    function claimRewards() public onlyOwner {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(emptyArray, emptyArray, emptyArray, emptyArray, 0, 0, 0, 0, 8);
+        // cvxFxs -> fxs
+        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(
+            address(this)
+        );
+        console.log('cvxFxsBalance', cvxFxsBalance);
+
+        if(cvxFxsBalance > 0) {
+            uint256 minFxsOut = 0; // TODO
+            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            ICrvEthPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxFxsBalance,
+                minFxsOut
+            );
+        }
+        // fxs -> eth
+        uint256 fxsBalance = IERC20(fxs).balanceOf(
+            address(this)
+        );
+        console.log('fxsBalance', fxsBalance);
+        if(fxsBalance > 0) {
+            uint256 minEthOut = 0; // TODO
+            console.log('approving', fxs, FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+
+            uint256 approved = IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+
+            console.log('approved is', approved);
+
+            console.log('approved, now exchange_underlying');
+            ICrvEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                fxsBalance,
+                0
+            );
+            console.log('swapped');
+        }
+
+        // cvxCrv -> crv
+        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(
+            address(this)
+        );
+        console.log('cvxCrvBalance', cvxCrvBalance);
+        if(cvxCrvBalance > 0) {
+            uint256 minCrvOut = 0; // TODO
+            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            ICrvEthPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxCrvBalance,
+                minCrvOut
+            );
+            console.log('done exchanging');
+        }
+
+        // crv -> eth
+        uint256 crvBalance = IERC20(crv).balanceOf(
+            address(this)
+        );
+        console.log('crvBalance', crvBalance);
+        if(crvBalance > 0) {
+            uint256 minEthOut = 0; // TODO
+            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                crvBalance,
+                minEthOut
+            );
+        }
+        console.log('claimRewards done');
         return;
     }
+
+    receive() external payable {}
 }
