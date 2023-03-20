@@ -294,7 +294,6 @@ contract AfEth is ERC1155Holder, Ownable {
         uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(
             address(this)
         );
-        console.log('cvxFxsBalance', cvxFxsBalance);
 
         if(cvxFxsBalance > 0) {
             uint256 minFxsOut = 0; // TODO
@@ -310,31 +309,24 @@ contract AfEth is ERC1155Holder, Ownable {
         uint256 fxsBalance = IERC20(fxs).balanceOf(
             address(this)
         );
-        console.log('fxsBalance', fxsBalance);
         if(fxsBalance > 0) {
             uint256 minEthOut = 0; // TODO
-            console.log('approving', fxs, FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
-            uint256 approved = IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
 
-            console.log('approved is', approved);
-
-            console.log('approved, now exchange_underlying');
             ICrvEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 fxsBalance,
-                0
+                minEthOut
             );
-            console.log('swapped');
         }
 
         // cvxCrv -> crv
         uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(
             address(this)
         );
-        console.log('cvxCrvBalance', cvxCrvBalance);
         if(cvxCrvBalance > 0) {
             uint256 minCrvOut = 0; // TODO
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
@@ -344,25 +336,22 @@ contract AfEth is ERC1155Holder, Ownable {
                 cvxCrvBalance,
                 minCrvOut
             );
-            console.log('done exchanging');
         }
 
         // crv -> eth
         uint256 crvBalance = IERC20(crv).balanceOf(
             address(this)
         );
-        console.log('crvBalance', crvBalance);
         if(crvBalance > 0) {
             uint256 minEthOut = 0; // TODO
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
-            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange(
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 crvBalance,
                 minEthOut
             );
         }
-        console.log('claimRewards done');
         return;
     }
 
