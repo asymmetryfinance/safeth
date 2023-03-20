@@ -29,11 +29,11 @@ describe.only("AfEth", async function () {
 
     const tx1 = await afEth.lockCvx(cvxAmount);
     const mined1 = tx1;
-    console.log('mined1 is', mined1);
+    console.log("mined1 is", mined1);
     await time.increase(1000);
 
     const tx2 = await afEth.claimRewards();
     const mined2 = await tx2.wait();
-    console.log('mined2 is', mined2);
+    console.log("mined2 is", mined2);
   });
 });
