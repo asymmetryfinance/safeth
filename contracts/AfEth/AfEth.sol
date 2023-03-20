@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/ICvxLockerV2.sol";
+import "./interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
@@ -43,6 +43,22 @@ contract AfEth is ERC1155Holder, Ownable {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
+
+    address public constant FXS_ETH_CRV_POOL_ADDRESS =
+        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
+    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
+        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
+    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
+        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
+    address public constant CRV_ETH_CRV_POOL_ADDRESS =
+        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
@@ -51,6 +67,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address CVXNFT;
     address bundleNFT;
     address crvPool;
+
+    uint256 public maxSlippage;
 
     constructor(
         address _token,
@@ -157,7 +175,7 @@ contract AfEth is ERC1155Holder, Ownable {
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
-        ICvxLockerV2(vlCVX).lock(address(this), amountOut, 0);
+        ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
             address(this)
         );
@@ -272,4 +290,76 @@ contract AfEth is ERC1155Holder, Ownable {
         amounts[1] = positions[user].convexBalances;
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
+
+    function claimRewards() public onlyOwner {
+        address[] memory emptyArray;
+        IClaimZap(cvxClaimZap).claimRewards(
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            0,
+            0,
+            0,
+            0,
+            8
+        );
+        // cvxFxs -> fxs
+        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
+
+        if (cvxFxsBalance > 0) {
+            uint256 minFxsOut = 0; // TODO
+            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            ICrvEthPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxFxsBalance,
+                minFxsOut
+            );
+        }
+        // fxs -> eth
+        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+        if (fxsBalance > 0) {
+            uint256 minEthOut = 0; // TODO
+            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+
+            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+
+            ICrvEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                fxsBalance,
+                minEthOut
+            );
+        }
+
+        // cvxCrv -> crv
+        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
+        if (cvxCrvBalance > 0) {
+            uint256 minCrvOut = 0; // TODO
+            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            ICrvEthPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxCrvBalance,
+                minCrvOut
+            );
+        }
+
+        // crv -> eth
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        if (crvBalance > 0) {
+            uint256 minEthOut = 0; // TODO
+            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                crvBalance,
+                minEthOut
+            );
+        }
+        return;
+    }
+
+    receive() external payable {}
 }
