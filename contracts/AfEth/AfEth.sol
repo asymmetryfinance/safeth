@@ -50,6 +50,7 @@ contract AfEth is
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    uint256 currentPositionId;
     uint256 currentCvxNftId;
     uint256 currentBundleNftId;
     address afETH;
@@ -73,7 +74,9 @@ contract AfEth is
         address _token,
         address _cvxNft,
         address _bundleNft,
-        address _crvPool
+        address _crvPool,
+        string memory _tokenName,
+        string memory _tokenSymbol
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
 
@@ -106,6 +109,34 @@ contract AfEth is
             msg.sender,
             amountCvxLocked
         );
+
+        uint256 afEthAmount = ethAmount;
+        _mint(address(this), afEthAmount);
+        uint256 crvLpAmount = addAfEthCrvLiquidity(
+            crvPool,
+            ethAmount,
+            afEthAmount
+        );
+
+        // TODO: mint a bundle NFT
+        // uint256 bundleNftId = mintBundleNft(
+        //     currentCvxNftId,
+        //     amountCvxLocked,
+        //     balLpAmount
+        // );
+
+        // storage of individual balances associated w/ user deposit
+        // TODO: This calculation doesn't update when afETH is transferred between wallets
+        uint256 newPositionID = ++currentPositionId;
+        positions[msg.sender] = Position({
+            positionID: newPositionID,
+            curveBalances: crvLpAmount,
+            convexBalances: amountCvxLocked,
+            cvxNFTID: _cvxNFTID,
+            bundleNFTID: 0, //bundleNftId,
+            afETH: afEthAmount,
+            createdAt: block.timestamp
+        });
     }
 
     function getCvxPriceData() public view returns (uint256) {
