@@ -51,7 +51,7 @@ contract SafEth is
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         _transferOwnership(msg.sender);
-        minAmount = 5 ** 17;
+        minAmount = 5 ** 18;
         maxAmount = 200 ** 18;
     }
 
