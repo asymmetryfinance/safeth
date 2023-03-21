@@ -280,15 +280,14 @@ contract AfEth is
         uint256 balPoolTokens
     ) private returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
-        // IAfBundle1155(bundleNFT).mint(
-        //     cvxNftId,
-        //     cvxAmount,
-        //     newBundleNftId,
-        //     balPoolTokens,
-        //     address(this)
-        // );
-        // positions[currentDepositor] = newBundleNftId;
-        // bundleNFtBalances[newBundleNftId] = balPoolTokens;
+        IAfBundle1155(bundleNFT).mint(
+            cvxNftId,
+            cvxAmount,
+            newBundleNftId,
+            balPoolTokens,
+            address(this)
+        );
+        positions[currentDepositor] = newBundleNftId;
         return (newBundleNftId);
     }
 
