@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-/**
- * https://etherscan.io/address/0x941eb6f616114e4ecaa85377945ea306002612fe#code#L1
- */
 interface ICrvEthPool1 {
     function add_liquidity(
         uint256[2] memory amounts,
