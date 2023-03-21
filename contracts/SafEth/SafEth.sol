@@ -158,7 +158,7 @@ contract SafEth is
         @notice - Adds new derivative to the index fund
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
-        @dev - Weights are approximate as it will slowly change as people stake/unstake
+        @dev - Weights are approximate as it will slowly change as people stake
         @param _derivativeIndex - index of the derivative you want to update the weight
         @param _weight - new weight for this derivative.
     */
