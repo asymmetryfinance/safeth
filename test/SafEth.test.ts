@@ -72,6 +72,17 @@ describe("Af Strategy", function () {
         )
       ).eq(true);
     });
+    it("Should fail with wrong min/max", async function () {
+      let depositAmount = ethers.utils.parseEther(".2");
+      await expect(
+        safEthProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("amount too low");
+
+      depositAmount = ethers.utils.parseEther("2050");
+      await expect(
+        safEthProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("amount too high");
+    });
   });
 
   describe("Slippage", function () {
