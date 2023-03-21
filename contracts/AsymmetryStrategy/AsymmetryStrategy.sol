@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Uniswap
 import "../interfaces/uniswap/ISwapRouter.sol";
 // Curve
-import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/curve/ICrvEthPool1.sol";
 // RocketPool
 import "../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../interfaces/rocketpool/RocketStorageInterface.sol";
@@ -323,7 +323,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
     // eth per sfrxEth (wei)
     function sfrxEthPrice(uint amount) public view returns (uint) {
         uint frxAmount = IsFrxEth(sfrxEthAddress).convertToAssets(amount);
-        return ICrvEthPool(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
+        return ICrvEthPool1(frxEthCrvPoolAddress).get_dy(0, 1, frxAmount);
     }
 
     function withdrawSfrax(uint amount) public {
@@ -332,7 +332,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPool(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+        ICrvEthPool1(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function
@@ -436,7 +436,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IERC20(stEthToken).approve(lidoCrvPool, stEthBal);
         // convert stETH to ETH
         console.log("Eth before swapping steth to eth:", address(this).balance);
-        ICrvEthPool(lidoCrvPool).exchange(1, 0, stEthBal, 0);
+        ICrvEthPool1(lidoCrvPool).exchange(1, 0, stEthBal, 0);
         console.log("Eth after swapping steth to eth:", address(this).balance);
     }
 
@@ -456,7 +456,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         // afEthToken.approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
-        uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
+        uint256 poolTokensMinted = ICrvEthPool1(_pool).add_liquidity(
             _amounts,
             uint256(100000),
             false
@@ -508,7 +508,7 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[msg.sender].curveBalances = 0;
-        ICrvEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
+        ICrvEthPool1(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@ import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-describe.skip("AfEth", async function () {
+describe("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const AfEth = await ethers.getContractFactory("AfEth");
 

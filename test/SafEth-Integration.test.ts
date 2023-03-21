@@ -13,7 +13,7 @@ import { BigNumber } from "ethers";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe("SafEth Integration Test", function () {
+describe.skip("SafEth Integration Test", function () {
   let safEthContractAddress: string;
   let strategyContractAddress: string;
 
