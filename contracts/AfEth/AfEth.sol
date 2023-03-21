@@ -339,7 +339,7 @@ contract AfEth is ERC1155Holder, Ownable {
         if (cvxCrvBalance > 0) {
             uint256 minCrvOut = 0; // TODO
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
-            ICrvEthPool2(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+            ICrvEthPool1(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
                 cvxCrvBalance,
@@ -359,6 +359,7 @@ contract AfEth is ERC1155Holder, Ownable {
                 minEthOut
             );
         }
+
         return;
     }
 
