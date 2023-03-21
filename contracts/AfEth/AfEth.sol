@@ -311,7 +311,7 @@ contract AfEth is ERC1155Holder, Ownable {
         uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
         if (cvxFxsBalance > 0) {
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
-                .price_oracle();
+                .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
@@ -327,8 +327,11 @@ contract AfEth is ERC1155Holder, Ownable {
         // fxs -> eth
         uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
         if (fxsBalance > 0) {
-            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS)
-                .price_oracle();
+            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
             uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
@@ -362,8 +365,11 @@ contract AfEth is ERC1155Holder, Ownable {
         // crv -> eth
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
         if (crvBalance > 0) {
-            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS)
-                .price_oracle();
+            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
             uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
