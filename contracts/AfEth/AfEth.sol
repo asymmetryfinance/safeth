@@ -9,7 +9,8 @@ import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/IClaimZap.sol";
-import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/curve/ICrvEthPool1.sol";
+import "../interfaces/curve/ICrvEthPool2.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
 
@@ -197,7 +198,7 @@ contract AfEth is ERC1155Holder, Ownable {
         // afEthToken.approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
-        uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
+        uint256 poolTokensMinted = ICrvEthPool1(_pool).add_liquidity(
             _amounts,
             uint256(100000),
             false
@@ -211,7 +212,7 @@ contract AfEth is ERC1155Holder, Ownable {
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[msg.sender].curveBalances = 0;
-        ICrvEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
+        ICrvEthPool1(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
     function mintCvxNft(
@@ -310,7 +311,7 @@ contract AfEth is ERC1155Holder, Ownable {
         if (cvxFxsBalance > 0) {
             uint256 minFxsOut = 0; // TODO
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
-            ICrvEthPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+            ICrvEthPool2(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
                 cvxFxsBalance,
@@ -325,7 +326,7 @@ contract AfEth is ERC1155Holder, Ownable {
 
             IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
 
-            ICrvEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+            ICrvEthPool2(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 fxsBalance,
@@ -338,7 +339,7 @@ contract AfEth is ERC1155Holder, Ownable {
         if (cvxCrvBalance > 0) {
             uint256 minCrvOut = 0; // TODO
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
-            ICrvEthPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+            ICrvEthPool2(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
                 cvxCrvBalance,
@@ -351,7 +352,7 @@ contract AfEth is ERC1155Holder, Ownable {
         if (crvBalance > 0) {
             uint256 minEthOut = 0; // TODO
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
-            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+            ICrvEthPool2(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 crvBalance,
