@@ -28,7 +28,12 @@ contract DerivativeMock is SfrxEth {
             FRX_ETH_CRV_POOL_ADDRESS,
             frxEthBalance
         );
-        IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(1, 0, frxEthBalance, 0);
+        IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
+            1,
+            0,
+            frxEthBalance,
+            0
+        );
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""

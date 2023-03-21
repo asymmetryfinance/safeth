@@ -332,7 +332,12 @@ contract AsymmetryStrategy is ERC1155Holder, Ownable {
         IsFrxEth(frxEthAddress).approve(frxEthCrvPoolAddress, frxEthBalance);
         // TODO figure out if we want a min receive amount and what it should be
         // Currently set to 0. It "works" but may not be ideal long term
-        ICrvEthPoolLegacy(frxEthCrvPoolAddress).exchange(1, 0, frxEthBalance, 0);
+        ICrvEthPoolLegacy(frxEthCrvPoolAddress).exchange(
+            1,
+            0,
+            frxEthBalance,
+            0
+        );
     }
 
     // utilize Lido's wstETH shortcut by sending ETH to its fallback function

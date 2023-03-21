@@ -10,5 +10,4 @@ interface IFrxEthEthPool {
     ) external payable returns (uint256);
 
     function price_oracle() external view returns (uint256);
-
 }
