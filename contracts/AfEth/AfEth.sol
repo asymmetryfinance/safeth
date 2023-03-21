@@ -9,8 +9,11 @@ import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/IClaimZap.sol";
-import "../interfaces/curve/ICrvEthPool1.sol";
-import "../interfaces/curve/ICrvEthPool2.sol";
+import "../interfaces/curve/ICvxCrvCrvPool.sol";
+import "../interfaces/curve/IFxsEthPool.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/curve/ICvxFxsFxsPool.sol";
+import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
 
@@ -68,8 +71,6 @@ contract AfEth is ERC1155Holder, Ownable {
     address CVXNFT;
     address bundleNFT;
     address crvPool;
-
-    uint256 public maxSlippage;
 
     constructor(
         address _token,
@@ -173,6 +174,7 @@ contract AfEth is ERC1155Holder, Ownable {
         return amountSwapped;
     }
 
+    // TODO does this need to be public???
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
@@ -198,7 +200,7 @@ contract AfEth is ERC1155Holder, Ownable {
         // afEthToken.approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
-        uint256 poolTokensMinted = ICrvEthPool1(_pool).add_liquidity(
+        uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
             uint256(100000),
             false
@@ -212,7 +214,7 @@ contract AfEth is ERC1155Holder, Ownable {
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[msg.sender].curveBalances = 0;
-        ICrvEthPool1(afETHPool).remove_liquidity(_amount, min_amounts);
+        IAfEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
     function mintCvxNft(
@@ -292,7 +294,7 @@ contract AfEth is ERC1155Holder, Ownable {
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
-    function claimRewards() public onlyOwner {
+    function claimRewards(uint256 maxSlippage) public onlyOwner {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,
@@ -307,58 +309,79 @@ contract AfEth is ERC1155Holder, Ownable {
         );
         // cvxFxs -> fxs
         uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
-
         if (cvxFxsBalance > 0) {
-            uint256 minFxsOut = 0; // TODO
+            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
-            ICrvEthPool2(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
                 cvxFxsBalance,
-                minFxsOut
+                minOut
             );
         }
+
         // fxs -> eth
         uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
         if (fxsBalance > 0) {
-            uint256 minEthOut = 0; // TODO
+            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
             IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
 
-            ICrvEthPool2(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 fxsBalance,
-                minEthOut
+                minOut
             );
         }
-
         // cvxCrv -> crv
         uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
         if (cvxCrvBalance > 0) {
-            uint256 minCrvOut = 0; // TODO
+            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
-            ICrvEthPool2(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
                 cvxCrvBalance,
-                minCrvOut
+                minOut
             );
         }
 
         // crv -> eth
         uint256 crvBalance = IERC20(crv).balanceOf(address(this));
         if (crvBalance > 0) {
-            uint256 minEthOut = 0; // TODO
+            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
-            ICrvEthPool2(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
                 crvBalance,
-                minEthOut
+                minOut
             );
         }
+
         return;
     }
 
