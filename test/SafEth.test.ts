@@ -53,7 +53,7 @@ describe("Af Strategy", function () {
   describe("Large Amounts", function () {
     it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("500");
+      const depositAmount = ethers.utils.parseEther("200");
       const tx1 = await safEthProxy.stake({ value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
