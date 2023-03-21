@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ankr/AnkrStaker.sol";
 import "../../interfaces/ankr/AnkrEth.sol";
-import "../../interfaces/curve/ICrvEthPool1.sol";
+import "../../interfaces/curve/IAnkrEthEthPool.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
@@ -61,12 +61,12 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         );
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, ankrEthBalance);
 
-        uint256 virtualPrice = ICrvEthPool1(ANKR_ETH_POOL).get_virtual_price();
+        uint256 oraclePrice = IAnkrEthEthPool(ANKR_ETH_POOL).get_virtual_price();
 
-        uint256 minOut = (((virtualPrice * _amount) / 10 ** 18) *
+        uint256 minOut = (((oraclePrice * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-        ICrvEthPool1(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
+        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
