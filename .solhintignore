@@ -2,4 +2,4 @@ node_modules
 contracts/AsymmetryStrategy
 coverage
 artifacts
-contracts/interfaces/curve/ICrvEthPool.sol
+contracts/interfaces/curve

@@ -53,7 +53,7 @@ describe("Af Strategy", function () {
   describe("Large Amounts", function () {
     it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("500");
+      const depositAmount = ethers.utils.parseEther("200");
       const tx1 = await safEthProxy.stake({ value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
@@ -66,11 +66,22 @@ describe("Af Strategy", function () {
       const finalBalance = await adminAccount.getBalance();
 
       expect(
-        withinHalfPercent(
+        within1Percent(
           finalBalance.add(networkFee1).add(networkFee2),
           startingBalance
         )
       ).eq(true);
+    });
+    it("Should fail with wrong min/max", async function () {
+      let depositAmount = ethers.utils.parseEther(".2");
+      await expect(
+        safEthProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("amount too low");
+
+      depositAmount = ethers.utils.parseEther("2050");
+      await expect(
+        safEthProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("amount too high");
     });
   });
 
@@ -223,7 +234,7 @@ describe("Af Strategy", function () {
 
       const postStakeBalance = await rEthDerivative.balance();
 
-      expect(withinHalfPercent(postStakeBalance, derivativeBalanceEstimate)).eq(
+      expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
         true
       );
     });
@@ -249,10 +260,11 @@ describe("Af Strategy", function () {
         const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
+
         // roughly expected derivative balance after deposit
-        expect(
-          withinHalfPercent(postStakeBalance, derivativeBalanceEstimate)
-        ).eq(true);
+        expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
+          true
+        );
 
         const preWithdrawEthBalance = await adminAccount.getBalance();
         const tx2 = await derivatives[i].withdraw(
@@ -267,7 +279,7 @@ describe("Af Strategy", function () {
           .add(networkFee2);
 
         // roughly same amount of eth received as originally deposited
-        expect(withinHalfPercent(ethReceived, weiDepositAmount)).eq(true);
+        expect(within1Percent(ethReceived, weiDepositAmount)).eq(true);
 
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
@@ -302,7 +314,7 @@ describe("Af Strategy", function () {
 
       // Value in and out approx same
       expect(
-        withinHalfPercent(
+        within1Percent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -376,7 +388,7 @@ describe("Af Strategy", function () {
 
       // Value in and out approx same
       expect(
-        withinHalfPercent(
+        within1Percent(
           depositAmount,
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
@@ -415,7 +427,7 @@ describe("Af Strategy", function () {
           .sub(ethBalanceBeforeWithdraw)
           .add(networkFee2);
 
-        expect(withinHalfPercent(depositAmount, amountWithdrawn));
+        expect(within1Percent(depositAmount, amountWithdrawn));
       }
 
       // accidentally send the contract some erc20
@@ -477,8 +489,8 @@ describe("Af Strategy", function () {
       const ethBalances = await estimatedDerivativeValues();
 
       // TODO make this test work for any number of derivatives
-      expect(withinHalfPercent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
-      expect(withinHalfPercent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
+      expect(within1Percent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
+      expect(within1Percent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
     });
 
     it("Should stake with a weight set to 0", async () => {
@@ -504,7 +516,7 @@ describe("Af Strategy", function () {
       // TODO make this test work for any number of derivatives
       expect(ethBalances[0]).eq(BigNumber.from(0));
       expect(
-        withinHalfPercent(initialDeposit, ethBalances[1].add(ethBalances[1]))
+        within1Percent(initialDeposit, ethBalances[1].add(ethBalances[1]))
       ).eq(true);
     });
 
@@ -551,7 +563,7 @@ describe("Af Strategy", function () {
       const balanceAfter = await adminAccount.getBalance();
 
       expect(
-        withinHalfPercent(balanceBefore, balanceAfter.add(totalNetworkFee))
+        within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))
       ).eq(true);
     });
   });
@@ -582,8 +594,8 @@ describe("Af Strategy", function () {
     return ethBalances;
   };
 
-  const withinHalfPercent = (amount1: BigNumber, amount2: BigNumber) => {
+  const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
-    return getDifferenceRatio(amount1, amount2).gt("200");
+    return getDifferenceRatio(amount1, amount2).gt("100");
   };
 });

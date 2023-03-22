@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-/// https://etherscan.io/address/0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511#code
-interface ICrvEthPool {
+/// https://etherscan.io/address/0xd658A338613198204DCa1143Ac3F01A722b5d94A#code
+interface ICvxFxsFxsPool {
     function exchange(
         uint256 i,
         uint256 j,

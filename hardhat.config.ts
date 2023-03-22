@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
       },
       forking: {
         url: process.env.MAINNET_URL || "",
-        blockNumber: 16820726,
+        blockNumber: 16871866,
         enabled: true, // Set to false to disable forked mainnet mode
       },
     },
@@ -97,7 +97,7 @@ const config: HardhatUserConfig = {
     runOnCompile: true,
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
     currency: "USD",
   },
   etherscan: {

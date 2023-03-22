@@ -9,8 +9,12 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/ICvxLockerV2.sol";
+import "./interfaces/convex/IClaimZap.sol";
+import "../interfaces/curve/ICvxCrvCrvPool.sol";
+import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/curve/ICvxFxsFxsPool.sol";
+import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "hardhat/console.sol";
 
@@ -49,8 +53,24 @@ contract AfEth is
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
     uint256 currentPositionId;
+
+    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
+
+    address public constant FXS_ETH_CRV_POOL_ADDRESS =
+        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
+    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
+        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
+    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
+        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
+    address public constant CRV_ETH_CRV_POOL_ADDRESS =
+        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+
     uint256 currentCvxNftId;
     uint256 currentBundleNftId;
     address afETH;
@@ -217,10 +237,11 @@ contract AfEth is
         return amountSwapped;
     }
 
+    // TODO does this need to be public???
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
-        ICvxLockerV2(vlCVX).lock(address(this), amountOut, 0);
+        ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
         uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
             address(this)
         );
@@ -242,7 +263,7 @@ contract AfEth is
         // afEthToken.approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
-        uint256 poolTokensMinted = ICrvEthPool(_pool).add_liquidity(
+        uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
             uint256(100000),
             false
@@ -256,7 +277,7 @@ contract AfEth is
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         positions[msg.sender].curveBalances = 0;
-        ICrvEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
+        IAfEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
     function mintCvxNft(
@@ -277,7 +298,6 @@ contract AfEth is
     function mintBundleNft(
         uint256 cvxNftId,
         uint256 cvxAmount,
-        uint256 balPoolTokens
     ) private returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
         IAfBundle1155(bundleNFT).mint(
@@ -287,7 +307,7 @@ contract AfEth is
             balPoolTokens,
             address(this)
         );
-        positions[currentDepositor] = newBundleNftId;
+        // positions[currentDepositor] = newBundleNftId;
         return (newBundleNftId);
     }
 
@@ -334,4 +354,97 @@ contract AfEth is
         amounts[1] = positions[user].convexBalances;
         // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
+
+    function claimRewards(uint256 maxSlippage) public onlyOwner {
+        address[] memory emptyArray;
+        IClaimZap(cvxClaimZap).claimRewards(
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            0,
+            0,
+            0,
+            0,
+            8
+        );
+        // cvxFxs -> fxs
+        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
+        if (cvxFxsBalance > 0) {
+            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxFxsBalance,
+                minOut
+            );
+        }
+
+        // fxs -> eth
+        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+        if (fxsBalance > 0) {
+            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+
+            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+
+            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                fxsBalance,
+                minOut
+            );
+        }
+        // cvxCrv -> crv
+        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
+        if (cvxCrvBalance > 0) {
+            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxCrvBalance,
+                minOut
+            );
+        }
+
+        // crv -> eth
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        if (crvBalance > 0) {
+            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                crvBalance,
+                minOut
+            );
+        }
+
+        return;
+    }
+
+    receive() external payable {}
 }
