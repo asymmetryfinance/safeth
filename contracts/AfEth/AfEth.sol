@@ -146,7 +146,7 @@ contract AfEth is
         // );
 
         // storage of individual balances associated w/ user deposit
-        // TODO: This calculation doesn't update when afETH is transferred between wallets
+        // This calculation doesn't update when afETH is transferred between wallets
         uint256 newPositionID = ++currentPositionId;
         positions[msg.sender] = Position({
             positionID: newPositionID,
@@ -297,16 +297,15 @@ contract AfEth is
 
     function mintBundleNft(
         uint256 cvxNftId,
-        uint256 cvxAmount,
+        uint256 cvxAmount
     ) private returns (uint256 id) {
         uint256 newBundleNftId = ++currentBundleNftId;
-        IAfBundle1155(bundleNFT).mint(
-            cvxNftId,
-            cvxAmount,
-            newBundleNftId,
-            balPoolTokens,
-            address(this)
-        );
+        // IAfBundle1155(bundleNFT).mint(
+        //     cvxNftId,
+        //     cvxAmount,
+        //     newBundleNftId,
+        //     address(this)
+        // );
         // positions[currentDepositor] = newBundleNftId;
         return (newBundleNftId);
     }
