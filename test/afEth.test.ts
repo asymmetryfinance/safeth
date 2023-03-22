@@ -39,4 +39,33 @@ describe("AfEth", async function () {
       afEth.claimRewards(ethers.utils.parseEther("0.0000001")) // very low slippage reverts
     ).to.be.reverted;
   });
+
+  it("Should return correct asym ratio values", async function () {
+    // this test always needs to happen on the same block so values are consistent
+    resetToBlock(16871866);
+
+    const AfEth = await ethers.getContractFactory("AfEth");
+    // The address params dont matter for this test.
+    const address = "0x0000000000000000000000000000000000000000";
+    const afEth = await AfEth.deploy(address, address, address, address);
+    await afEth.deployed();
+    const r1 = await afEth.getAsymmetryRatio("150000000000000000");
+    expect(r1.eq("299482867234169718")).eq(true);
+    const r2 = await afEth.getAsymmetryRatio("300000000000000000");
+    expect(r2.eq("460926226555940021")).eq(true);
+  });
 });
+
+const resetToBlock = async (blockNumber: number) => {
+  await network.provider.request({
+    method: "hardhat_reset",
+    params: [
+      {
+        forking: {
+          jsonRpcUrl: process.env.MAINNET_URL,
+          blockNumber,
+        },
+      },
+    ],
+  });
+};
