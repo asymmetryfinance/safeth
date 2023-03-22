@@ -54,7 +54,7 @@ describe("AfEth", async function () {
     expect(r1.eq("299482867234169718")).eq(true); // 29.94%
 
     const r2 = await afEth.getAsymmetryRatio("300000000000000000");
-    expect(r2.eq("460926226555940021")).eq(true); // 29.09%
+    expect(r2.eq("460926226555940021")).eq(true); // 46.09%
 
     const r3 = await afEth.getAsymmetryRatio("500000000000000000");
     expect(r3.eq("587638408209630597")).eq(true); // 56.76%

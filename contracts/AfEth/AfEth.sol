@@ -114,16 +114,20 @@ contract AfEth is ERC1155Holder, Ownable {
         return uint256(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
-    function getAsymmetryRatio(uint256 apy) public view returns (uint256 ratio) {
+    function getAsymmetryRatio(
+        uint256 apy
+    ) public view returns (uint256 ratio) {
         uint256 cvxPrice = getCvxPriceData();
         uint256 crvPrice = getCrvPriceData();
         uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
-        uint256 totalUsdEmissionsPerYear = (emissionsPerYear[emissionYear] * crvPrice);
-        uint256 cvxAmount = (((apy) * IERC20(CVX).totalSupply()) / totalUsdEmissionsPerYear);
+        uint256 totalUsdEmissionsPerYear = (emissionsPerYear[emissionYear] *
+            crvPrice);
+        uint256 cvxAmount = (((apy) * IERC20(CVX).totalSupply()) /
+            totalUsdEmissionsPerYear);
         uint256 cvxAmountUsdValue = (cvxAmount * uint256(cvxPrice));
-        return (cvxAmountUsdValue) / (10 ** 18 + (cvxAmountUsdValue / 10 ** 18));
+        return
+            (cvxAmountUsdValue) / (10 ** 18 + (cvxAmountUsdValue / 10 ** 18));
     }
-
 
     function swapExactInputSingleHop(
         address tokenIn,
