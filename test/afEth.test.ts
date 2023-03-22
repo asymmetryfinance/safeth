@@ -49,10 +49,15 @@ describe("AfEth", async function () {
     const address = "0x0000000000000000000000000000000000000000";
     const afEth = await AfEth.deploy(address, address, address, address);
     await afEth.deployed();
+
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
-    expect(r1.eq("299482867234169718")).eq(true);
+    expect(r1.eq("299482867234169718")).eq(true); // 29.94%
+
     const r2 = await afEth.getAsymmetryRatio("300000000000000000");
-    expect(r2.eq("460926226555940021")).eq(true);
+    expect(r2.eq("460926226555940021")).eq(true); // 29.09%
+
+    const r3 = await afEth.getAsymmetryRatio("500000000000000000");
+    expect(r3.eq("587638408209630597")).eq(true); // 56.76%
   });
 });
 
