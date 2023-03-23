@@ -100,7 +100,7 @@ contract AfEth is ERC1155Holder, Ownable {
 
         // Assumes AfEth contract owns the vote locked convex
         // This will need to be done differently if other contracts own or wrap the vote locked convex
-        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(0x6376782e65746800000000000000000000000000000000000000000000000000, owner);
+        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(0x6376782e65746800000000000000000000000000000000000000000000000000, owner());
     }
 
     function getCvxPriceData() public view returns (uint256) {
