@@ -1,5 +1,9 @@
 import { ethers, network, waffle } from "hardhat";
-import { CVX_ADDRESS, CVX_WHALE, SNAPSHOT_DELEGATE_REGISTRY } from "./helpers/constants";
+import {
+  CVX_ADDRESS,
+  CVX_WHALE,
+  SNAPSHOT_DELEGATE_REGISTRY,
+} from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
