@@ -371,5 +371,9 @@ contract AfEth is ERC1155Holder, Ownable {
         return;
     }
 
+    function unlockCvx() public {
+        ILockedCvx(vlCVX).processExpiredLocks(false);
+    }
+
     receive() external payable {}
 }
