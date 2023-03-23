@@ -122,7 +122,7 @@ contract AfEth is
     }
 
     function stake() public payable {
-        uint256 ratio = getAsymmetryRatio();
+        uint256 ratio = getAsymmetryRatio(150000000000000000);
         uint256 cvxAmount = (msg.value * ratio) / 10000;
         uint256 ethAmount = (msg.value - cvxAmount) / 2;
 

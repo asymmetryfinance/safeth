@@ -66,11 +66,6 @@ describe.only("AfEth", async function () {
   });
 
   it("Should trigger withdrawing of vlCVX rewards", async function () {
-    const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
-    const afEth = await AfEth.deploy(address, address, address, address);
-    await afEth.deployed();
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -104,11 +99,6 @@ describe.only("AfEth", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
 
-    const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
-    const afEth = await AfEth.deploy(address, address, address, address);
-    await afEth.deployed();
 
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
     expect(r1.eq("299482867234169718")).eq(true); // 29.94%
