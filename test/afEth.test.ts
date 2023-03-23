@@ -15,9 +15,7 @@ import { AfEth } from "../typechain-types";
 describe.only("AfEth", async function () {
   let afEth: AfEth;
 
-  before(async () => {
-    const accounts = await ethers.getSigners();
-
+  const deployAfEth = async () => {
     const AfEth = await ethers.getContractFactory("AfEth");
     // The address params dont matter for this test.
     const address = "0x0000000000000000000000000000000000000000";
@@ -31,7 +29,11 @@ describe.only("AfEth", async function () {
       "afETh",
     ])) as AfEth;
     await afEth.deployed();
+  };
 
+  before(async () => {
+    const accounts = await ethers.getSigners();
+    await deployAfEth();
     const crvPool = new ethers.Contract(
       CRV_POOL_FACTORY,
       crvPoolAbi,
@@ -98,7 +100,7 @@ describe.only("AfEth", async function () {
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
-
+    await deployAfEth();
 
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
     expect(r1.eq("299482867234169718")).eq(true); // 29.94%

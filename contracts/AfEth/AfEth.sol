@@ -101,6 +101,7 @@ contract AfEth is
         string memory _tokenSymbol
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
+        _transferOwnership(msg.sender);
 
         afETH = _token;
         CVXNFT = _cvxNft;
