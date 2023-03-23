@@ -64,7 +64,7 @@ contract AfEth is ERC1155Holder, Ownable {
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
 
-    address public constant SNAPSHOT_DELEGATE_REGISTRY = 0x469788fe6e9e9681c6ebf3bf78e7fd26fc015446;
+    address public constant SNAPSHOT_DELEGATE_REGISTRY = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
