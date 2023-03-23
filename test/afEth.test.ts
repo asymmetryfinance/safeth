@@ -5,7 +5,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 
-describe.only("AfEth", async function () {
+describe("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const AfEth = await ethers.getContractFactory("AfEth");
     // The address params dont matter for this test.
