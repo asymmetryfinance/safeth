@@ -181,33 +181,19 @@ contract AfEth is
         return uint256(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
     }
 
-    function getAsymmetryRatio() public view returns (uint256 ratio) {
-        uint256 crvPrice = getCrvPriceData();
+    function getAsymmetryRatio(
+        uint256 apy
+    ) public view returns (uint256 ratio) {
         uint256 cvxPrice = getCvxPriceData();
-        uint256 cvxSupply = IERC20(CVX).totalSupply();
-        uint256 tvl = 10000000; // TODO: Should be ETH/afETH pool tvl
-        uint256 apy = 1500;
-        uint256 offset = 30;
-
-        // 1597471200 - represents Aug 15th 2020 when curve was initialized
-        // 31556926 - represents 1 year including leap years
+        uint256 crvPrice = getCrvPriceData();
         uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
-        uint256 crvPerDay = emissionsPerYear[emissionYear] / 365;
-
-        uint256 yearly_minted_crv_per_cvx = ((crvPerDay * 10 ** offset) /
-            cvxSupply) *
-            365 *
-            uint256(crvPrice);
-
-        uint256 cvx_amount = ((((apy + 10000) * (tvl / 10000)) - tvl) *
-            10 ** offset) / yearly_minted_crv_per_cvx;
-
-        uint256 allocationPercentage = (((((cvx_amount * uint256(cvxPrice)) /
-            10 ** 18) * 10000) /
-            (tvl + ((cvx_amount * uint256(cvxPrice)) / 10 ** 18))) * 10000) /
-            10000;
-
-        return allocationPercentage;
+        uint256 totalUsdEmissionsPerYear = (emissionsPerYear[emissionYear] *
+            crvPrice);
+        uint256 cvxAmount = (((apy) * IERC20(CVX).totalSupply()) /
+            totalUsdEmissionsPerYear);
+        uint256 cvxAmountUsdValue = (cvxAmount * uint256(cvxPrice));
+        return
+            (cvxAmountUsdValue) / (10 ** 18 + (cvxAmountUsdValue / 10 ** 18));
     }
 
     function swapExactInputSingleHop(
