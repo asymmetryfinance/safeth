@@ -64,7 +64,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
 
-    address public constant SNAPSHOT_DELEGATE_REGISTRY = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+    address public constant SNAPSHOT_DELEGATE_REGISTRY =
+        0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
@@ -100,7 +101,11 @@ contract AfEth is ERC1155Holder, Ownable {
 
         // Assumes AfEth contract owns the vote locked convex
         // This will need to be done differently if other contracts own or wrap the vote locked convex
-        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(0x6376782e65746800000000000000000000000000000000000000000000000000, owner());
+        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
+        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
+            vlCvxVoteDelegationId,
+            owner()
+        );
     }
 
     function getCvxPriceData() public view returns (uint256) {

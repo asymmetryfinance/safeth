@@ -137,9 +137,11 @@ describe("AfEth", async function () {
       accounts[0]
     );
 
+    const vlCvxVoteDelegationId =
+      "0x6376782e65746800000000000000000000000000000000000000000000000000";
     const voter = await snapshotDelegateRegistry.delegation(
       afEth.address,
-      "0x6376782e65746800000000000000000000000000000000000000000000000000"
+      vlCvxVoteDelegationId
     );
 
     expect(voter).eq(accounts[0].address);
