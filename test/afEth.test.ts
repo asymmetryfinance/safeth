@@ -26,6 +26,7 @@ describe.only("AfEth", async function () {
       address,
       address,
       address,
+      address,
       "Asymmetry Finance ETH",
       "afETh",
     ])) as AfEth;
@@ -65,11 +66,11 @@ describe.only("AfEth", async function () {
   });
 
   it("Should trigger withdrawing of vlCVX rewards", async function () {
-    // const AfEth = await ethers.getContractFactory("AfEth");
-    // // The address params dont matter for this test.
-    // const address = "0x0000000000000000000000000000000000000000";
-    // const afEth = await AfEth.deploy(address, address, address, address);
-    // await afEth.deployed();
+    const AfEth = await ethers.getContractFactory("AfEth");
+    // The address params dont matter for this test.
+    const address = "0x0000000000000000000000000000000000000000";
+    const afEth = await AfEth.deploy(address, address, address, address);
+    await afEth.deployed();
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",

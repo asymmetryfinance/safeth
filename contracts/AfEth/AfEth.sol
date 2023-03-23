@@ -77,6 +77,7 @@ contract AfEth is
     address CVXNFT;
     address bundleNFT;
     address crvPool;
+    address safEth;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -95,6 +96,7 @@ contract AfEth is
         address _cvxNft,
         address _bundleNft,
         address _crvPool,
+        address _safEth,
         string memory _tokenName,
         string memory _tokenSymbol
     ) external initializer {
@@ -104,6 +106,7 @@ contract AfEth is
         CVXNFT = _cvxNft;
         bundleNFT = _bundleNft;
         crvPool = _crvPool;
+        safEth = _safEth;
 
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
@@ -131,6 +134,7 @@ contract AfEth is
         );
 
         uint256 afEthAmount = ethAmount;
+        uint256 safEthAmount = ethAmount; // mint safETH
         _mint(address(this), afEthAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
