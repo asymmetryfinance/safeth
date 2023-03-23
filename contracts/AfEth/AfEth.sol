@@ -16,6 +16,7 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
+import "./interfaces/ISafEth.sol";
 import "hardhat/console.sol";
 
 contract AfEth is
@@ -129,13 +130,17 @@ contract AfEth is
 
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
+
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
 
+
+        // TODO: return mint amount
+        ISafEth(safEth).stake{value: ethAmount}();
         uint256 afEthAmount = ethAmount;
-        uint256 safEthAmount = ethAmount; // mint safETH
+
         _mint(address(this), afEthAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
@@ -143,12 +148,6 @@ contract AfEth is
             afEthAmount
         );
 
-        // TODO: mint a bundle NFT
-        // uint256 bundleNftId = mintBundleNft(
-        //     currentCvxNftId,
-        //     amountCvxLocked,
-        //     balLpAmount
-        // );
 
         // storage of individual balances associated w/ user deposit
         // This calculation doesn't update when afETH is transferred between wallets
@@ -286,21 +285,6 @@ contract AfEth is
         return (mintedCvx1155, newCvxNftId);
     }
 
-    function mintBundleNft(
-        uint256 cvxNftId,
-        uint256 cvxAmount
-    ) private returns (uint256 id) {
-        uint256 newBundleNftId = ++currentBundleNftId;
-        // IAfBundle1155(bundleNFT).mint(
-        //     cvxNftId,
-        //     cvxAmount,
-        //     newBundleNftId,
-        //     address(this)
-        // );
-        // positions[currentDepositor] = newBundleNftId;
-        return (newBundleNftId);
-    }
-
     // user selection in front-end:
     // True - user is transferred the 1155 NFT holding their CVX deposit
     // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
@@ -334,15 +318,6 @@ contract AfEth is
             // fee schedule:
             //
         }
-    }
-
-    function burnBundleNFT(address user) private {
-        uint256[2] memory ids;
-        uint256[2] memory amounts;
-        ids[0] = positions[user].bundleNFTID;
-        ids[1] = positions[user].cvxNFTID;
-        amounts[1] = positions[user].convexBalances;
-        // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
     }
 
     function claimRewards(uint256 maxSlippage) public onlyOwner {
