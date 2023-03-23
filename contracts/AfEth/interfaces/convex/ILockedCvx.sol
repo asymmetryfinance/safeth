@@ -88,4 +88,6 @@ interface ILockedCvx {
     function shutdown() external;
 
     function recoverERC20(address _tokenAddress, uint256 _tokenAmount) external;
+
+    function setDelegate(bytes32 id, address delegate) external;
 }
