@@ -76,6 +76,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address bundleNFT;
     address crvPool;
 
+    event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+
     constructor(
         address _token,
         address _cvxNft,
@@ -113,6 +115,7 @@ contract AfEth is ERC1155Holder, Ownable {
         uint256 emissions
     ) public onlyOwner {
         emissionsPerYear[year] = emissions;
+        emit SetEmissionsPerYear(year, emissions);
     }
 
     function getCvxPriceData() public view returns (uint256) {
