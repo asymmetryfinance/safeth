@@ -30,7 +30,7 @@ contract AfEth is ERC1155Holder, Ownable {
     }
 
     // curve emissions based on year
-    mapping(uint256 => uint256) private emissionsPerYear;
+    mapping(uint256 => uint256) public emissionsPerYear;
     // map user address to Position struct
     mapping(address => Position) public positions;
 
@@ -76,6 +76,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address bundleNFT;
     address crvPool;
 
+    event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+
     constructor(
         address _token,
         address _cvxNft,
@@ -106,6 +108,14 @@ contract AfEth is ERC1155Holder, Ownable {
             vlCvxVoteDelegationId,
             owner()
         );
+    }
+
+    function setEmissionsPerYear(
+        uint256 year,
+        uint256 emissions
+    ) public onlyOwner {
+        emissionsPerYear[year] = emissions;
+        emit SetEmissionsPerYear(year, emissions);
     }
 
     function getCvxPriceData() public view returns (uint256) {
