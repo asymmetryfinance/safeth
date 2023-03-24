@@ -10,7 +10,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
-describe.only("AfEth", async function () {
+describe("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const AfEth = await ethers.getContractFactory("AfEth");
     // The address params dont matter for this test.
@@ -153,7 +153,7 @@ describe.only("AfEth", async function () {
   });
 });
 
-it.only("Should update emissions per year", async function () {
+it("Should update emissions per year", async function () {
   const AfEth = await ethers.getContractFactory("AfEth");
   // The address params dont matter for this test.
   const address = "0x0000000000000000000000000000000000000000";
