@@ -108,7 +108,10 @@ contract AfEth is ERC1155Holder, Ownable {
         );
     }
 
-    function setEmissionsPerYear(uint256 year, uint256 emissions) public onlyOwner {
+    function setEmissionsPerYear(
+        uint256 year,
+        uint256 emissions
+    ) public onlyOwner {
         emissionsPerYear[year] = emissions;
     }
 
