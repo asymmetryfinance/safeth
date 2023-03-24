@@ -265,6 +265,33 @@ contract AfEth is
         IAfEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
+    // function mintBundleNft(
+    //     uint256 cvxNftId,
+    //     uint256 cvxAmount,
+    //     uint256 balPoolTokens
+    // ) private returns (uint256 id) {
+    //     uint256 newBundleNftId = ++currentBundleNftId;
+    //     // IAfBundle1155(bundleNFT).mint(
+    //     //     cvxNftId,
+    //     //     cvxAmount,
+    //     //     newBundleNftId,
+    //     //     balPoolTokens,
+    //     //     address(this)
+    //     // );
+    //     // positions[currentDepositor] = newBundleNftId;
+    //     // bundleNFtBalances[newBundleNftId] = balPoolTokens;
+    //     return (newBundleNftId);
+    // }
+
+    // function burnBundleNFT(address user) private {
+    //     uint256[2] memory ids;
+    //     uint256[2] memory amounts;
+    //     ids[0] = positions[user].bundleNFTID;
+    //     ids[1] = positions[user].cvxNFTID;
+    //     amounts[1] = positions[user].convexBalances;
+    //     // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+    // }
+
     function mintCvxNft(
         address sender,
         uint256 _amountLocked
