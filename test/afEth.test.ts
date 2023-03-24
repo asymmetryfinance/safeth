@@ -13,7 +13,7 @@ import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
 import { AfCVX1155, AfEth } from "../typechain-types";
-import { vlCvxAbi } from "./abi/vlcvxAbi";
+import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
