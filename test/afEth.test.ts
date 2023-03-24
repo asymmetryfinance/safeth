@@ -10,7 +10,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
-describe("AfEth", async function () {
+describe.only("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const AfEth = await ethers.getContractFactory("AfEth");
     // The address params dont matter for this test.
@@ -153,16 +153,21 @@ describe("AfEth", async function () {
   });
 });
 
-it("Should update emissions per year", async function () {
+it.only("Should update emissions per year", async function () {
   const AfEth = await ethers.getContractFactory("AfEth");
   // The address params dont matter for this test.
   const address = "0x0000000000000000000000000000000000000000";
   const afEth = await AfEth.deploy(address, address, address, address);
   await afEth.deployed();
 
-  const year0EmissionsBefore = afEth.emissionsPerYear(0);
-  await afEth.setEmissionsPerYear(0, 123);
+  const year0EmissionsBefore = await afEth.emissionsPerYear(0);
 
+  const tx = await afEth.setEmissionsPerYear(0, 1234567890);
+  await tx.wait();
+  const year0EmissionsAfter = await afEth.emissionsPerYear(0);
+
+  expect(year0EmissionsBefore).eq(BigNumber.from(0));
+  expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));
 });
 
 const resetToBlock = async (blockNumber: number) => {
