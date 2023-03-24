@@ -153,6 +153,18 @@ describe("AfEth", async function () {
   });
 });
 
+it("Should update emissions per year", async function () {
+  const AfEth = await ethers.getContractFactory("AfEth");
+  // The address params dont matter for this test.
+  const address = "0x0000000000000000000000000000000000000000";
+  const afEth = await AfEth.deploy(address, address, address, address);
+  await afEth.deployed();
+
+  const year0EmissionsBefore = afEth.emissionsPerYear(0);
+  await afEth.setEmissionsPerYear(0, 123);
+
+});
+
 const resetToBlock = async (blockNumber: number) => {
   await network.provider.request({
     method: "hardhat_reset",
