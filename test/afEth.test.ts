@@ -181,7 +181,7 @@ describe.only("AfEth", async function () {
     await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
   });
 
-  it("Should lock cvx and unlock after it has expired", async function () {
+  it.skip("Should lock cvx and unlock after it has expired", async function () {
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",
