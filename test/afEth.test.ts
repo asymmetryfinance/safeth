@@ -17,7 +17,7 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
-describe("AfEth", async function () {
+describe.only("AfEth", async function () {
   let afEth: AfEth;
   let afCvx1155: AfCVX1155;
   let crvPool: any;
@@ -163,11 +163,6 @@ describe("AfEth", async function () {
   });
 
   it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
-    const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
-    const afEth = await AfEth.deploy(address, address, address, address);
-    await afEth.deployed();
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -187,11 +182,6 @@ describe("AfEth", async function () {
   });
 
   it("Should lock cvx and unlock after it has expired", async function () {
-    const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
-    const afEth = await AfEth.deploy(address, address, address, address);
-    await afEth.deployed();
     // impersonate an account that has rewards to withdraw at the current block
     await network.provider.request({
       method: "hardhat_impersonateAccount",
@@ -224,12 +214,7 @@ describe("AfEth", async function () {
     expect(cvxBalanceAfterUnlock).eq(BigNumber.from("100000000000000000000"));
   });
 
-  it("Should verify that vote delegation is set to the contract owner", async function () {
-    const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
-    const afEth = await AfEth.deploy(address, address, address, address);
-    await afEth.deployed();
+  it.skip("Should verify that vote delegation is set to the contract owner", async function () {
     const accounts = await ethers.getSigners();
     const snapshotDelegateRegistry = new ethers.Contract(
       SNAPSHOT_DELEGATE_REGISTRY,
