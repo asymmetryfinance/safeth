@@ -8,5 +8,3 @@ interface ISafEth {
 
     function unstake(uint256 _safEthAmount) external;
 }
-
-
