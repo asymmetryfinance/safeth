@@ -25,6 +25,9 @@ contract AfEth is
     ERC1155Holder,
     OwnableUpgradeable
 {
+    event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
+
+
     struct Position {
         uint256 positionID;
         uint256 curveBalances; // crv Pool LP amount
@@ -93,10 +96,8 @@ contract AfEth is
         @param _tokenSymbol - symbol of erc20
     */
     function initialize(
-        address _token,
         address _cvxNft,
         address _bundleNft,
-        address _crvPool,
         address _safEth,
         string memory _tokenName,
         string memory _tokenSymbol
@@ -104,10 +105,8 @@ contract AfEth is
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         _transferOwnership(msg.sender);
 
-        afETH = _token;
         CVXNFT = _cvxNft;
         bundleNFT = _bundleNft;
-        crvPool = _crvPool;
         safEth = _safEth;
 
         // emissions of CRV per year
@@ -123,9 +122,9 @@ contract AfEth is
         emissionsPerYear[10] = 57772796;
     }
 
-    function stake() public payable {
-        uint256 ratio = getAsymmetryRatio(150000000000000000);
-        uint256 cvxAmount = (msg.value * ratio) / 10000;
+    function stake() external payable {
+        uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
+        uint256 cvxAmount = (msg.value * ratio) / 10 ** 18;
         uint256 ethAmount = (msg.value - cvxAmount) / 2;
 
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
@@ -136,18 +135,17 @@ contract AfEth is
             amountCvxLocked
         );
 
-
-        // TODO: return mint amount
+        // TODO: return mint amount from stake function
         ISafEth(safEth).stake{value: ethAmount}();
         uint256 afEthAmount = ethAmount;
 
         _mint(address(this), afEthAmount);
+
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             ethAmount,
             afEthAmount
         );
-
 
         // storage of individual balances associated w/ user deposit
         // This calculation doesn't update when afETH is transferred between wallets
@@ -155,7 +153,7 @@ contract AfEth is
         positions[msg.sender] = Position({
             positionID: newPositionID,
             curveBalances: crvLpAmount,
-            convexBalances: amountCvxLocked,
+            convexBalances: cvxNftBalance,
             cvxNFTID: _cvxNFTID,
             bundleNFTID: 0, //bundleNftId,
             afETH: afEthAmount,
@@ -201,7 +199,7 @@ contract AfEth is
         address tokenOut,
         uint24 poolFee,
         uint256 amountIn
-    ) public returns (uint256 amountOut) {
+    ) private returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(swapRouter), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -216,7 +214,7 @@ contract AfEth is
         amountOut = swapRouter.exactInputSingle(params);
     }
 
-    function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
+    function swapCvx(uint256 amount) private returns (uint256 amountOut) {
         IWETH(wETH).deposit{value: amount}();
         uint256 amountSwapped = swapExactInputSingleHop(
             wETH,
@@ -227,7 +225,6 @@ contract AfEth is
         return amountSwapped;
     }
 
-    // TODO does this need to be public???
     function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
@@ -243,14 +240,12 @@ contract AfEth is
         address _pool,
         uint256 _ethAmount,
         uint256 _afEthAmount
-    ) public returns (uint256 mint) {
+    ) private returns (uint256 mintAmount) {
         require(_ethAmount <= address(this).balance, "Not Enough ETH");
 
         IWETH(wETH).deposit{value: _ethAmount}();
         IWETH(wETH).approve(_pool, _ethAmount);
-
-        // IAfETH afEthToken = IAfETH(afETH);
-        // afEthToken.approve(_pool, _afEthAmount);
+        _approve(address(this), _pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
@@ -261,7 +256,7 @@ contract AfEth is
         return (poolTokensMinted);
     }
 
-    function withdrawCRVPool(address _pool, uint256 _amount) public {
+    function withdrawCRVPool(address _pool, uint256 _amount) private {
         address afETHPool = _pool;
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
@@ -282,6 +277,7 @@ contract AfEth is
             address(this),
             newCvxNftId
         );
+
         return (mintedCvx1155, newCvxNftId);
     }
 
@@ -318,6 +314,11 @@ contract AfEth is
             // fee schedule:
             //
         }
+    }
+
+    function updateCrvPool(address _crvPool) public onlyOwner {
+        emit UpdateCrvPool(_crvPool, crvPool);
+        crvPool = _crvPool;
     }
 
     function claimRewards(uint256 maxSlippage) public onlyOwner {

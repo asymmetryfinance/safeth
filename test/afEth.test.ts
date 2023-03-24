@@ -15,30 +15,41 @@ import { AfEth } from "../typechain-types";
 describe.only("AfEth", async function () {
   let afEth: AfEth;
 
-  const deployAfEth = async () => {
+  const deployContracts = async () => {
+    const AfCVX1155 = await ethers.getContractFactory("AfCVX1155");
+    const afCvx1155 = await AfCVX1155.deploy();
+    await afCvx1155.deployed();
+
+    const SafEth = await ethers.getContractFactory("SafEth");
+    const safEth = await upgrades.deployProxy(SafEth, [
+      "Asymmetry Finance ETH",
+      "safETH",
+    ]);
+    await safEth.deployed();
+
     const AfEth = await ethers.getContractFactory("AfEth");
-    // The address params dont matter for this test.
-    const address = "0x0000000000000000000000000000000000000000";
+    const address = ethers.constants.AddressZero;
     afEth = (await upgrades.deployProxy(AfEth, [
+      afCvx1155.address,
       address,
-      address,
-      address,
-      address,
-      address,
+      safEth.address,
       "Asymmetry Finance ETH",
       "afETh",
     ])) as AfEth;
     await afEth.deployed();
+
+    await afCvx1155.initialize(afEth.address);
   };
 
   before(async () => {
     const accounts = await ethers.getSigners();
-    await deployAfEth();
     const crvPool = new ethers.Contract(
       CRV_POOL_FACTORY,
       crvPoolAbi,
       accounts[0]
     );
+
+    await deployContracts();
 
     const deployCrv = await crvPool.deploy_pool(
       "Asymmetry Finance ETH",
@@ -63,8 +74,12 @@ describe.only("AfEth", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-
-    console.log("afEthCrvPoolAddress", afEthCrvPoolAddress);
+    console.log(afEthCrvPoolAddress);
+    await afEth.updateCrvPool(afEthCrvPoolAddress);
+  });
+  it("Should stake", async function () {
+    const depositAmount = ethers.utils.parseEther("200");
+    const tx1 = await afEth.stake({ value: depositAmount });
   });
 
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -100,7 +115,7 @@ describe.only("AfEth", async function () {
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
-    await deployAfEth();
+    await deployContracts();
 
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
     expect(r1.eq("299482867234169718")).eq(true); // 29.94%
