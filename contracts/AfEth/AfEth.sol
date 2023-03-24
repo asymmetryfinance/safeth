@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
+import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
@@ -63,6 +64,9 @@ contract AfEth is ERC1155Holder, Ownable {
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
 
+    address public constant SNAPSHOT_DELEGATE_REGISTRY =
+        0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+
     // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
     // Bundle NFT ID starts at 100 // TODO: why?
@@ -94,6 +98,14 @@ contract AfEth is ERC1155Holder, Ownable {
         emissionsPerYear[8] = 81703072;
         emissionsPerYear[9] = 68703820;
         emissionsPerYear[10] = 57772796;
+
+        // Assumes AfEth contract owns the vote locked convex
+        // This will need to be done elseware if other contracts own or wrap the vote locked convex
+        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
+        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
+            vlCvxVoteDelegationId,
+            owner()
+        );
     }
 
     function getCvxPriceData() public view returns (uint256) {

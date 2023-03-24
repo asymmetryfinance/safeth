@@ -1,9 +1,14 @@
 import { ethers, network, waffle } from "hardhat";
-import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
+import {
+  CVX_ADDRESS,
+  CVX_WHALE,
+  SNAPSHOT_DELEGATE_REGISTRY,
+} from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
+import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
 describe("AfEth", async function () {
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -121,6 +126,30 @@ describe("AfEth", async function () {
     const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
 
     expect(cvxBalanceAfterUnlock).eq(BigNumber.from("100000000000000000000"));
+  });
+
+  it("Should verify that vote delegation is set to the contract owner", async function () {
+    const AfEth = await ethers.getContractFactory("AfEth");
+    // The address params dont matter for this test.
+    const address = "0x0000000000000000000000000000000000000000";
+    const afEth = await AfEth.deploy(address, address, address, address);
+    await afEth.deployed();
+    const accounts = await ethers.getSigners();
+    const snapshotDelegateRegistry = new ethers.Contract(
+      SNAPSHOT_DELEGATE_REGISTRY,
+      snapshotDelegationRegistryAbi,
+      accounts[0]
+    );
+
+    const vlCvxVoteDelegationId =
+      "0x6376782e65746800000000000000000000000000000000000000000000000000";
+    const voter = await snapshotDelegateRegistry.delegation(
+      afEth.address,
+      vlCvxVoteDelegationId
+    );
+
+    expect(voter).eq(accounts[0].address);
+    expect(voter).eq(await afEth.owner());
   });
 });
 
