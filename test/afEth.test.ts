@@ -3,21 +3,26 @@ import {
   CRV_POOL_FACTORY,
   CVX_ADDRESS,
   CVX_WHALE,
+  VL_CVX,
   WETH_ADDRESS,
 } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { crvPoolAbi } from "./abi/crvPoolAbi";
+import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
-import { AfEth } from "../typechain-types";
+import { AfCVX1155, AfEth } from "../typechain-types";
+import { vlCvxAbi } from "./abi/vlcvxAbi";
+import { crvPoolAbi } from "./abi/crvPoolAbi";
 
-describe.only("AfEth", async function () {
+describe("AfEth", async function () {
   let afEth: AfEth;
+  let afCvx1155: AfCVX1155;
+  let crvPool: any;
 
   const deployContracts = async () => {
     const AfCVX1155 = await ethers.getContractFactory("AfCVX1155");
-    const afCvx1155 = await AfCVX1155.deploy();
+    afCvx1155 = await AfCVX1155.deploy();
     await afCvx1155.deployed();
 
     const SafEth = await ethers.getContractFactory("SafEth");
@@ -43,15 +48,15 @@ describe.only("AfEth", async function () {
 
   before(async () => {
     const accounts = await ethers.getSigners();
-    const crvPool = new ethers.Contract(
+    const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,
-      crvPoolAbi,
+      crvPoolFactoryAbi,
       accounts[0]
     );
 
     await deployContracts();
 
-    const deployCrv = await crvPool.deploy_pool(
+    const deployCrv = await crvPoolFactory.deploy_pool(
       "Asymmetry Finance ETH",
       "afETH",
       [afEth.address, WETH_ADDRESS],
@@ -74,12 +79,40 @@ describe.only("AfEth", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    console.log(afEthCrvPoolAddress);
+    crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     await afEth.updateCrvPool(afEthCrvPoolAddress);
   });
   it("Should stake", async function () {
-    const depositAmount = ethers.utils.parseEther("200");
-    const tx1 = await afEth.stake({ value: depositAmount });
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+
+    const stakeTx = await afEth.stake({ value: depositAmount });
+    await stakeTx.wait();
+
+    // verify vlCVX
+    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
+    expect(vlCvxBalance).eq(BigNumber.from("475549709557732453023"));
+
+    // check for cvx nft
+    const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
+    expect(cvxNftAmount).eq(BigNumber.from("475549709557732453023"));
+
+    // check crv liquidity pool
+    const crvPoolAfEthAmount = await crvPool.balances(0);
+    const crvPoolEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("1751292831914575705");
+    expect(crvPoolEthAmount).eq("1751292831914575705");
+
+    // check position struct
+    const positions = await afEth.positions(accounts[0].address);
+    expect(positions.afETH).eq(BigNumber.from("1751292831914575705"));
+    expect(positions.cvxNFTID).eq(BigNumber.from("1"));
+    expect(positions.positionID).eq(BigNumber.from("1"));
+    expect(positions.curveBalances).eq(BigNumber.from("1751292831914575705"));
+    expect(positions.convexBalances).eq(
+      BigNumber.from("475549709557732453023")
+    );
   });
 
   it("Should trigger withdrawing of vlCVX rewards", async function () {

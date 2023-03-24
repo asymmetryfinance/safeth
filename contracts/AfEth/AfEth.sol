@@ -27,7 +27,6 @@ contract AfEth is
 {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
 
-
     struct Position {
         uint256 positionID;
         uint256 curveBalances; // crv Pool LP amount
@@ -149,13 +148,14 @@ contract AfEth is
 
         // storage of individual balances associated w/ user deposit
         // This calculation doesn't update when afETH is transferred between wallets
+        // if we can not need this that'd be great, Maybe the bundle nft can handle the acounting from this
         uint256 newPositionID = ++currentPositionId;
         positions[msg.sender] = Position({
             positionID: newPositionID,
             curveBalances: crvLpAmount,
             convexBalances: cvxNftBalance,
             cvxNFTID: _cvxNFTID,
-            bundleNFTID: 0, //bundleNftId,
+            bundleNFTID: 0, // maybe not needed yet,
             afETH: afEthAmount,
             createdAt: block.timestamp
         });
@@ -271,6 +271,7 @@ contract AfEth is
     ) private returns (uint256 balance, uint256 nftId) {
         uint256 amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
+
         IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
         positions[sender].cvxNFTID = newCvxNftId;
         uint256 mintedCvx1155 = IAfCVX1155(CVXNFT).balanceOf(
