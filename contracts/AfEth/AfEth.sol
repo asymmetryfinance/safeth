@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
+import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "./interfaces/convex/ILockedCvx.sol";
 import "./interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
@@ -73,6 +74,8 @@ contract AfEth is
         0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant SNAPSHOT_DELEGATE_REGISTRY =
+        0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
     uint256 currentCvxNftId;
     uint256 currentBundleNftId;
@@ -119,6 +122,14 @@ contract AfEth is
         emissionsPerYear[8] = 81703072;
         emissionsPerYear[9] = 68703820;
         emissionsPerYear[10] = 57772796;
+
+        // Assumes AfEth contract owns the vote locked convex
+        // This will need to be done elseware if other contracts own or wrap the vote locked convex
+        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
+        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
+            vlCvxVoteDelegationId,
+            owner()
+        );
     }
 
     function stake() external payable {
@@ -438,6 +449,11 @@ contract AfEth is
         }
 
         return;
+    }
+
+    // TODO make this function private once we figure out a solution for unlocking
+    function unlockCvx() public {
+        ILockedCvx(vlCVX).processExpiredLocks(false);
     }
 
     receive() external payable {}
