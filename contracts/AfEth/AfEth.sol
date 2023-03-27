@@ -360,7 +360,7 @@ contract AfEth is
         crvPool = _crvPool;
     }
 
-    function claimRewards(uint256 maxSlippage) public onlyOwner {
+    function claimRewards(uint256 _maxSlippage) public onlyOwner {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,
@@ -379,7 +379,7 @@ contract AfEth is
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
             ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
@@ -399,7 +399,7 @@ contract AfEth is
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
@@ -418,7 +418,7 @@ contract AfEth is
             uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
             ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
@@ -437,7 +437,7 @@ contract AfEth is
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
             ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
