@@ -451,7 +451,8 @@ contract AfEth is
         return;
     }
 
-    function unlockCvx() private {
+    // TODO make this function private once we figure out a solution for unlocking
+    function unlockCvx() public {
         ILockedCvx(vlCVX).processExpiredLocks(false);
     }
 

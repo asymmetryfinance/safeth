@@ -120,88 +120,76 @@ describe("AfEth", async function () {
       BigNumber.from("476215987701345784134")
     );
   });
+  it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
+    // impersonate an account that has rewards to withdraw at the current block
+    const depositAmount = ethers.utils.parseEther("5");
 
-  // it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
-  //   // impersonate an account that has rewards to withdraw at the current block
-  //   await network.provider.request({
-  //     method: "hardhat_impersonateAccount",
-  //     params: [CVX_WHALE],
-  //   });
-  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
-  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
+    const stakeTx = await afEth.stake({ value: depositAmount });
+    await stakeTx.wait();
 
-  //   const cvxAmount = ethers.utils.parseEther("100");
-  //   await cvx.transfer(afEth.address, cvxAmount);
+    await time.increase(1000);
 
-  //   const tx1 = await afEth.lockCvx(cvxAmount);
-  //   await tx1.wait();
-  //   await time.increase(1000);
+    await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
+  });
+  it("Should lock cvx and unlock after it has expired", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [CVX_WHALE],
+    });
+    const whaleSigner = await ethers.getSigner(CVX_WHALE);
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
-  //   await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
-  // });
+    const stakeTx = await afEth.stake({ value: depositAmount });
+    await stakeTx.wait();
 
-  // it("Should lock cvx and unlock after it has expired", async function () {
-  //   // impersonate an account that has rewards to withdraw at the current block
-  //   await network.provider.request({
-  //     method: "hardhat_impersonateAccount",
-  //     params: [CVX_WHALE],
-  //   });
-  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
-  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
+    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
+    expect(vlCvxBalance).eq(BigNumber.from("475549709557732453023"));
 
-  //   const cvxAmount = ethers.utils.parseEther("100");
-  //   await cvx.transfer(afEth.address, cvxAmount);
+    const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
+    expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
 
-  //   const cvxBalanceBeforeLock = await cvx.balanceOf(afEth.address);
+    await time.increase(12960000); // 5 months (locks expire in 4)
 
-  //   expect(cvxBalanceBeforeLock).eq(BigNumber.from("100000000000000000000"));
+    const tx2 = await afEth.unlockCvx();
+    await tx2.wait();
 
-  //   const tx1 = await afEth.lockCvx(cvxAmount);
-  //   await tx1.wait();
+    const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
+    expect(cvxBalanceAfterUnlock).eq(BigNumber.from("475549709557732453023"));
+  });
+  it("Should trigger withdrawing of vlCVX rewards", async function () {
+    const depositAmount = ethers.utils.parseEther("5");
+    // impersonate an account that has rewards to withdraw at the current block
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [CVX_WHALE],
+    });
+    const whaleSigner = await ethers.getSigner(CVX_WHALE);
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
-  //   const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
+    const cvxAmount = ethers.utils.parseEther("100");
+    await cvx.transfer(afEth.address, cvxAmount);
 
-  //   expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
+    const stakeTx = await afEth.stake({ value: depositAmount });
+    await stakeTx.wait();
 
-  //   await time.increase(12960000); // 5 months (locks expire in 4)
+    await time.increase(1000);
 
-  //   const tx2 = await afEth.unlockCvx();
-  //   await tx2.wait();
+    const provider = waffle.provider;
+    const startingBalance = await provider.getBalance(afEth.address);
 
-  //   const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
+    const tx2 = await afEth.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
+    await tx2.wait();
+    const endingBalance = await provider.getBalance(afEth.address);
 
-  //   expect(cvxBalanceAfterUnlock).eq(BigNumber.from("100000000000000000000"));
-  // });
+    expect(endingBalance.gt(startingBalance)).eq(true);
 
-  // it("Should trigger withdrawing of vlCVX rewards", async function () {
-  //   // impersonate an account that has rewards to withdraw at the current block
-  //   await network.provider.request({
-  //     method: "hardhat_impersonateAccount",
-  //     params: [CVX_WHALE],
-  //   });
-  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
-  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-  //   const cvxAmount = ethers.utils.parseEther("100");
-  //   await cvx.transfer(afEth.address, cvxAmount);
-
-  //   const tx1 = await afEth.lockCvx(cvxAmount);
-  //   await tx1.wait();
-  //   await time.increase(1000);
-
-  //   const provider = waffle.provider;
-  //   const startingBalance = await provider.getBalance(afEth.address);
-
-  //   const tx2 = await afEth.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
-  //   await tx2.wait();
-  //   const endingBalance = await provider.getBalance(afEth.address);
-
-  //   expect(endingBalance.gt(startingBalance)).eq(true);
-
-  //   await expect(
-  //     afEth.claimRewards(ethers.utils.parseEther("0.0000001")) // very low slippage reverts
-  //   ).to.be.reverted;
-  // });
+    await expect(
+      afEth.claimRewards(ethers.utils.parseEther("0.0000001")) // very low slippage reverts
+    ).to.be.reverted;
+  });
 
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
