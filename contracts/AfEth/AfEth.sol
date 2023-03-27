@@ -3,7 +3,8 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
@@ -16,9 +17,17 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
+import "./interfaces/ISafEth.sol";
 import "hardhat/console.sol";
 
-contract AfEth is ERC1155Holder, Ownable {
+contract AfEth is
+    Initializable,
+    ERC20Upgradeable,
+    ERC1155Holder,
+    OwnableUpgradeable
+{
+    event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
+
     struct Position {
         uint256 positionID;
         uint256 curveBalances; // crv Pool LP amount
@@ -48,6 +57,8 @@ contract AfEth is ERC1155Holder, Ownable {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    uint256 currentPositionId;
+
     address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
 
     address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
@@ -63,29 +74,42 @@ contract AfEth is ERC1155Holder, Ownable {
         0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
-    // cvx NFT ID starts at 0
     uint256 currentCvxNftId;
-    // Bundle NFT ID starts at 100 // TODO: why?
-    uint256 currentBundleNftId = 100;
+    uint256 currentBundleNftId;
     address afETH;
     address CVXNFT;
     address bundleNFT;
     address crvPool;
+    address safEth;
 
-    constructor(
-        address _token,
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+        @notice - Function to initialize values for the contracts
+        @dev - This replaces the constructor for upgradeable contracts
+        @param _tokenName - name of erc20
+        @param _tokenSymbol - symbol of erc20
+    */
+    function initialize(
         address _cvxNft,
         address _bundleNft,
-        address _crvPool
-    ) {
-        afETH = _token;
+        address _safEth,
+        string memory _tokenName,
+        string memory _tokenSymbol
+    ) external initializer {
+        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
+        _transferOwnership(msg.sender);
+
         CVXNFT = _cvxNft;
         bundleNFT = _bundleNft;
-        crvPool = _crvPool;
+        safEth = _safEth;
 
         // emissions of CRV per year
         emissionsPerYear[1] = 274815283;
@@ -106,6 +130,46 @@ contract AfEth is ERC1155Holder, Ownable {
             vlCvxVoteDelegationId,
             owner()
         );
+    }
+
+    function stake() external payable {
+        uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
+        uint256 cvxAmount = (msg.value * ratio) / 10 ** 18;
+        uint256 ethAmount = (msg.value - cvxAmount) / 2;
+
+        uint256 cvxAmountReceived = swapCvx(cvxAmount);
+        uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
+
+        (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
+            msg.sender,
+            amountCvxLocked
+        );
+
+        // TODO: return mint amount from stake function
+        ISafEth(safEth).stake{value: ethAmount}();
+        uint256 afEthAmount = ethAmount;
+
+        _mint(address(this), afEthAmount);
+
+        uint256 crvLpAmount = addAfEthCrvLiquidity(
+            crvPool,
+            ethAmount,
+            afEthAmount
+        );
+
+        // storage of individual balances associated w/ user deposit
+        // This calculation doesn't update when afETH is transferred between wallets
+        // if we can not need this that'd be great, Maybe the bundle nft can handle the acounting from this
+        uint256 newPositionID = ++currentPositionId;
+        positions[msg.sender] = Position({
+            positionID: newPositionID,
+            curveBalances: crvLpAmount,
+            convexBalances: cvxNftBalance,
+            cvxNFTID: _cvxNFTID,
+            bundleNFTID: 0, // maybe not needed yet,
+            afETH: afEthAmount,
+            createdAt: block.timestamp
+        });
     }
 
     function getCvxPriceData() public view returns (uint256) {
@@ -146,7 +210,7 @@ contract AfEth is ERC1155Holder, Ownable {
         address tokenOut,
         uint24 poolFee,
         uint256 amountIn
-    ) public returns (uint256 amountOut) {
+    ) private returns (uint256 amountOut) {
         IERC20(tokenIn).approve(address(swapRouter), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -161,7 +225,7 @@ contract AfEth is ERC1155Holder, Ownable {
         amountOut = swapRouter.exactInputSingle(params);
     }
 
-    function swapCvx(uint256 amount) internal returns (uint256 amountOut) {
+    function swapCvx(uint256 amount) private returns (uint256 amountOut) {
         IWETH(wETH).deposit{value: amount}();
         uint256 amountSwapped = swapExactInputSingleHop(
             wETH,
@@ -172,11 +236,10 @@ contract AfEth is ERC1155Holder, Ownable {
         return amountSwapped;
     }
 
-    // TODO does this need to be public???
-    function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
-        uint256 amountOut = _amountOut;
-        IERC20(CVX).approve(vlCVX, amountOut);
-        ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
+    function lockCvx(uint256 _amountToLock) private returns (uint256 amount) {
+        uint256 amountToLock = _amountToLock;
+        IERC20(CVX).approve(vlCVX, amountToLock);
+        ILockedCvx(vlCVX).lock(address(this), amountToLock, 0);
         uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
             address(this)
         );
@@ -188,14 +251,12 @@ contract AfEth is ERC1155Holder, Ownable {
         address _pool,
         uint256 _ethAmount,
         uint256 _afEthAmount
-    ) public returns (uint256 mint) {
+    ) private returns (uint256 mintAmount) {
         require(_ethAmount <= address(this).balance, "Not Enough ETH");
 
         IWETH(wETH).deposit{value: _ethAmount}();
         IWETH(wETH).approve(_pool, _ethAmount);
-
-        // IAfETH afEthToken = IAfETH(afETH);
-        // afEthToken.approve(_pool, _afEthAmount);
+        _approve(address(this), _pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
@@ -206,7 +267,7 @@ contract AfEth is ERC1155Holder, Ownable {
         return (poolTokensMinted);
     }
 
-    function withdrawCRVPool(address _pool, uint256 _amount) public {
+    function withdrawCRVPool(address _pool, uint256 _amount) private {
         address afETHPool = _pool;
         uint256[2] memory min_amounts;
         min_amounts[0] = 0;
@@ -215,37 +276,48 @@ contract AfEth is ERC1155Holder, Ownable {
         IAfEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
     }
 
+    // function mintBundleNft(
+    //     uint256 cvxNftId,
+    //     uint256 cvxAmount,
+    //     uint256 balPoolTokens
+    // ) private returns (uint256 id) {
+    //     uint256 newBundleNftId = ++currentBundleNftId;
+    //     // IAfBundle1155(bundleNFT).mint(
+    //     //     cvxNftId,
+    //     //     cvxAmount,
+    //     //     newBundleNftId,
+    //     //     balPoolTokens,
+    //     //     address(this)
+    //     // );
+    //     // positions[currentDepositor] = newBundleNftId;
+    //     // bundleNFtBalances[newBundleNftId] = balPoolTokens;
+    //     return (newBundleNftId);
+    // }
+
+    // function burnBundleNFT(address user) private {
+    //     uint256[2] memory ids;
+    //     uint256[2] memory amounts;
+    //     ids[0] = positions[user].bundleNFTID;
+    //     ids[1] = positions[user].cvxNFTID;
+    //     amounts[1] = positions[user].convexBalances;
+    //     // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+    // }
+
     function mintCvxNft(
         address sender,
         uint256 _amountLocked
     ) private returns (uint256 balance, uint256 nftId) {
         uint256 amountLocked = _amountLocked;
         uint256 newCvxNftId = ++currentCvxNftId;
+
         IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
         positions[sender].cvxNFTID = newCvxNftId;
         uint256 mintedCvx1155 = IAfCVX1155(CVXNFT).balanceOf(
             address(this),
             newCvxNftId
         );
-        return (mintedCvx1155, newCvxNftId);
-    }
 
-    function mintBundleNft(
-        uint256 cvxNftId,
-        uint256 cvxAmount,
-        uint256 balPoolTokens
-    ) private returns (uint256 id) {
-        uint256 newBundleNftId = ++currentBundleNftId;
-        // IAfBundle1155(bundleNFT).mint(
-        //     cvxNftId,
-        //     cvxAmount,
-        //     newBundleNftId,
-        //     balPoolTokens,
-        //     address(this)
-        // );
-        // positions[currentDepositor] = newBundleNftId;
-        // bundleNFtBalances[newBundleNftId] = balPoolTokens;
-        return (newBundleNftId);
+        return (mintedCvx1155, newCvxNftId);
     }
 
     // user selection in front-end:
@@ -283,16 +355,12 @@ contract AfEth is ERC1155Holder, Ownable {
         }
     }
 
-    function burnBundleNFT(address user) private {
-        uint256[2] memory ids;
-        uint256[2] memory amounts;
-        ids[0] = positions[user].bundleNFTID;
-        ids[1] = positions[user].cvxNFTID;
-        amounts[1] = positions[user].convexBalances;
-        // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
+    function updateCrvPool(address _crvPool) public onlyOwner {
+        emit UpdateCrvPool(_crvPool, crvPool);
+        crvPool = _crvPool;
     }
 
-    function claimRewards(uint256 maxSlippage) public onlyOwner {
+    function claimRewards(uint256 _maxSlippage) public onlyOwner {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,
@@ -311,7 +379,7 @@ contract AfEth is ERC1155Holder, Ownable {
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
             ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
@@ -331,7 +399,7 @@ contract AfEth is ERC1155Holder, Ownable {
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
@@ -350,7 +418,7 @@ contract AfEth is ERC1155Holder, Ownable {
             uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
             ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
@@ -369,7 +437,7 @@ contract AfEth is ERC1155Holder, Ownable {
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - maxSlippage)) / 10 ** 18;
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
 
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
             ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
