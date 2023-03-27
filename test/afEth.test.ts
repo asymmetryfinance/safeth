@@ -22,6 +22,7 @@ describe("AfEth", async function () {
   let afCvx1155: AfCVX1155;
   let crvPool: any;
   let initialHardhatBlock: number;
+  let snapshot: SnapshotRestorer;
 
   const deployContracts = async () => {
     const AfCVX1155 = await ethers.getContractFactory("AfCVX1155");
@@ -49,7 +50,7 @@ describe("AfEth", async function () {
     await afCvx1155.initialize(afEth.address);
   };
 
-  before(async () => {
+  beforeEach(async () => {
     const latestBlock = await ethers.provider.getBlock("latest");
     initialHardhatBlock = latestBlock.number;
     await resetToBlock(initialHardhatBlock);
@@ -120,45 +121,6 @@ describe("AfEth", async function () {
       BigNumber.from("476215987701345784134")
     );
   });
-  it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
-    // impersonate an account that has rewards to withdraw at the current block
-    const depositAmount = ethers.utils.parseEther("5");
-
-    const stakeTx = await afEth.stake({ value: depositAmount });
-    await stakeTx.wait();
-
-    await time.increase(1000);
-
-    await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
-  });
-  it("Should lock cvx and unlock after it has expired", async function () {
-    const accounts = await ethers.getSigners();
-    const depositAmount = ethers.utils.parseEther("5");
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-    const stakeTx = await afEth.stake({ value: depositAmount });
-    await stakeTx.wait();
-
-    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("1422063383685132167064"));
-
-    const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
-    expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
-
-    await time.increase(12960000); // 5 months (locks expire in 4)
-
-    const tx2 = await afEth.unlockCvx();
-    await tx2.wait();
-
-    const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
-    expect(cvxBalanceAfterUnlock).eq(BigNumber.from("1422063383685132167064"));
-  });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // impersonate an account that has rewards to withdraw at the current block
@@ -223,6 +185,22 @@ describe("AfEth", async function () {
 
     expect(voter).eq(accounts[0].address);
     expect(voter).eq(await afEth.owner());
+  });
+
+  it("Should test locking and unlocking cvx positions over various timeframes", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [CVX_WHALE],
+    });
+    const whaleSigner = await ethers.getSigner(CVX_WHALE);
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
+    const stakeTx = await afEth.stake({ value: depositAmount });
+    await stakeTx.wait();
+
+    // TODO test unstaking, unlocking & claiming cvx positions over various timeframes
   });
 });
 

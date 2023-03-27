@@ -19,12 +19,14 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 import "hardhat/console.sol";
+import "./CvxLockManager.sol";
 
 contract AfEth is
     Initializable,
     ERC20Upgradeable,
     ERC1155Holder,
-    OwnableUpgradeable
+    OwnableUpgradeable,
+    CvxLockManager
 {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
 
@@ -53,9 +55,8 @@ contract AfEth is
     ISwapRouter constant swapRouter =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
-    address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
-    address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 currentPositionId;
 
@@ -138,19 +139,17 @@ contract AfEth is
         uint256 ethAmount = (msg.value - cvxAmount) / 2;
 
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
-        uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
-
         (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
             msg.sender,
-            amountCvxLocked
+            cvxAmountReceived
         );
+        openCvxPosition(cvxAmountReceived, _cvxNFTID);
 
         // TODO: return mint amount from stake function
         ISafEth(safEth).stake{value: ethAmount}();
         uint256 afEthAmount = ethAmount;
 
         _mint(address(this), afEthAmount);
-
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             ethAmount,
@@ -234,16 +233,6 @@ contract AfEth is
             amount
         );
         return amountSwapped;
-    }
-
-    function lockCvx(uint256 _amountToLock) private returns (uint256 amount) {
-        uint256 amountToLock = _amountToLock;
-        IERC20(CVX).approve(vlCVX, amountToLock);
-        ILockedCvx(vlCVX).lock(address(this), amountToLock, 0);
-        uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
-            address(this)
-        );
-        return lockedCvxAmount;
     }
 
     // strat has afETH, deposit in CRV pool
@@ -449,11 +438,6 @@ contract AfEth is
         }
 
         return;
-    }
-
-    // TODO make this function private once we figure out a solution for unlocking
-    function unlockCvx() public {
-        ILockedCvx(vlCVX).processExpiredLocks(false);
     }
 
     receive() external payable {}
