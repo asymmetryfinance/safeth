@@ -17,10 +17,11 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
-describe.only("AfEth", async function () {
+describe("AfEth", async function () {
   let afEth: AfEth;
   let afCvx1155: AfCVX1155;
   let crvPool: any;
+  let initialHardhatBlock: number;
 
   const deployContracts = async () => {
     const AfCVX1155 = await ethers.getContractFactory("AfCVX1155");
@@ -49,6 +50,9 @@ describe.only("AfEth", async function () {
   };
 
   before(async () => {
+    const latestBlock = await ethers.provider.getBlock("latest");
+    initialHardhatBlock = latestBlock.number;
+    await resetToBlock(initialHardhatBlock);
     const accounts = await ethers.getSigners();
     const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,
@@ -94,58 +98,110 @@ describe.only("AfEth", async function () {
 
     // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("475549709557732453023"));
+    expect(vlCvxBalance).eq(BigNumber.from("476215987701345784134"));
 
     // check for cvx nft
     const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("475549709557732453023"));
+    expect(cvxNftAmount).eq(BigNumber.from("476215987701345784134"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1751292831914575705");
-    expect(crvPoolEthAmount).eq("1751292831914575705");
+    expect(crvPoolAfEthAmount).eq("1751292163634350360");
+    expect(crvPoolEthAmount).eq("1751292163634350360");
 
     // check position struct
     const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1751292831914575705"));
+    expect(positions.afETH).eq(BigNumber.from("1751292163634350360"));
     expect(positions.cvxNFTID).eq(BigNumber.from("1"));
     expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1751292831914575705"));
+    expect(positions.curveBalances).eq(BigNumber.from("1751292163634350360"));
     expect(positions.convexBalances).eq(
-      BigNumber.from("475549709557732453023")
+      BigNumber.from("476215987701345784134")
     );
   });
 
-  it("Should trigger withdrawing of vlCVX rewards", async function () {
-    // impersonate an account that has rewards to withdraw at the current block
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
+  // it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
+  //   // impersonate an account that has rewards to withdraw at the current block
+  //   await network.provider.request({
+  //     method: "hardhat_impersonateAccount",
+  //     params: [CVX_WHALE],
+  //   });
+  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
+  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
-    const cvxAmount = ethers.utils.parseEther("100");
-    await cvx.transfer(afEth.address, cvxAmount);
+  //   const cvxAmount = ethers.utils.parseEther("100");
+  //   await cvx.transfer(afEth.address, cvxAmount);
 
-    const tx1 = await afEth.lockCvx(cvxAmount);
-    await tx1.wait();
-    await time.increase(1000);
+  //   const tx1 = await afEth.lockCvx(cvxAmount);
+  //   await tx1.wait();
+  //   await time.increase(1000);
 
-    const provider = waffle.provider;
-    const startingBalance = await provider.getBalance(afEth.address);
+  //   await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
+  // });
 
-    const tx2 = await afEth.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
-    await tx2.wait();
-    const endingBalance = await provider.getBalance(afEth.address);
+  // it("Should lock cvx and unlock after it has expired", async function () {
+  //   // impersonate an account that has rewards to withdraw at the current block
+  //   await network.provider.request({
+  //     method: "hardhat_impersonateAccount",
+  //     params: [CVX_WHALE],
+  //   });
+  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
+  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
-    expect(endingBalance.gt(startingBalance)).eq(true);
+  //   const cvxAmount = ethers.utils.parseEther("100");
+  //   await cvx.transfer(afEth.address, cvxAmount);
 
-    await expect(
-      afEth.claimRewards(ethers.utils.parseEther("0.0000001")) // very low slippage reverts
-    ).to.be.reverted;
-  });
+  //   const cvxBalanceBeforeLock = await cvx.balanceOf(afEth.address);
+
+  //   expect(cvxBalanceBeforeLock).eq(BigNumber.from("100000000000000000000"));
+
+  //   const tx1 = await afEth.lockCvx(cvxAmount);
+  //   await tx1.wait();
+
+  //   const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
+
+  //   expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
+
+  //   await time.increase(12960000); // 5 months (locks expire in 4)
+
+  //   const tx2 = await afEth.unlockCvx();
+  //   await tx2.wait();
+
+  //   const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
+
+  //   expect(cvxBalanceAfterUnlock).eq(BigNumber.from("100000000000000000000"));
+  // });
+
+  // it("Should trigger withdrawing of vlCVX rewards", async function () {
+  //   // impersonate an account that has rewards to withdraw at the current block
+  //   await network.provider.request({
+  //     method: "hardhat_impersonateAccount",
+  //     params: [CVX_WHALE],
+  //   });
+  //   const whaleSigner = await ethers.getSigner(CVX_WHALE);
+  //   const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
+
+  //   const cvxAmount = ethers.utils.parseEther("100");
+  //   await cvx.transfer(afEth.address, cvxAmount);
+
+  //   const tx1 = await afEth.lockCvx(cvxAmount);
+  //   await tx1.wait();
+  //   await time.increase(1000);
+
+  //   const provider = waffle.provider;
+  //   const startingBalance = await provider.getBalance(afEth.address);
+
+  //   const tx2 = await afEth.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
+  //   await tx2.wait();
+  //   const endingBalance = await provider.getBalance(afEth.address);
+
+  //   expect(endingBalance.gt(startingBalance)).eq(true);
+
+  //   await expect(
+  //     afEth.claimRewards(ethers.utils.parseEther("0.0000001")) // very low slippage reverts
+  //   ).to.be.reverted;
+  // });
 
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
@@ -161,60 +217,7 @@ describe.only("AfEth", async function () {
     const r3 = await afEth.getAsymmetryRatio("500000000000000000");
     expect(r3.eq("587638408209630597")).eq(true); // 58.76%
   });
-
-  it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
-    // impersonate an account that has rewards to withdraw at the current block
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-    const cvxAmount = ethers.utils.parseEther("100");
-    await cvx.transfer(afEth.address, cvxAmount);
-
-    const tx1 = await afEth.lockCvx(cvxAmount);
-    await tx1.wait();
-    await time.increase(1000);
-
-    await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
-  });
-
-  it.skip("Should lock cvx and unlock after it has expired", async function () {
-    // impersonate an account that has rewards to withdraw at the current block
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-    const cvxAmount = ethers.utils.parseEther("100");
-    await cvx.transfer(afEth.address, cvxAmount);
-
-    const cvxBalanceBeforeLock = await cvx.balanceOf(afEth.address);
-
-    expect(cvxBalanceBeforeLock).eq(BigNumber.from("100000000000000000000"));
-
-    const tx1 = await afEth.lockCvx(cvxAmount);
-    await tx1.wait();
-
-    const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
-
-    expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
-
-    await time.increase(12960000); // 5 months (locks expire in 4)
-
-    const tx2 = await afEth.unlockCvx();
-    await tx2.wait();
-
-    const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
-
-    expect(cvxBalanceAfterUnlock).eq(BigNumber.from("100000000000000000000"));
-  });
-
-  it.skip("Should verify that vote delegation is set to the contract owner", async function () {
+  it("Should verify that vote delegation is set to the contract owner", async function () {
     const accounts = await ethers.getSigners();
     const snapshotDelegateRegistry = new ethers.Contract(
       SNAPSHOT_DELEGATE_REGISTRY,

@@ -236,7 +236,7 @@ contract AfEth is
         return amountSwapped;
     }
 
-    function lockCvx(uint256 _amountOut) public returns (uint256 amount) {
+    function lockCvx(uint256 _amountOut) private returns (uint256 amount) {
         uint256 amountOut = _amountOut;
         IERC20(CVX).approve(vlCVX, amountOut);
         ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
@@ -451,8 +451,7 @@ contract AfEth is
         return;
     }
 
-    // TODO make this function private once we figure out a solution for unlocking
-    function unlockCvx() public {
+    function unlockCvx() private {
         ILockedCvx(vlCVX).processExpiredLocks(false);
     }
 
