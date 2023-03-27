@@ -236,10 +236,10 @@ contract AfEth is
         return amountSwapped;
     }
 
-    function lockCvx(uint256 _amountOut) private returns (uint256 amount) {
-        uint256 amountOut = _amountOut;
-        IERC20(CVX).approve(vlCVX, amountOut);
-        ILockedCvx(vlCVX).lock(address(this), amountOut, 0);
+    function lockCvx(uint256 _amountToLock) private returns (uint256 amount) {
+        uint256 amountToLock = _amountToLock;
+        IERC20(CVX).approve(vlCVX, amountToLock);
+        ILockedCvx(vlCVX).lock(address(this), amountToLock, 0);
         uint256 lockedCvxAmount = ILockedCvx(vlCVX).lockedBalanceOf(
             address(this)
         );
