@@ -131,6 +131,8 @@ contract AfEth is
             vlCvxVoteDelegationId,
             owner()
         );
+
+        lastRelockTime = block.timestamp;
     }
 
     function stake() external payable {
@@ -143,7 +145,8 @@ contract AfEth is
             msg.sender,
             cvxAmountReceived
         );
-        openCvxPosition(cvxAmountReceived, _cvxNFTID);
+
+        lockCvx(cvxAmountReceived, _cvxNFTID, msg.sender);
 
         // TODO: return mint amount from stake function
         ISafEth(safEth).stake{value: ethAmount}();
@@ -169,6 +172,10 @@ contract AfEth is
             afETH: afEthAmount,
             createdAt: block.timestamp
         });
+    }
+
+    function unstake(uint256 positionId) public {
+        requestUnlockCvx(positionId, msg.sender);
     }
 
     function getCvxPriceData() public view returns (uint256) {
