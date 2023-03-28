@@ -29,7 +29,7 @@ contract CvxLockManager {
 
     uint256 constant cvxLockLength = 60 * 60 * 24 * 7 * 16; // 16 weeks
 
-    // to know if we force the user to pay gas for relocking
+    // to know if we are due for another relocking
     uint256 public lastRelockTime;
 
     // total cvx we need unlocked for users to withdraw after closing a position
