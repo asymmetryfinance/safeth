@@ -49,7 +49,7 @@ describe("AfEth", async function () {
     await afCvx1155.initialize(afEth.address);
   };
 
-  beforeEach(async () => {
+  before(async () => {
     const latestBlock = await ethers.provider.getBlock("latest");
     initialHardhatBlock = latestBlock.number;
     await resetToBlock(initialHardhatBlock);

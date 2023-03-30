@@ -210,4 +210,58 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
+
+  it.only("Should fail to withdraw 1 minute before unlock epoch and succeed after unlock epoch has started", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    tx = await afEth.stake({ value: depositAmount });
+
+    // close position
+    tx = await afEth.unstake(1);
+    await tx.wait();
+
+    const nextEpoch = (await vlCvxContract.epochCount()).sub(1);
+
+    const nextEpochStartTime = BigNumber.from(
+      (await vlCvxContract.epochs(nextEpoch)).date
+    );
+
+    const unlockEpochStartTime = nextEpochStartTime.add(
+      await vlCvxContract.lockDuration()
+    );
+
+    // 1 minute before expected unlock epoch
+    await time.increaseTo(unlockEpochStartTime.sub(60));
+
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    // expect it to fail because not yet unlocked
+
+    await expect(afEth.withdrawCvx(1)).to.be.revertedWith("Cvx still locked");
+
+    // 1 minute after unlock epoch has started
+    await time.increaseTo(unlockEpochStartTime.add(60));
+
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const cvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
+
+    const lockedPositionAmount = (await afEth.cvxPositions(1)).cvxAmount;
+
+    tx = await afEth.withdrawCvx(1);
+    await tx.wait();
+
+    const cvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
+
+    expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
+  });
 });

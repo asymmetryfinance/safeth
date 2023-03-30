@@ -96,23 +96,15 @@ contract CvxLockManager {
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         require(cvxPositions[positionId].owner == owner, 'Not owner');
         require(cvxPositions[positionId].open == true, 'Not open');
         cvxPositions[positionId].open = false;
 
-        uint256 epochsPastStart;
-        if(currentEpoch >= cvxPositions[positionId].startingEpoch)
-            epochsPastStart = currentEpoch - cvxPositions[positionId].startingEpoch;
-        else
-            epochsPastStart = 0;
+        uint256 unlockEpoch;
+        if(cvxPositions[positionId].startingEpoch > lastRelockEpoch) unlockEpoch = cvxPositions[positionId].startingEpoch + 16;
+        else unlockEpoch = lastRelockEpoch + 17;
 
-        // if it has been auto relocked because more than 16 weeks passed
-        uint256 extraCycles = (epochsPastStart / 16);
-
-        // TODO this feels like it could have off by 1 error. TRIPLE check this in tests
-        cvxPositions[positionId].unlockEpoch = cvxPositions[positionId].startingEpoch + 16 + extraCycles * 17;
-
+        cvxPositions[positionId].unlockEpoch = unlockEpoch;
         unlockSchedule[cvxPositions[positionId].unlockEpoch] += cvxPositions[positionId].cvxAmount;
     }
 
