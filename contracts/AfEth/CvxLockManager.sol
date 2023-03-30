@@ -19,8 +19,6 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 
-import "hardhat/console.sol";
-
 contract CvxLockManager {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
@@ -100,6 +98,8 @@ contract CvxLockManager {
         require(cvxPositions[positionId].open == true, 'Not open');
         cvxPositions[positionId].open = false;
 
+
+        // TODO need more tests around this logic specifically
         uint256 unlockEpoch;
         if(cvxPositions[positionId].startingEpoch > lastRelockEpoch) unlockEpoch = cvxPositions[positionId].startingEpoch + 16;
         else unlockEpoch = lastRelockEpoch + 17;
