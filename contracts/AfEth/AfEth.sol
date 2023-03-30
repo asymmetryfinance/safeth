@@ -132,7 +132,7 @@ contract AfEth is
             owner()
         );
 
-        lastRelockTime = block.timestamp;
+        lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 
     function stake() external payable {

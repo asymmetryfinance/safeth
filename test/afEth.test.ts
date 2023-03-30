@@ -185,61 +185,6 @@ describe("AfEth", async function () {
     expect(voter).eq(accounts[0].address);
     expect(voter).eq(await afEth.owner());
   });
-
-  it.only("Should test locking and unlocking cvx positions over various timeframes", async function () {
-    const accounts = await ethers.getSigners();
-
-    const depositAmount = ethers.utils.parseEther("5");
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
-
-    let tx = await afEth.stake({ value: depositAmount });
-    await tx.wait();
-
-    let currentWeek = await afEth.getCurrentWeek();
-    const lastWeekUnlocked = await afEth.getWeek(await afEth.lastRelockTime());
-    console.log("currentWeek", currentWeek);
-    console.log("lastWeekUnlocked", lastWeekUnlocked);
-    let lockedPositionInfo = await afEth.cvxPositions(1);
-    console.log("lockedPositionInfo", lockedPositionInfo);
-    tx = await afEth.unstake(1);
-    await tx.wait();
-    lockedPositionInfo = await afEth.cvxPositions(1);
-    console.log("lockedPositionInfo", lockedPositionInfo);
-    const unlockWeekPositionInfo = await afEth.unlockSchedule(
-      lockedPositionInfo.unlockWeek
-    );
-    console.log("unlockWeekPositionInfo", unlockWeekPositionInfo);
-
-    // 15 weeks
-    await time.increase(60 * 60 * 24 * 7 * 15);
-    currentWeek = await afEth.getCurrentWeek();
-    console.log("week after increase", currentWeek);
-
-    console.log("cvxToLeaveUnlocked 1", await afEth.cvxToLeaveUnlocked());
-
-    // try calling relock (it shouldnt change anything)
-    tx = await afEth.relockCvxIfnNeeded();
-    await tx.wait();
-
-    console.log("cvxToLeaveUnlocked 2", await afEth.cvxToLeaveUnlocked());
-
-    // 2 weeks
-    await time.increase(60 * 60 * 24 * 7 * 2);
-
-    // should now be withdrawable after this relock
-    tx = await afEth.relockCvxIfnNeeded();
-    await tx.wait();
-    console.log("cvxToLeaveUnlocked 3", await afEth.cvxToLeaveUnlocked());
-
-    console.log("unlockedCvxBalance 1", await cvx.balanceOf(afEth.address));
-
-    tx = await afEth.withdrawCvx(1);
-    await tx.wait();
-    console.log("done withdrawaing");
-
-    console.log("cvxToLeaveUnlocked 4", await afEth.cvxToLeaveUnlocked());
-    console.log("unlockedCvxBalance 2", await cvx.balanceOf(afEth.address));
-  });
 });
 
 const resetToBlock = async (blockNumber: number) => {

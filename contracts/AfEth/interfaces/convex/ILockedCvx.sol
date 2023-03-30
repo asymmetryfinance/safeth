@@ -19,6 +19,8 @@ interface ILockedCvx {
 
     function getReward(address _account, bool _stake) external;
 
+    function findEpochId(uint256 _time) external view returns (uint256);
+
     function balanceAtEpochOf(
         uint256 _epoch,
         address _user
@@ -50,6 +52,8 @@ interface ILockedCvx {
     ) external view returns (uint256 amount);
 
     function totalSupply() external view returns (uint256 supply);
+
+    function lockDuration() external view returns (uint256);
 
     function lockedBalances(
         address _user
