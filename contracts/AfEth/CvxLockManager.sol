@@ -105,7 +105,7 @@ contract CvxLockManager {
         else unlockEpoch = lastRelockEpoch + 17;
 
         cvxPositions[positionId].unlockEpoch = unlockEpoch;
-        unlockSchedule[cvxPositions[positionId].unlockEpoch] += cvxPositions[positionId].cvxAmount;
+        unlockSchedule[unlockEpoch] += cvxPositions[positionId].cvxAmount;
     }
 
     // Try to withdraw cvx from a closed position
