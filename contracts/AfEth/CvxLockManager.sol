@@ -58,9 +58,7 @@ contract CvxLockManager {
 
     // at the beginning of each new epoch to process the previous
     function relockCvx() public {
-
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-
         // alredy called for this epoch
         if(lastRelockEpoch == currentEpoch) return;
 
@@ -77,7 +75,9 @@ contract CvxLockManager {
         if(unlockedCvxBalance == 0) return;
 
         uint256 toUnlock = 0;
-        for(uint256 i=currentEpoch;i>lastRelockEpoch;i--) {
+        // we overlap with the previous relock by 1 epoch 
+        // to make sure we dont miss any if they requested an unlock on the same epoch but after relockCvx() was called
+        for(uint256 i=currentEpoch;i>lastRelockEpoch-1;i--) {
             toUnlock += unlockSchedule[i];
             unlockSchedule[i] = 0;
         }
@@ -107,14 +107,14 @@ contract CvxLockManager {
         // when cvx is fully unlocked and can be withdrawn
         uint256 unlockEpoch;
 
-        // position has never been relocked. original unlock epoch stands
-        if(lastRelockEpoch < originalUnlockEpoch) unlockEpoch = originalUnlockEpoch;
         // position has been relocked since the originalUnlockEpoch passed
         // calculate what its new unlock epoch is
-        else {
+        if(currentEpoch > originalUnlockEpoch) {
             uint256 epochDifference = currentEpoch - originalUnlockEpoch;
-            uint256 lockLengthsSinceRelock = (epochDifference / 16) + 1;
-            unlockEpoch = originalUnlockEpoch + lockLengthsSinceRelock * 16;
+            uint256 extraLockLengths = (epochDifference / 16) + 1;
+            unlockEpoch = originalUnlockEpoch + extraLockLengths * 16;
+        } else {
+            unlockEpoch = originalUnlockEpoch;
         }
 
         cvxPositions[positionId].unlockEpoch = unlockEpoch;
@@ -138,5 +138,9 @@ contract CvxLockManager {
         cvxToLeaveUnlocked -= cvxPositions[positionId].cvxAmount;
         IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxPositions[positionId].cvxAmount);
         cvxPositions[positionId].cvxAmount = 0;
+    }
+
+    function getCurrentEpoch() public view returns (uint) {
+        return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 }

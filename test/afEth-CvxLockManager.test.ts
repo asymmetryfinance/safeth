@@ -279,7 +279,8 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     // wait 10 more lock durations
-    await time.increase((await vlCvxContract.lockDuration()) * 2);
+
+    await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
@@ -296,7 +297,7 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     // wait 10 more lock durations
-    await time.increase((await vlCvxContract.lockDuration()) * 2);
+    await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
@@ -319,9 +320,13 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     // open position (1)
     tx = await afEth.stake({ value: depositAmount });
+    await tx.wait();
 
     // wait 3 days
     await time.increase(60 * 60 * 24 * 3);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
 
     // open position (2) 3 days later but in the same epoch
     tx = await afEth.stake({ value: depositAmount });
@@ -332,11 +337,11 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     const leaveUnlocked0 = await afEth.cvxToLeaveUnlocked();
     const cvxBalance0 = await cvx.balanceOf(afEth.address);
-
     // initially nothing to hold unlocked
     expect(leaveUnlocked0).eq(cvxBalance0).eq(0);
 
     // 8 weeks later relock
+    // relocking after 8 weeks wont have anything to hold unlocked yet
     await time.increase(60 * 60 * 24 * 7 * 8);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
@@ -365,6 +370,7 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     // request unlock position 2
     tx = await afEth.unstake(2);
+    await tx.wait();
 
     // 9 weeks later relock again
     await time.increase(60 * 60 * 24 * 7 * 9);
@@ -376,12 +382,11 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     const leaveUnlocked21 = await afEth.cvxToLeaveUnlocked();
     const cvxBalance21 = await cvx.balanceOf(afEth.address);
-
     // relocking again shouldnt change anything because the second unlock request is not done yet
     expect(leaveUnlocked21).eq(cvxBalance21).eq("475549709557732453023");
 
     // 8 weeks later relock again
-    await time.increase(60 * 60 * 24 * 7 * 9);
+    await time.increase(60 * 60 * 24 * 7 * 8);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
@@ -390,7 +395,6 @@ describe.only("AfEth (CvxLockManager)", async function () {
 
     const leaveUnlocked22 = await afEth.cvxToLeaveUnlocked();
     const cvxBalance22 = await cvx.balanceOf(afEth.address);
-
     // relocking this time enough time has passed so both positions are ready for withdraw
     expect(leaveUnlocked22).eq(cvxBalance22).eq("948904100565578728382");
 
@@ -426,5 +430,58 @@ describe.only("AfEth (CvxLockManager)", async function () {
     // withdrawing will put cvxToLeaveUnlocked back to 0
     expect(leaveUnlocked6).eq(cvxBalance6).eq(0);
     expect(userCvxBalance).eq("948904100565578728382");
+  });
+
+  it.only("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position (1)
+    tx = await afEth.stake({ value: depositAmount });
+
+    // wait 65 weeks (just over 4 lock periods)
+    await time.increase(60 * 60 * 24 * 7 * 68);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await afEth.unstake(1);
+    await tx.wait();
+
+    const position1 = await afEth.cvxPositions(1);
+    const unlockEpoch = position1.unlockEpoch;
+    const currentEpoch = await afEth.getCurrentEpoch();
+    const startingEpoch = position1.startingEpoch;
+    // unlock epoch should be <= 16 weeks from now
+    expect(unlockEpoch.sub(currentEpoch)).lte(16);
+    const unlockDifference = unlockEpoch.sub(startingEpoch).toNumber();
+    // should be in 16 week intervals from the original starting epoch
+    expect(unlockDifference % 16).eq(0);
+    const startingEpochTime = BigNumber.from(
+      (await vlCvxContract.epochs(startingEpoch)).date
+    );
+    const unlockEpochTime = startingEpochTime.add(
+      unlockDifference * 24 * 60 * 60 * 7
+    );
+
+    // wait until we theoretically can unlock
+    await time.increaseTo(unlockEpochTime);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const position1Before = await afEth.cvxPositions(1);
+    const userCvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
+    // unlock
+    tx = await afEth.withdrawCvx(1);
+    await tx.wait();
+
+    const userCvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
+    const diff = userCvxBalanceAfter.sub(userCvxBalanceBefore);
+
+    expect(diff).eq(position1Before.cvxAmount);
   });
 });
