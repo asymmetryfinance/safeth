@@ -211,7 +211,7 @@ describe.only("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it.only("Should fail to withdraw 1 minute before unlock epoch and succeed after unlock epoch has started", async function () {
+  it("Should fail to withdraw 1 minute before unlock epoch and succeed after unlock epoch has started", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -263,5 +263,50 @@ describe.only("AfEth (CvxLockManager)", async function () {
     const cvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
 
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
+  });
+
+  it.only("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    tx = await afEth.stake({ value: depositAmount });
+
+    // close position
+    tx = await afEth.unstake(1);
+    await tx.wait();
+
+    // wait 10 more lock durations
+    await time.increase((await vlCvxContract.lockDuration()) * 2);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await afEth.withdrawCvx(1);
+    const mined = await tx.wait();
+    const gasUsedWithoutRelock = mined.gasUsed;
+
+    // open position
+    tx = await afEth.stake({ value: depositAmount });
+
+    // close position
+    tx = await afEth.unstake(2);
+    await tx.wait();
+
+    // wait 10 more lock durations
+    await time.increase((await vlCvxContract.lockDuration()) * 2);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    await afEth.relockCvx();
+
+    tx = await afEth.withdrawCvx(2);
+    const mined2 = await tx.wait();
+    const gasUsedWithRelock = mined2.gasUsed;
+
+    expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 });

@@ -73,7 +73,7 @@ contract CvxLockManager {
 
         uint256 unlockedCvxBalance = IERC20(CVX).balanceOf(address(this));
 
-        // nothing was unlocked
+        // nothing to relock
         if(unlockedCvxBalance == 0) return;
 
         uint256 toUnlock = 0;
@@ -113,7 +113,8 @@ contract CvxLockManager {
         require(cvxPositions[positionId].startingEpoch > 0, 'Invalid positionId');
         require(cvxPositions[positionId].open == false, 'Not closed');
 
-        // relocks for this epoch if it hasnt yet
+        // unlock and relock if havent yet for this epochCount
+        // enusres there will be enough unlocked cvx to withdraw
         relockCvx();
 
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp); 
