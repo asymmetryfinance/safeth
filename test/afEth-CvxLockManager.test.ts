@@ -104,7 +104,6 @@ describe.only("AfEth (CvxLockManager)", async function () {
   it("Should fail to close a position with the wrong owner", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-
     const afEth0 = afEth.connect(accounts[0]);
     const afEth1 = afEth.connect(accounts[1]);
 
@@ -128,8 +127,8 @@ describe.only("AfEth (CvxLockManager)", async function () {
   });
 
   it("Should fail to withdraw from a position twice", async function () {
-    const accounts = await ethers.getSigners();
     let tx;
+    const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
 
     tx = await afEth.stake({ value: depositAmount });
@@ -141,20 +140,20 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await time.increase(60 * 60 * 24 * 7 * 17);
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
 
-    // this is necessary every time we have increased time past a new epoch
+    // makes sure epoch is correct
+    // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
-    await tx.wait();
 
-    tx = await afEth.relockCvx();
     await tx.wait();
 
     tx = await afEth.withdrawCvx(1);
     await tx.wait();
     await expect(afEth.withdrawCvx(1)).to.be.revertedWith("No cvx to withdraw");
   });
+
   it("Should fail to withdraw from a non-existent positionId", async function () {
-    const accounts = await ethers.getSigners();
     let tx;
+    const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
 
     tx = await afEth.stake({ value: depositAmount });
@@ -166,14 +165,49 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await time.increase(60 * 60 * 24 * 7 * 17);
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
 
-    // this is necessary every time we have increased time past a new epoch
+    // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
-    await tx.wait();
-
-    tx = await afEth.relockCvx();
     await tx.wait();
 
     await tx.wait();
     await expect(afEth.withdrawCvx(2)).to.be.revertedWith("Invalid positionId");
+  });
+
+  it("Should allow a user to lock, unlock & withdraw after 17 weeks", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    tx = await afEth.stake({ value: depositAmount });
+
+    // wait 8 weeks
+    await time.increase(60 * 60 * 24 * 7 * 8);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    // close position
+    tx = await afEth.unstake(1);
+    await tx.wait();
+
+    // wait 9 weeks more weeks
+    await time.increase(60 * 60 * 24 * 7 * 9);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const cvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
+
+    const lockedPositionAmount = (await afEth.cvxPositions(1)).cvxAmount;
+
+    tx = await afEth.withdrawCvx(1);
+    await tx.wait();
+
+    const cvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
+
+    expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 });

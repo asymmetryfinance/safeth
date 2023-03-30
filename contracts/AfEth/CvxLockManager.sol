@@ -64,6 +64,10 @@ contract CvxLockManager {
         // alredy called for this epoch
         if(lastRelockEpoch == currentEpoch) return;
 
+        (, uint256 unlockable,,) = ILockedCvx(vlCVX).lockedBalances(address(this));
+
+        // nothing to unlock
+        if(unlockable == 0) return;
         // unlock all
         ILockedCvx(vlCVX).processExpiredLocks(false);
 
@@ -117,7 +121,9 @@ contract CvxLockManager {
         require(cvxPositions[positionId].startingEpoch > 0, 'Invalid positionId');
         require(cvxPositions[positionId].open == false, 'Not closed');
 
-        // TODO this is fucked for testing because it doesnt seem to find future epochs well after time.increase().
+        // relocks for this epoch if it hasnt yet
+        relockCvx();
+
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp); 
 
         require(currentEpoch >= cvxPositions[positionId].unlockEpoch, 'Cvx still locked');
