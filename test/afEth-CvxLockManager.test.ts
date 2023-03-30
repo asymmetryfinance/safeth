@@ -152,4 +152,28 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await tx.wait();
     await expect(afEth.withdrawCvx(1)).to.be.revertedWith("No cvx to withdraw");
   });
+  it("Should fail to withdraw from a non-existent positionId", async function () {
+    const accounts = await ethers.getSigners();
+    let tx;
+    const depositAmount = ethers.utils.parseEther("5");
+
+    tx = await afEth.stake({ value: depositAmount });
+    await tx.wait();
+
+    tx = await afEth.unstake(1);
+    await tx.wait();
+
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+
+    // this is necessary every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await afEth.relockCvx();
+    await tx.wait();
+
+    await tx.wait();
+    await expect(afEth.withdrawCvx(2)).to.be.revertedWith("Invalid positionId");
+  });
 });

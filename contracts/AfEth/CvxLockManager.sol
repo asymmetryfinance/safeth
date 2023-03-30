@@ -19,6 +19,8 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 
+import "hardhat/console.sol";
+
 contract CvxLockManager {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
@@ -112,6 +114,7 @@ contract CvxLockManager {
 
     // Try to withdraw cvx from a closed position
     function withdrawCvx(uint256 positionId) public {
+        require(cvxPositions[positionId].startingEpoch > 0, 'Invalid positionId');
         require(cvxPositions[positionId].open == false, 'Not closed');
 
         // TODO this is fucked for testing because it doesnt seem to find future epochs well after time.increase().
