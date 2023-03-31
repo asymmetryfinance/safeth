@@ -98,26 +98,26 @@ describe("AfEth", async function () {
 
     // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("476215987701345784134"));
+    expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
 
     // check for cvx nft
     const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("476215987701345784134"));
+    expect(cvxNftAmount).eq(BigNumber.from("476216053286032795841"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1751292163634350360");
-    expect(crvPoolEthAmount).eq("1751292163634350360");
+    expect(crvPoolAfEthAmount).eq("1751292060282684770");
+    expect(crvPoolEthAmount).eq("1751292060282684770");
 
     // check position struct
     const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1751292163634350360"));
+    expect(positions.afETH).eq(BigNumber.from("1751292060282684770"));
     expect(positions.cvxNFTID).eq(BigNumber.from("1"));
     expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1751292163634350360"));
+    expect(positions.curveBalances).eq(BigNumber.from("1751292060282684770"));
     expect(positions.convexBalances).eq(
-      BigNumber.from("476215987701345784134")
+      BigNumber.from("476216053286032795841")
     );
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
