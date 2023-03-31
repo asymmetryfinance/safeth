@@ -77,6 +77,7 @@ contract CvxLockManager {
         uint256 toUnlock = 0;
         // we overlap with the previous relock by 1 epoch 
         // to make sure we dont miss any if they requested an unlock on the same epoch but after relockCvx() was called
+        // TODO put more tests around this logic
         for(uint256 i=currentEpoch;i>lastRelockEpoch-1;i--) {
             toUnlock += unlockSchedule[i];
             unlockSchedule[i] = 0;
@@ -134,7 +135,7 @@ contract CvxLockManager {
         relockCvx();
 
         cvxToLeaveUnlocked -= cvxPositions[positionId].cvxAmount;
-        IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxPositions[positionId].cvxAmount);
+        require(IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxPositions[positionId].cvxAmount), 'Couldnt transfer');
         cvxPositions[positionId].cvxAmount = 0;
     }
 
