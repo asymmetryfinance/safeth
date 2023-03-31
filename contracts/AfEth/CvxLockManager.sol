@@ -44,7 +44,11 @@ contract CvxLockManager {
     // epoch at which amount should be unlocked
     mapping(uint256 => uint256) public unlockSchedule;
 
-    function lockCvx(uint256 cvxAmount, uint256 positionId, address owner) internal {
+    function lockCvx(
+        uint256 cvxAmount,
+        uint256 positionId,
+        address owner
+    ) internal {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         cvxPositions[positionId].cvxAmount = cvxAmount;
@@ -60,25 +64,27 @@ contract CvxLockManager {
     function relockCvx() public {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         // alredy called for this epoch
-        if(lastRelockEpoch == currentEpoch) return;
+        if (lastRelockEpoch == currentEpoch) return;
 
-        (, uint256 unlockable,,) = ILockedCvx(vlCVX).lockedBalances(address(this));
+        (, uint256 unlockable, , ) = ILockedCvx(vlCVX).lockedBalances(
+            address(this)
+        );
 
         // nothing to unlock
-        if(unlockable == 0) return;
+        if (unlockable == 0) return;
         // unlock all
         ILockedCvx(vlCVX).processExpiredLocks(false);
 
         uint256 unlockedCvxBalance = IERC20(CVX).balanceOf(address(this));
 
         // nothing to relock
-        if(unlockedCvxBalance == 0) return;
+        if (unlockedCvxBalance == 0) return;
 
         uint256 toUnlock = 0;
-        // we overlap with the previous relock by 1 epoch 
+        // we overlap with the previous relock by 1 epoch
         // to make sure we dont miss any if they requested an unlock on the same epoch but after relockCvx() was called
         // TODO put more tests around this logic
-        for(uint256 i=currentEpoch;i>lastRelockEpoch-1;i--) {
+        for (uint256 i = currentEpoch; i > lastRelockEpoch - 1; i--) {
             toUnlock += unlockSchedule[i];
             unlockSchedule[i] = 0;
         }
@@ -88,7 +94,7 @@ contract CvxLockManager {
         uint256 cvxAmountToRelock = unlockedCvxBalance - cvxToLeaveUnlocked;
 
         // nothing to relock
-        if(cvxAmountToRelock == 0) return;
+        if (cvxAmountToRelock == 0) return;
 
         IERC20(CVX).approve(vlCVX, cvxAmountToRelock);
         ILockedCvx(vlCVX).lock(address(this), cvxAmountToRelock, 0);
@@ -97,20 +103,21 @@ contract CvxLockManager {
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
-        require(cvxPositions[positionId].owner == owner, 'Not owner');
-        require(cvxPositions[positionId].open == true, 'Not open');
+        require(cvxPositions[positionId].owner == owner, "Not owner");
+        require(cvxPositions[positionId].open == true, "Not open");
         cvxPositions[positionId].open = false;
 
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp); 
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
-        uint256 originalUnlockEpoch = cvxPositions[positionId].startingEpoch + 16;
+        uint256 originalUnlockEpoch = cvxPositions[positionId].startingEpoch +
+            16;
 
         // when cvx is fully unlocked and can be withdrawn
         uint256 unlockEpoch;
 
         // position has been relocked since the originalUnlockEpoch passed
         // calculate its new unlock epoch
-        if(currentEpoch > originalUnlockEpoch) {
+        if (currentEpoch > originalUnlockEpoch) {
             uint256 epochDifference = currentEpoch - originalUnlockEpoch;
             uint256 extraLockLengths = (epochDifference / 16) + 1;
             unlockEpoch = originalUnlockEpoch + extraLockLengths * 16;
@@ -124,18 +131,30 @@ contract CvxLockManager {
 
     // Try to withdraw cvx from a closed position
     function withdrawCvx(uint256 positionId) public {
-        require(cvxPositions[positionId].startingEpoch > 0, 'Invalid positionId');
-        require(cvxPositions[positionId].open == false, 'Not closed');
-        require(cvxPositions[positionId].cvxAmount > 0, 'No cvx to withdraw');
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp); 
-        require(currentEpoch >= cvxPositions[positionId].unlockEpoch, 'Cvx still locked');
+        require(
+            cvxPositions[positionId].startingEpoch > 0,
+            "Invalid positionId"
+        );
+        require(cvxPositions[positionId].open == false, "Not closed");
+        require(cvxPositions[positionId].cvxAmount > 0, "No cvx to withdraw");
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        require(
+            currentEpoch >= cvxPositions[positionId].unlockEpoch,
+            "Cvx still locked"
+        );
 
         // relock if havent yet for this epochCount
         // enusres there will be enough unlocked cvx to withdraw
         relockCvx();
 
         cvxToLeaveUnlocked -= cvxPositions[positionId].cvxAmount;
-        require(IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxPositions[positionId].cvxAmount), 'Couldnt transfer');
+        require(
+            IERC20(CVX).transfer(
+                cvxPositions[positionId].owner,
+                cvxPositions[positionId].cvxAmount
+            ),
+            "Couldnt transfer"
+        );
         cvxPositions[positionId].cvxAmount = 0;
     }
 
