@@ -9,6 +9,7 @@ import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -92,6 +93,7 @@ contract SafEth is
             uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
                 depositAmount
             ) * depositAmount) / 10 ** 18;
+            console.log("derivativeReceivedEthValue", derivativeReceivedEthValue);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
         // mintAmount represents a percentage of the total assets in the system

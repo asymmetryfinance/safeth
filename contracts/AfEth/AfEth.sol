@@ -28,20 +28,11 @@ contract AfEth is
 {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
 
-    struct Position {
-        uint256 positionID;
-        uint256 curveBalances; // crv Pool LP amount
-        uint256 convexBalances; // CVX locked amount amount
-        uint256 cvxNFTID;
-        uint256 bundleNFTID;
-        uint256 afETH; // amount safETH minted to user
-        uint256 createdAt; // block.timestamp
-    }
-
     // curve emissions based on year
     mapping(uint256 => uint256) private emissionsPerYear;
-    // map user address to Position struct
-    mapping(address => Position) public positions;
+
+    mapping(address => uint256) public nftIds;
+    uint256 nftId = 0;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if these are updated or discontinued?
@@ -77,8 +68,6 @@ contract AfEth is
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
-    uint256 currentCvxNftId;
-    uint256 currentBundleNftId;
     address afETH;
     address CVXNFT;
     address bundleNFT;
@@ -140,7 +129,7 @@ contract AfEth is
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
 
-        (uint256 cvxNftBalance, uint256 _cvxNFTID) = mintCvxNft(
+        (uint256 cvxNftBalance, uint256 cvxNFTID) = mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
@@ -157,19 +146,32 @@ contract AfEth is
             afEthAmount
         );
 
+        mintBundleNft(crvLpAmount, cvxNFTID);
+
         // storage of individual balances associated w/ user deposit
         // This calculation doesn't update when afETH is transferred between wallets
         // if we can not need this that'd be great, Maybe the bundle nft can handle the acounting from this
         uint256 newPositionID = ++currentPositionId;
-        positions[msg.sender] = Position({
-            positionID: newPositionID,
-            curveBalances: crvLpAmount,
-            convexBalances: cvxNftBalance,
-            cvxNFTID: _cvxNFTID,
-            bundleNFTID: 0, // maybe not needed yet,
-            afETH: afEthAmount,
-            createdAt: block.timestamp
-        });
+        // positions[msg.sender] = Position({
+        //     positionID: newPositionID,
+        //     curveBalances: crvLpAmount,
+        //     convexBalances: cvxNftBalance,
+        //     cvxNFTID: cvxNFTID,
+        //     bundleNFTID: 0, // maybe not needed yet,
+        //     afETH: afEthAmount,
+        //     createdAt: block.timestamp
+        // });
+    }
+
+    function unstake(bool _instantWithdraw) external payable {
+        // TODO: add option to not unstake all
+        uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
+        withdrawCVXNft(_instantWithdraw, _id);
+        withdrawCRVPool(crvPool, 100000);
+        _burn(msg.sender, afEthBalance);
+
+        burnBundleNFT(msg.sender);
+        IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken
     }
 
     function getCvxPriceData() public view returns (uint256) {
@@ -267,78 +269,66 @@ contract AfEth is
         return (poolTokensMinted);
     }
 
-    function withdrawCRVPool(address _pool, uint256 _amount) private {
-        address afETHPool = _pool;
+    function withdrawCRVPool(
+        address _pool,
+        uint256 _amount
+    ) private returns (uint256) {
         uint256[2] memory min_amounts;
+        // TODO: update min amounts
         min_amounts[0] = 0;
         min_amounts[1] = 0;
-        positions[msg.sender].curveBalances = 0;
-        IAfEthPool(afETHPool).remove_liquidity(_amount, min_amounts);
+        // positions[msg.sender].curveBalances = 0;
+        IAfEthPool(_pool).remove_liquidity(_amount, min_amounts);
     }
 
-    // function mintBundleNft(
-    //     uint256 cvxNftId,
-    //     uint256 cvxAmount,
-    //     uint256 balPoolTokens
-    // ) private returns (uint256 id) {
-    //     uint256 newBundleNftId = ++currentBundleNftId;
-    //     // IAfBundle1155(bundleNFT).mint(
-    //     //     cvxNftId,
-    //     //     cvxAmount,
-    //     //     newBundleNftId,
-    //     //     balPoolTokens,
-    //     //     address(this)
-    //     // );
-    //     // positions[currentDepositor] = newBundleNftId;
-    //     // bundleNFtBalances[newBundleNftId] = balPoolTokens;
-    //     return (newBundleNftId);
-    // }
+    function mintBundleNft(uint256 _amount, uint256 _id) private {
+        IAfBundle1155(bundleNFT).mint(msg.sender, _amount, _id);
+        nftId++;
+    }
 
-    // function burnBundleNFT(address user) private {
-    //     uint256[2] memory ids;
-    //     uint256[2] memory amounts;
-    //     ids[0] = positions[user].bundleNFTID;
-    //     ids[1] = positions[user].cvxNFTID;
-    //     amounts[1] = positions[user].convexBalances;
-    //     // IAfBundle1155(bundleNFT).burnBatch(address(this), ids, amounts);
-    // }
+    function burnBundleNFT(
+        address _from,
+        uint256 _id,
+        uint256 _amount
+    ) private {
+        // uint256[2] memory ids;
+        // uint256[2] memory amounts;
+        // ids[0] = positions[user].bundleNFTID;
+        // ids[1] = positions[user].cvxNFTID;
+        // amounts[1] = positions[user].convexBalances;
+        IAfBundle1155(bundleNFT).burn(_from, _id, _amount);
+    }
 
     function mintCvxNft(
         address sender,
         uint256 _amountLocked
-    ) private returns (uint256 balance, uint256 nftId) {
+    ) private returns (uint256 _balance, uint256 _id) {
         uint256 amountLocked = _amountLocked;
-        uint256 newCvxNftId = ++currentCvxNftId;
 
-        IAfCVX1155(CVXNFT).mint(newCvxNftId, amountLocked, address(this));
-        positions[sender].cvxNFTID = newCvxNftId;
-        uint256 mintedCvx1155 = IAfCVX1155(CVXNFT).balanceOf(
-            address(this),
-            newCvxNftId
-        );
-
-        return (mintedCvx1155, newCvxNftId);
+        IAfCVX1155(CVXNFT).mint(address(this), nftId, amountLocked);
+        // positions[sender].cvxNFTID = newCvxNftId;
+        return (amountLocked, nftId);
     }
 
     // user selection in front-end:
     // True - user is transferred the 1155 NFT holding their CVX deposit
     // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
     // False - user pays fee to unlock their CVX and burn their NFT
-    function withdrawCVXNft(bool _instantWithdraw) private {
-        if (_instantWithdraw == true) {
+    function withdrawCVXNft(bool _instantWithdraw, uint256 _cvxNFTID) private {
+        if (_instantWithdraw == false) {
             // TODO: start withdraw vlCVX
             IAfCVX1155(CVXNFT).safeTransferFrom(
                 address(this),
                 msg.sender,
-                positions[msg.sender].cvxNFTID,
-                positions[msg.sender].convexBalances,
+                _cvxNFTID,
+                // positions[msg.sender].convexBalances,
                 ""
             );
             console.log(
                 "user balance of CVX NFT:",
                 IAfCVX1155(CVXNFT).balanceOf(
                     msg.sender,
-                    positions[msg.sender].cvxNFTID
+                    // positions[msg.sender].cvxNFTID
                 )
             );
         } else {
@@ -455,6 +445,4 @@ contract AfEth is
     function unlockCvx() public {
         ILockedCvx(vlCVX).processExpiredLocks(false);
     }
-
-    receive() external payable {}
 }
