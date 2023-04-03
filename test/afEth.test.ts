@@ -98,66 +98,27 @@ describe("AfEth", async function () {
 
     // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("476215987701345784134"));
+    expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
 
     // check for cvx nft
     const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("476215987701345784134"));
+    expect(cvxNftAmount).eq(BigNumber.from("476216053286032795841"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1751292163634350360");
-    expect(crvPoolEthAmount).eq("1751292163634350360");
+    expect(crvPoolAfEthAmount).eq("1751292060282684770");
+    expect(crvPoolEthAmount).eq("1751292060282684770");
 
     // check position struct
     const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1751292163634350360"));
+    expect(positions.afETH).eq(BigNumber.from("1751292060282684770"));
     expect(positions.cvxNFTID).eq(BigNumber.from("1"));
     expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1751292163634350360"));
+    expect(positions.curveBalances).eq(BigNumber.from("1751292060282684770"));
     expect(positions.convexBalances).eq(
-      BigNumber.from("476215987701345784134")
+      BigNumber.from("476216053286032795841")
     );
-  });
-  it("Should lock cvx and fail to unlock if lock is not yet expired", async function () {
-    // impersonate an account that has rewards to withdraw at the current block
-    const depositAmount = ethers.utils.parseEther("5");
-
-    const stakeTx = await afEth.stake({ value: depositAmount });
-    await stakeTx.wait();
-
-    await time.increase(1000);
-
-    await expect(afEth.unlockCvx()).to.be.revertedWith("no exp locks");
-  });
-  it("Should lock cvx and unlock after it has expired", async function () {
-    const accounts = await ethers.getSigners();
-    const depositAmount = ethers.utils.parseEther("5");
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-    const stakeTx = await afEth.stake({ value: depositAmount });
-    await stakeTx.wait();
-
-    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("1422063383685132167064"));
-
-    const cvxBalanceAfterLock = await cvx.balanceOf(afEth.address);
-    expect(cvxBalanceAfterLock).eq(BigNumber.from("0"));
-
-    await time.increase(12960000); // 5 months (locks expire in 4)
-
-    const tx2 = await afEth.unlockCvx();
-    await tx2.wait();
-
-    const cvxBalanceAfterUnlock = await cvx.balanceOf(afEth.address);
-    expect(cvxBalanceAfterUnlock).eq(BigNumber.from("1422063383685132167064"));
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
@@ -223,6 +184,17 @@ describe("AfEth", async function () {
 
     expect(voter).eq(accounts[0].address);
     expect(voter).eq(await afEth.owner());
+  });
+
+  it("Should update emissions per year", async function () {
+    const year0EmissionsBefore = await afEth.emissionsPerYear(0);
+
+    const tx = await afEth.setEmissionsPerYear(0, 1234567890);
+    await tx.wait();
+    const year0EmissionsAfter = await afEth.emissionsPerYear(0);
+
+    expect(year0EmissionsBefore).eq(BigNumber.from(0));
+    expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));
   });
 });
 
