@@ -182,20 +182,25 @@ contract AfEth is
         requestUnlockCvx(positionId, msg.sender);
     }
 
-
     function getAsymmetryRatio(
         uint256 apy
     ) public view returns (uint256 ratio) {
-        uint256 crvEmissionsThisYear = crvEmissionsPerYear[((block.timestamp - 1597471200) / 31556926) + 1];
-        uint256 cvxTotalSupplyAsCrv = (crvPerCvx() * IERC20(CVX).totalSupply()) / 10 ** 18;
-        uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv / crvEmissionsThisYear;
+        uint256 crvEmissionsThisYear = crvEmissionsPerYear[
+            ((block.timestamp - 1597471200) / 31556926) + 1
+        ];
+        uint256 cvxTotalSupplyAsCrv = (crvPerCvx() *
+            IERC20(CVX).totalSupply()) / 10 ** 18;
+        uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv /
+            crvEmissionsThisYear;
         uint256 ratioPercentage = supplyEmissionRatio * apy;
         return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
     }
 
     function crvPerCvx() private view returns (uint256) {
-        uint256 crvOraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).price_oracle();
-        uint256 cvxOraclePrice = ICvxEthPool(CVX_ETH_CRV_POOL_ADDRESS).price_oracle();
+        uint256 crvOraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS)
+            .price_oracle();
+        uint256 cvxOraclePrice = ICvxEthPool(CVX_ETH_CRV_POOL_ADDRESS)
+            .price_oracle();
         return (cvxOraclePrice * 10 ** 18) / crvOraclePrice;
     }
 
