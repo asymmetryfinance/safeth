@@ -28,6 +28,8 @@ contract AfEth is
 {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
 
+    event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+
     struct Position {
         uint256 positionID;
         uint256 curveBalances; // crv Pool LP amount
@@ -39,7 +41,7 @@ contract AfEth is
     }
 
     // curve emissions based on year
-    mapping(uint256 => uint256) private emissionsPerYear;
+    mapping(uint256 => uint256) public emissionsPerYear;
     // map user address to Position struct
     mapping(address => Position) public positions;
 
@@ -91,6 +93,13 @@ contract AfEth is
         _disableInitializers();
     }
 
+    function setEmissionsPerYear(
+        uint256 year,
+        uint256 emissions
+    ) public onlyOwner {
+        emissionsPerYear[year] = emissions;
+        emit SetEmissionsPerYear(year, emissions);
+    }
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
