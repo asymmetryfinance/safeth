@@ -125,11 +125,14 @@ contract AfEth is
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
         uint256 cvxAmount = (msg.value * ratio) / 10 ** 18;
         uint256 ethAmount = (msg.value - cvxAmount) / 2;
-
+        uint256 id = nftIds[msg.sender];
+        if (id == 0) {
+            id = nftId;
+            nftId++;
+        }
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
         uint256 amountCvxLocked = lockCvx(cvxAmountReceived);
-
-        (uint256 cvxNftBalance, uint256 cvxNFTID) = mintCvxNft(
+        mintCvxNft(
             msg.sender,
             amountCvxLocked
         );
@@ -151,7 +154,7 @@ contract AfEth is
         // storage of individual balances associated w/ user deposit
         // This calculation doesn't update when afETH is transferred between wallets
         // if we can not need this that'd be great, Maybe the bundle nft can handle the acounting from this
-        uint256 newPositionID = ++currentPositionId;
+        // uint256 newPositionID = ++currentPositionId;
         // positions[msg.sender] = Position({
         //     positionID: newPositionID,
         //     curveBalances: crvLpAmount,
@@ -283,7 +286,6 @@ contract AfEth is
 
     function mintBundleNft(uint256 _amount, uint256 _id) private {
         IAfBundle1155(bundleNFT).mint(msg.sender, _amount, _id);
-        nftId++;
     }
 
     function burnBundleNFT(
@@ -300,8 +302,9 @@ contract AfEth is
     }
 
     function mintCvxNft(
-        address sender,
-        uint256 _amountLocked
+        address _sender,
+        uint256 _amountLocked,
+        uint256 _id
     ) private returns (uint256 _balance, uint256 _id) {
         uint256 amountLocked = _amountLocked;
 
