@@ -100,6 +100,7 @@ contract AfEth is
         emissionsPerYear[year] = emissions;
         emit SetEmissionsPerYear(year, emissions);
     }
+
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
