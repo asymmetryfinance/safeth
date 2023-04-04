@@ -203,13 +203,17 @@ contract AfEth is
     }
 
     function crvPerCvx() private view returns (uint256) {
-
-        (, int256 chainLinkCrvEthPrice, , , ) = chainLinkCrvEthFeed.latestRoundData();
+        (, int256 chainLinkCrvEthPrice, , , ) = chainLinkCrvEthFeed
+            .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
-        (, int256 chainLinkCvxEthPrice, , , ) = chainLinkCvxEthFeed.latestRoundData();
+        (, int256 chainLinkCvxEthPrice, , , ) = chainLinkCvxEthFeed
+            .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
-        return (uint256(chainLinkCvxEthPrice) * 10 ** 18) / uint256(chainLinkCrvEthPrice);
+        return
+            (uint256(chainLinkCvxEthPrice) * 10 ** 18) /
+            uint256(chainLinkCrvEthPrice);
     }
+
     function swapExactInputSingleHop(
         address tokenIn,
         address tokenOut,
