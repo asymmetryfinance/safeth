@@ -98,26 +98,26 @@ describe("AfEth", async function () {
 
     // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
+    expect(vlCvxBalance).eq(BigNumber.from("474436593765883209227"));
 
     // check for cvx nft
     const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("476216053286032795841"));
+    expect(cvxNftAmount).eq(BigNumber.from("474436593765883209227"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1751292060282684770");
-    expect(crvPoolEthAmount).eq("1751292060282684770");
+    expect(crvPoolAfEthAmount).eq("1754096198245713537");
+    expect(crvPoolEthAmount).eq("1754096198245713537");
 
     // check position struct
     const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1751292060282684770"));
+    expect(positions.afETH).eq(BigNumber.from("1754096198245713537"));
     expect(positions.cvxNFTID).eq(BigNumber.from("1"));
     expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1751292060282684770"));
+    expect(positions.curveBalances).eq(BigNumber.from("1754096198245713537"));
     expect(positions.convexBalances).eq(
-      BigNumber.from("476216053286032795841")
+      BigNumber.from("474436593765883209227")
     );
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -159,14 +159,15 @@ describe("AfEth", async function () {
     await deployContracts();
 
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
-    expect(r1.eq("299482867234169718")).eq(true); // 29.94%
+    expect(r1).eq("298361212712598375"); // 29.94%
 
     const r2 = await afEth.getAsymmetryRatio("300000000000000000");
-    expect(r2.eq("460926226555940021")).eq(true); // 46.09%
+    expect(r2).eq("459596620403112401"); // 46.09%
 
     const r3 = await afEth.getAsymmetryRatio("500000000000000000");
-    expect(r3.eq("587638408209630597")).eq(true); // 58.76%
+    expect(r3).eq("586340851502091146"); // 58.76%
   });
+
   it("Should verify that vote delegation is set to the contract owner", async function () {
     const accounts = await ethers.getSigners();
     const snapshotDelegateRegistry = new ethers.Contract(
@@ -187,11 +188,11 @@ describe("AfEth", async function () {
   });
 
   it("Should update emissions per year", async function () {
-    const year0EmissionsBefore = await afEth.emissionsPerYear(0);
+    const year0EmissionsBefore = await afEth.crvEmissionsPerYear(0);
 
     const tx = await afEth.setEmissionsPerYear(0, 1234567890);
     await tx.wait();
-    const year0EmissionsAfter = await afEth.emissionsPerYear(0);
+    const year0EmissionsAfter = await afEth.crvEmissionsPerYear(0);
 
     expect(year0EmissionsBefore).eq(BigNumber.from(0));
     expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));

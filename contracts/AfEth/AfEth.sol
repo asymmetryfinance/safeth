@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
@@ -20,6 +19,7 @@ import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 import "hardhat/console.sol";
 import "./CvxLockManager.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AfEth is
     Initializable,
@@ -42,17 +42,9 @@ contract AfEth is
         uint256 createdAt; // block.timestamp
     }
 
-    // curve emissions based on year
-    mapping(uint256 => uint256) public emissionsPerYear;
+    mapping(uint256 => uint256) public crvEmissionsPerYear;
     // map user address to Position struct
     mapping(address => Position) public positions;
-
-    AggregatorV3Interface constant chainLinkEthFeed =
-        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if these are updated or discontinued?
-    AggregatorV3Interface constant chainLinkCvxFeed =
-        AggregatorV3Interface(0xd962fC30A72A84cE50161031391756Bf2876Af5D);
-    AggregatorV3Interface constant chainLinkCrvFeed =
-        AggregatorV3Interface(0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f);
 
     ISwapRouter constant swapRouter =
         ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
@@ -77,8 +69,16 @@ contract AfEth is
         0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
     address public constant CRV_ETH_CRV_POOL_ADDRESS =
         0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_ETH_CRV_POOL_ADDRESS =
+        0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+
+    AggregatorV3Interface constant chainLinkCvxEthFeed =
+        AggregatorV3Interface(0xC9CbF687f43176B302F03f5e58470b77D07c61c6);
+    AggregatorV3Interface constant chainLinkCrvEthFeed =
+        AggregatorV3Interface(0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e);
 
     uint256 currentCvxNftId;
     uint256 currentBundleNftId;
@@ -98,7 +98,7 @@ contract AfEth is
         uint256 year,
         uint256 emissions
     ) public onlyOwner {
-        emissionsPerYear[year] = emissions;
+        crvEmissionsPerYear[year] = emissions;
         emit SetEmissionsPerYear(year, emissions);
     }
 
@@ -122,17 +122,16 @@ contract AfEth is
         bundleNFT = _bundleNft;
         safEth = _safEth;
 
-        // emissions of CRV per year
-        emissionsPerYear[1] = 274815283;
-        emissionsPerYear[2] = 231091186;
-        emissionsPerYear[3] = 194323750;
-        emissionsPerYear[4] = 163406144;
-        emissionsPerYear[5] = 137407641;
-        emissionsPerYear[6] = 115545593;
-        emissionsPerYear[7] = 97161875;
-        emissionsPerYear[8] = 81703072;
-        emissionsPerYear[9] = 68703820;
-        emissionsPerYear[10] = 57772796;
+        crvEmissionsPerYear[1] = 274815283;
+        crvEmissionsPerYear[2] = 231091186;
+        crvEmissionsPerYear[3] = 194323750;
+        crvEmissionsPerYear[4] = 163406144;
+        crvEmissionsPerYear[5] = 137407641;
+        crvEmissionsPerYear[6] = 115545593;
+        crvEmissionsPerYear[7] = 97161875;
+        crvEmissionsPerYear[8] = 81703072;
+        crvEmissionsPerYear[9] = 68703820;
+        crvEmissionsPerYear[10] = 57772796;
 
         // Assumes AfEth contract owns the vote locked convex
         // This will need to be done elseware if other contracts own or wrap the vote locked convex
@@ -188,37 +187,30 @@ contract AfEth is
         requestUnlockCvx(positionId, msg.sender);
     }
 
-    function getCvxPriceData() public view returns (uint256) {
-        (, int256 price, , , ) = chainLinkCvxFeed.latestRoundData();
-        if (price < 0) {
-            price = 0;
-        }
-        uint8 decimals = chainLinkCvxFeed.decimals();
-        return uint256(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
-    }
-
-    function getCrvPriceData() public view returns (uint256) {
-        (, int256 price, , , ) = chainLinkCrvFeed.latestRoundData();
-        if (price < 0) {
-            price = 0;
-        }
-        uint8 decimals = chainLinkCrvFeed.decimals();
-        return uint256(price) * 10 ** (decimals + 2); // Need to remove decimals and send price with the precision including decimals
-    }
-
     function getAsymmetryRatio(
         uint256 apy
     ) public view returns (uint256 ratio) {
-        uint256 cvxPrice = getCvxPriceData();
-        uint256 crvPrice = getCrvPriceData();
-        uint256 emissionYear = ((block.timestamp - 1597471200) / 31556926) + 1; // which year the emission schedule is on
-        uint256 totalUsdEmissionsPerYear = (emissionsPerYear[emissionYear] *
-            crvPrice);
-        uint256 cvxAmount = (((apy) * IERC20(CVX).totalSupply()) /
-            totalUsdEmissionsPerYear);
-        uint256 cvxAmountUsdValue = (cvxAmount * uint256(cvxPrice));
+        uint256 crvEmissionsThisYear = crvEmissionsPerYear[
+            ((block.timestamp - 1597471200) / 31556926) + 1
+        ];
+        uint256 cvxTotalSupplyAsCrv = (crvPerCvx() *
+            IERC20(CVX).totalSupply()) / 10 ** 18;
+        uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv /
+            crvEmissionsThisYear;
+        uint256 ratioPercentage = supplyEmissionRatio * apy;
+        return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
+    }
+
+    function crvPerCvx() private view returns (uint256) {
+        (, int256 chainLinkCrvEthPrice, , , ) = chainLinkCrvEthFeed
+            .latestRoundData();
+        if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
+        (, int256 chainLinkCvxEthPrice, , , ) = chainLinkCvxEthFeed
+            .latestRoundData();
+        if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
         return
-            (cvxAmountUsdValue) / (10 ** 18 + (cvxAmountUsdValue / 10 ** 18));
+            (uint256(chainLinkCvxEthPrice) * 10 ** 18) /
+            uint256(chainLinkCrvEthPrice);
     }
 
     function swapExactInputSingleHop(
