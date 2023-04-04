@@ -18,12 +18,12 @@ import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
+import "./interfaces/IAfEth.sol";
 import "hardhat/console.sol";
 import "./CvxLockManager.sol";
 
 contract AfEth is
     Initializable,
-    ERC20Upgradeable,
     ERC1155Holder,
     OwnableUpgradeable,
     CvxLockManager
@@ -108,7 +108,6 @@ contract AfEth is
         string memory _tokenName,
         string memory _tokenSymbol
     ) external initializer {
-        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         _transferOwnership(msg.sender);
 
         cvxNft = _cvxNft;
@@ -156,7 +155,7 @@ contract AfEth is
         ISafEth(safEth).stake{value: ethAmount}();
         uint256 afEthAmount = ethAmount;
 
-        _mint(address(this), afEthAmount);
+        IAfEth(afEth).mint(address(this), afEthAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             ethAmount,
@@ -178,7 +177,7 @@ contract AfEth is
         withdrawCVXNft(_instantWithdraw, id);
         withdrawCRVPool(crvPool, positions[id].curveBalance);
         uint256 afEthBalance = IERC20(afEth).balanceOf(address(this));
-        _burn(address(this), afEthBalance);
+        IAfEth(afEth).burn(address(this), afEthBalance);
 
         IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken
     }
@@ -257,7 +256,7 @@ contract AfEth is
 
         IWETH(wETH).deposit{value: _ethAmount}();
         IWETH(wETH).approve(_pool, _ethAmount);
-        _approve(address(this), _pool, _afEthAmount);
+        IERC20(afEth).approve(address(this), _pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
