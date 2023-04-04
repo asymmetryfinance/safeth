@@ -163,7 +163,7 @@ contract CvxLockManager {
         );
         cvxPositions[positionId].cvxAmount = 0;
 
-        // TODO upon withdrawal iterate from startingEpoch and calculate how much rewards they are owed from each
+        // TODO iterate from startingEpoch to unlockEpoch and calculate how much rewards they are owed from each
         // use vlCvx.balanceAtEpochOf() to determine total locked amount at each epoch and get the ratio relative to their position
         // give user ratio * rewardsClaimed[i] for all epochs iterated
     }
