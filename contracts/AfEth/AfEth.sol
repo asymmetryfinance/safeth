@@ -13,7 +13,6 @@ import "./interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
-import "../interfaces/curve/ICvxEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/IAf1155.sol";
