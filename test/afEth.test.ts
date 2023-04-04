@@ -37,10 +37,7 @@ describe.only("CvxStrategy", async function () {
     await safEth.deployed();
 
     const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await upgrades.deployProxy(AfEth, [
-      "Asymmetry Finance ETH",
-      "afETh",
-    ])) as AfEth;
+    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
     await afEth.deployed();
 
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
@@ -51,7 +48,7 @@ describe.only("CvxStrategy", async function () {
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
-    await afCvx1155.initialize(afEth.address);
+    await afCvx1155.initialize(cvxStrategy.address);
   };
 
   before(async () => {
@@ -91,22 +88,22 @@ describe.only("CvxStrategy", async function () {
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
-    await afEth.updateCrvPool(afEthCrvPoolAddress);
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
   });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
 
-    const stakeTx = await afEth.stake({ value: depositAmount });
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     // verify vlCVX
-    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
+    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(cvxStrategy.address);
     expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
 
     // check for cvx nft
-    const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
+    const cvxNftAmount = await afCvx1155.balanceOf(cvxStrategy.address, 1);
     expect(cvxNftAmount).eq(BigNumber.from("476216053286032795841"));
 
     // check crv liquidity pool
@@ -116,7 +113,7 @@ describe.only("CvxStrategy", async function () {
     expect(crvPoolEthAmount).eq("1751292060282684770");
 
     // check position struct
-    const positions = await afEth.positions(0);
+    const positions = await cvxStrategy.positions(0);
     expect(positions.afEthAmount).eq(BigNumber.from("1751292060282684770"));
     expect(positions.curveBalance).eq(BigNumber.from("1751292060282684770"));
     expect(positions.convexBalance).eq(BigNumber.from("476216053286032795841"));
@@ -132,25 +129,25 @@ describe.only("CvxStrategy", async function () {
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
 
     const cvxAmount = ethers.utils.parseEther("100");
-    await cvx.transfer(afEth.address, cvxAmount);
+    await cvx.transfer(cvxStrategy.address, cvxAmount);
 
-    const stakeTx = await afEth.stake({ value: depositAmount });
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     await time.increase(1000);
 
     const provider = waffle.provider;
-    const startingBalance = await provider.getBalance(afEth.address);
+    const startingBalance = await provider.getBalance(cvxStrategy.address);
 
-    const tx2 = await afEth.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
+    const tx2 = await cvxStrategy.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
     await tx2.wait();
-    const endingBalance = await provider.getBalance(afEth.address);
+    const endingBalance = await provider.getBalance(cvxStrategy.address);
 
     expect(endingBalance.gt(startingBalance)).eq(true);
 
     // TODO: Not reverting, need to look more into it trying to get this PR in
     // await expect(
-    //   afEth.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
+    //   cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
     // ).to.be.reverted;
   });
 
@@ -159,13 +156,13 @@ describe.only("CvxStrategy", async function () {
     resetToBlock(16871866);
     await deployContracts();
 
-    const r1 = await afEth.getAsymmetryRatio("150000000000000000");
+    const r1 = await cvxStrategy.getAsymmetryRatio("150000000000000000");
     expect(r1.eq("299482867234169718")).eq(true); // 29.94%
 
-    const r2 = await afEth.getAsymmetryRatio("300000000000000000");
+    const r2 = await cvxStrategy.getAsymmetryRatio("300000000000000000");
     expect(r2.eq("460926226555940021")).eq(true); // 46.09%
 
-    const r3 = await afEth.getAsymmetryRatio("500000000000000000");
+    const r3 = await cvxStrategy.getAsymmetryRatio("500000000000000000");
     expect(r3.eq("587638408209630597")).eq(true); // 58.76%
   });
   it("Should verify that vote delegation is set to the contract owner", async function () {
@@ -179,20 +176,20 @@ describe.only("CvxStrategy", async function () {
     const vlCvxVoteDelegationId =
       "0x6376782e65746800000000000000000000000000000000000000000000000000";
     const voter = await snapshotDelegateRegistry.delegation(
-      afEth.address,
+      cvxStrategy.address,
       vlCvxVoteDelegationId
     );
 
     expect(voter).eq(accounts[0].address);
-    expect(voter).eq(await afEth.owner());
+    expect(voter).eq(await cvxStrategy.owner());
   });
 
   it("Should update emissions per year", async function () {
-    const year0EmissionsBefore = await afEth.emissionsPerYear(0);
+    const year0EmissionsBefore = await cvxStrategy.emissionsPerYear(0);
 
-    const tx = await afEth.setEmissionsPerYear(0, 1234567890);
+    const tx = await cvxStrategy.setEmissionsPerYear(0, 1234567890);
     await tx.wait();
-    const year0EmissionsAfter = await afEth.emissionsPerYear(0);
+    const year0EmissionsAfter = await cvxStrategy.emissionsPerYear(0);
 
     expect(year0EmissionsBefore).eq(BigNumber.from(0));
     expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));

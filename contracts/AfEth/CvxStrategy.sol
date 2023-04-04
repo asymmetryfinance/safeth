@@ -35,7 +35,7 @@ contract CvxStrategy is
     mapping(uint256 => uint256) public emissionsPerYear;
 
     mapping(address => uint256) public nftIds;
-    uint256 positionId = 0;
+    uint256 positionId;
 
     AggregatorV3Interface constant chainLinkEthFeed =
         AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); // TODO: what if these are updated or discontinued?
@@ -188,6 +188,7 @@ contract CvxStrategy is
         uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
         IAfEth(afEth).burn(address(this), afEthBalance);
 
+        // TODO: send user eth
 
     }
 
