@@ -20,6 +20,7 @@ import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 import "hardhat/console.sol";
 import "./CvxLockManager.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract AfEth is
     Initializable,
@@ -74,6 +75,11 @@ contract AfEth is
 
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+
+    AggregatorV3Interface constant chainLinkCvxEthFeed =
+        AggregatorV3Interface(0xC9CbF687f43176B302F03f5e58470b77D07c61c6);
+    AggregatorV3Interface constant chainLinkCrvEthFeed =
+        AggregatorV3Interface(0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e);
 
     uint256 currentCvxNftId;
     uint256 currentBundleNftId;
@@ -197,13 +203,13 @@ contract AfEth is
     }
 
     function crvPerCvx() private view returns (uint256) {
-        uint256 crvOraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS)
-            .price_oracle();
-        uint256 cvxOraclePrice = ICvxEthPool(CVX_ETH_CRV_POOL_ADDRESS)
-            .price_oracle();
-        return (cvxOraclePrice * 10 ** 18) / crvOraclePrice;
-    }
 
+        (, int256 chainLinkCrvEthPrice, , , ) = chainLinkCrvEthFeed.latestRoundData();
+        if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
+        (, int256 chainLinkCvxEthPrice, , , ) = chainLinkCvxEthFeed.latestRoundData();
+        if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
+        return (uint256(chainLinkCvxEthPrice) * 10 ** 18) / uint256(chainLinkCrvEthPrice);
+    }
     function swapExactInputSingleHop(
         address tokenIn,
         address tokenOut,

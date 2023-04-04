@@ -98,26 +98,26 @@ describe("AfEth", async function () {
 
     // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(afEth.address);
-    expect(vlCvxBalance).eq(BigNumber.from("473659893980974553216"));
+    expect(vlCvxBalance).eq(BigNumber.from("474436593765883209227"));
 
     // check for cvx nft
     const cvxNftAmount = await afCvx1155.balanceOf(afEth.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("473659893980974553216"));
+    expect(cvxNftAmount).eq(BigNumber.from("474436593765883209227"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1755320135177201542");
-    expect(crvPoolEthAmount).eq("1755320135177201542");
+    expect(crvPoolAfEthAmount).eq("1754096198245713537");
+    expect(crvPoolEthAmount).eq("1754096198245713537");
 
     // check position struct
     const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1755320135177201542"));
+    expect(positions.afETH).eq(BigNumber.from("1754096198245713537"));
     expect(positions.cvxNFTID).eq(BigNumber.from("1"));
     expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1755320135177201542"));
+    expect(positions.curveBalances).eq(BigNumber.from("1754096198245713537"));
     expect(positions.convexBalances).eq(
-      BigNumber.from("473659893980974553216")
+      BigNumber.from("474436593765883209227")
     );
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
@@ -159,14 +159,15 @@ describe("AfEth", async function () {
     await deployContracts();
 
     const r1 = await afEth.getAsymmetryRatio("150000000000000000");
-    expect(r1).eq("297005470228357629"); // 29.94%
+    expect(r1).eq("298361212712598375"); // 29.94%
 
     const r2 = await afEth.getAsymmetryRatio("300000000000000000");
-    expect(r2).eq("457986457337092462"); // 46.09%
+    expect(r2).eq("459596620403112401"); // 46.09%
 
     const r3 = await afEth.getAsymmetryRatio("500000000000000000");
-    expect(r3).eq("584767141290605239"); // 58.76%
+    expect(r3).eq("586340851502091146"); // 58.76%
   });
+
   it("Should verify that vote delegation is set to the contract owner", async function () {
     const accounts = await ethers.getSigners();
     const snapshotDelegateRegistry = new ethers.Contract(
