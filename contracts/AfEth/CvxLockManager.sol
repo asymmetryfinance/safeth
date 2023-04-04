@@ -44,6 +44,9 @@ contract CvxLockManager {
     // epoch at which amount should be unlocked
     mapping(uint256 => uint256) public unlockSchedule;
 
+    // how much rewards was claimed at each epoch
+    mapping(uint256 => uint256) public rewardsClaimed;
+
     function lockCvx(
         uint256 cvxAmount,
         uint256 positionId,
@@ -98,6 +101,9 @@ contract CvxLockManager {
 
         IERC20(CVX).approve(vlCVX, cvxAmountToRelock);
         ILockedCvx(vlCVX).lock(address(this), cvxAmountToRelock, 0);
+
+        // TODO claim rewards and record it in epochInfo[currentEpoch]
+        rewardsClaimed[currentEpoch] = 123;
 
         lastRelockEpoch = currentEpoch;
     }
@@ -156,6 +162,10 @@ contract CvxLockManager {
             "Couldnt transfer"
         );
         cvxPositions[positionId].cvxAmount = 0;
+
+        // TODO upon withdrawal iterate from startingEpoch and calculate how much rewards they are owed from each
+        // use vlCvx.balanceAtEpochOf() to determine total locked amount at each epoch and get the ratio relative to their position
+        // give user ratio * rewardsClaimed[i] for all epochs iterated
     }
 
     function getCurrentEpoch() public view returns (uint) {
