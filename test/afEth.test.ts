@@ -111,14 +111,10 @@ describe("AfEth", async function () {
     expect(crvPoolEthAmount).eq("1751292060282684770");
 
     // check position struct
-    const positions = await afEth.positions(accounts[0].address);
-    expect(positions.afETH).eq(BigNumber.from("1751292060282684770"));
-    expect(positions.cvxNFTID).eq(BigNumber.from("1"));
-    expect(positions.positionID).eq(BigNumber.from("1"));
-    expect(positions.curveBalances).eq(BigNumber.from("1751292060282684770"));
-    expect(positions.convexBalances).eq(
-      BigNumber.from("476216053286032795841")
-    );
+    const positions = await afEth.positions(0);
+    expect(positions.afEthAmount).eq(BigNumber.from("1751292060282684770"));
+    expect(positions.curveBalance).eq(BigNumber.from("1751292060282684770"));
+    expect(positions.convexBalance).eq(BigNumber.from("476216053286032795841"));
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");

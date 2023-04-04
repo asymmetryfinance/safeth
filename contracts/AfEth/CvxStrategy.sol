@@ -32,7 +32,7 @@ contract AfEth is
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
 
     // curve emissions based on year
-    mapping(uint256 => uint256) private emissionsPerYear;
+    mapping(uint256 => uint256) public emissionsPerYear;
 
     mapping(address => uint256) public nftIds;
     uint256 positionId = 0;
@@ -98,15 +98,11 @@ contract AfEth is
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _tokenName - name of erc20
-        @param _tokenSymbol - symbol of erc20
     */
     function initialize(
         address _cvxNft,
         address _safEth,
-        address _afEth,
-        string memory _tokenName,
-        string memory _tokenSymbol
+        address _afEth
     ) external initializer {
         _transferOwnership(msg.sender);
 
@@ -256,7 +252,7 @@ contract AfEth is
 
         IWETH(wETH).deposit{value: _ethAmount}();
         IWETH(wETH).approve(_pool, _ethAmount);
-        IERC20(afEth).approve(address(this), _pool, _afEthAmount);
+        IERC20(afEth).approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
