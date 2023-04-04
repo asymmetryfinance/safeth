@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // TODO: should we make this upgradeable?
-contract AfETH is ERC20, Ownable {
+contract AfEth is ERC20, Ownable {
     address public minter;
 
     constructor(

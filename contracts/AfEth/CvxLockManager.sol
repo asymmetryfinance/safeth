@@ -44,6 +44,8 @@ contract CvxLockManager {
     // epoch at which amount should be unlocked
     mapping(uint256 => uint256) public unlockSchedule;
 
+    
+
     function lockCvx(
         uint256 cvxAmount,
         uint256 positionId,

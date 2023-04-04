@@ -22,7 +22,7 @@ import "./interfaces/IAfEth.sol";
 import "hardhat/console.sol";
 import "./CvxLockManager.sol";
 
-contract AfEth is
+contract CvxStrategy is
     Initializable,
     ERC1155Holder,
     OwnableUpgradeable,
@@ -76,7 +76,9 @@ contract AfEth is
         uint256 curveBalance; // crv Pool LP amount
         uint256 convexBalance; // cvx locked amount
         uint256 afEthAmount; // afEth amount minted TODO: this may not be needed
+        uint256 safEthAmount; // afEth amount minted TODO: this may not be needed
         uint256 createdAt; // block.timestamp
+        bool claimed; // user has unstaked position
     }
 
     mapping(uint256 => Position) public positions;
@@ -147,14 +149,17 @@ contract AfEth is
 
         lockCvx(cvxAmountReceived, id, msg.sender);
 
+        uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
+
         // TODO: return mint amount from stake function
         ISafEth(safEth).stake{value: ethAmount}();
-        uint256 afEthAmount = ethAmount;
+        uint256 safEthBalanceAfter = IERC20(safEth).balanceOf(address(this));
+        uint256 afEthAmount = safEthBalanceAfter - safEthBalanceBefore;
 
-        IAfEth(afEth).mint(address(this), afEthAmount);
+        IAfEth(afEth).mint(address(this), ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
-            ethAmount,
+            afEthAmount,
             afEthAmount
         );
 
@@ -164,18 +169,26 @@ contract AfEth is
             curveBalance: crvLpAmount,
             convexBalance: cvxAmountReceived,
             afEthAmount: afEthAmount,
-            createdAt: block.timestamp
+            safEthAmount: afEthAmount,
+            createdAt: block.timestamp,
+            claimed: false
         });
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
         uint256 id = _id;
+        Position storage position = positions[id];
+        require(position.claimed == false, "position claimed");
+        position.claimed = true;
+
         withdrawCVXNft(_instantWithdraw, id);
-        withdrawCRVPool(crvPool, positions[id].curveBalance);
-        uint256 afEthBalance = IERC20(afEth).balanceOf(address(this));
+        uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
+        withdrawCRVPool(crvPool, position.curveBalance);
+        uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
+        uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
         IAfEth(afEth).burn(address(this), afEthBalance);
 
-        IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken
+
     }
 
     function getCvxPriceData() public view returns (uint256) {
@@ -268,7 +281,6 @@ contract AfEth is
         // TODO: update min amounts
         min_amounts[0] = 0;
         min_amounts[1] = 0;
-        // positions[msg.sender].curveBalance = 0;
         IAfEthPool(_pool).remove_liquidity(_amount, min_amounts);
     }
 

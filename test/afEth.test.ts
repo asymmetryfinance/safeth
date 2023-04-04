@@ -4,7 +4,6 @@ import {
   CVX_ADDRESS,
   CVX_WHALE,
   VL_CVX,
-  WETH_ADDRESS,
   SNAPSHOT_DELEGATE_REGISTRY,
 } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
@@ -12,13 +11,15 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
-import { AfCVX1155, AfEth } from "../typechain-types";
+import { AfCVX1155, AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 
-describe("AfEth", async function () {
+describe.only("CvxStrategy", async function () {
   let afEth: AfEth;
+  let safEth: SafEth;
+  let cvxStrategy: CvxStrategy;
   let afCvx1155: AfCVX1155;
   let crvPool: any;
   let initialHardhatBlock: number;
@@ -29,22 +30,26 @@ describe("AfEth", async function () {
     await afCvx1155.deployed();
 
     const SafEth = await ethers.getContractFactory("SafEth");
-    const safEth = await upgrades.deployProxy(SafEth, [
+    safEth = (await upgrades.deployProxy(SafEth, [
       "Asymmetry Finance ETH",
       "safETH",
-    ]);
+    ])) as SafEth;
     await safEth.deployed();
 
     const AfEth = await ethers.getContractFactory("AfEth");
-    const address = ethers.constants.AddressZero;
     afEth = (await upgrades.deployProxy(AfEth, [
-      afCvx1155.address,
-      address,
-      safEth.address,
       "Asymmetry Finance ETH",
       "afETh",
     ])) as AfEth;
     await afEth.deployed();
+
+    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
+    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
+      afCvx1155.address,
+      safEth.address,
+      afEth.address,
+    ])) as CvxStrategy;
+    await cvxStrategy.deployed();
 
     await afCvx1155.initialize(afEth.address);
   };
@@ -63,9 +68,9 @@ describe("AfEth", async function () {
     await deployContracts();
 
     const deployCrv = await crvPoolFactory.deploy_pool(
-      "Asymmetry Finance ETH",
-      "afETH",
-      [afEth.address, WETH_ADDRESS],
+      "Af Cvx Strategy",
+      "afCvxStrat",
+      [afEth.address, safEth.address],
       BigNumber.from("400000"),
       BigNumber.from("145000000000000"),
       BigNumber.from("26000000"),
