@@ -181,16 +181,14 @@ contract AfEth is
     function unstake(bool _instantWithdraw) external payable {
         // TODO: add option to not unstake all
         uint256 afEthBalance = IERC20(afETH).balanceOf(msg.sender);
+                requestUnlockCvx(positionId, msg.sender);
+
         withdrawCVXNft(_instantWithdraw, _id);
         withdrawCRVPool(crvPool, 100000);
         _burn(msg.sender, afEthBalance);
 
         burnBundleNFT(msg.sender);
         IWETH(wETH).withdraw(IWETH(wETH).balanceOf(address(this))); // TODO: this seems broken
-    }
-
-    function unstake(uint256 positionId) public {
-        requestUnlockCvx(positionId, msg.sender);
     }
 
     function getCvxPriceData() public view returns (uint256) {
