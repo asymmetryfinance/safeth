@@ -25,7 +25,6 @@ contract CvxLockManager is OwnableUpgradeable {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
 
-
     address public constant FXS_ETH_CRV_POOL_ADDRESS =
         0x941Eb6F616114e4Ecaa85377945EA306002612FE;
     address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
@@ -128,7 +127,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = balanceAfterClaim - balanceBeforeClaim;
 
-        rewardsClaimed[currentEpoch] = 123;
+        rewardsClaimed[currentEpoch] = amountClaimed;
 
         lastRelockEpoch = currentEpoch;
     }
@@ -191,6 +190,24 @@ contract CvxLockManager is OwnableUpgradeable {
         // TODO iterate from startingEpoch to unlockEpoch and calculate how much rewards they are owed from each
         // use vlCvx.balanceAtEpochOf() to determine total locked amount at each epoch and get the ratio relative to their position
         // give user ratio * rewardsClaimed[i] for all epochs iterated
+        // calculate their portion of the rewards
+    }
+
+    function getPositionRewards(uint256 positionId) public returns (uint256) {
+        uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
+        uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
+        uint256 positionAmount = cvxPositions[positionId].cvxAmount;
+        address positionOwner = cvxPositions[positionId].owner;
+
+        uint256 totalRewards = 0;
+        for(uint256 i=startingEpoch;i<unlockEpoch-1;i++) {
+            uint256 positionLockRatio = (positionAmount * 10 ** 18) / ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
+            totalRewards += positionLockRatio * rewardsClaimed[i];
+        }
+
+        console.log('totalRewards is', totalRewards);
+
+        return totalRewards;
     }
 
     function getCurrentEpoch() public view returns (uint) {
