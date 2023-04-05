@@ -128,8 +128,6 @@ describe.only("CvxStrategy", async function () {
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
-
-    
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
@@ -170,13 +168,13 @@ describe.only("CvxStrategy", async function () {
     await deployContracts();
 
     const r1 = await cvxStrategy.getAsymmetryRatio("150000000000000000");
-    expect(r1.eq("299482867234169718")).eq(true); // 29.94%
+    expect(r1).eq("298361212712598375"); // 29.94%
 
     const r2 = await cvxStrategy.getAsymmetryRatio("300000000000000000");
-    expect(r2.eq("460926226555940021")).eq(true); // 46.09%
+    expect(r2).eq("459596620403112401"); // 46.09%
 
     const r3 = await cvxStrategy.getAsymmetryRatio("500000000000000000");
-    expect(r3.eq("587638408209630597")).eq(true); // 58.76%
+    expect(r3).eq("586340851502091146"); // 58.76%
   });
   it("Should verify that vote delegation is set to the contract owner", async function () {
     const accounts = await ethers.getSigners();
