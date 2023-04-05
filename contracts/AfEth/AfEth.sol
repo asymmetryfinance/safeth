@@ -13,8 +13,10 @@ contract AfEth is ERC20, Ownable {
         string memory _symbol
     ) ERC20(_name, _symbol) {}
 
-    function setMinter(address newMinter) public onlyOwner {
-        minter = newMinter;
+    function setMinter(address _newMinter) public onlyOwner {
+        require(minter == address(0), "Already initialized");
+        require(_newMinter != address(0), "Need valid address");
+        minter = _newMinter;
     }
 
     function mint(address to, uint256 amount) public {

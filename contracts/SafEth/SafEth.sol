@@ -23,7 +23,7 @@ contract SafEth is
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 slippage);
-    event Staked(address indexed recipient, uint ethIn, uint safEthOut);
+    event Staked(address indexed recipient, uint ethIn, uint totalStakeValue);
     event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
     event WeightChange(uint indexed index, uint weight);
     event DerivativeAdded(
@@ -80,7 +80,7 @@ contract SafEth is
             preDepositPrice = 10 ** 18; // initializes with a price of 1
         else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
 
-        uint256 totalStakeValueEth = 0; // total amount of derivatives worth of ETH in system
+        uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
         for (uint i = 0; i < derivativeCount; i++) {
             uint256 weight = weights[i];
             IDerivative derivative = derivatives[i];
@@ -97,7 +97,7 @@ contract SafEth is
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
         _mint(msg.sender, mintAmount);
-        emit Staked(msg.sender, msg.value, mintAmount);
+        emit Staked(msg.sender, msg.value, totalStakeValueEth);
     }
 
     /**

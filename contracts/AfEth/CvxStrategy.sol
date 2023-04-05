@@ -189,7 +189,6 @@ contract CvxStrategy is
         IAfEth(afEth).burn(address(this), afEthBalance);
 
         // TODO: send user eth
-
     }
 
     function getCvxPriceData() public view returns (uint256) {
@@ -259,16 +258,15 @@ contract CvxStrategy is
     // strat has afEth, deposit in CRV pool
     function addAfEthCrvLiquidity(
         address _pool,
-        uint256 _ethAmount,
+        uint256 _safEthAmount,
         uint256 _afEthAmount
     ) private returns (uint256 mintAmount) {
-        require(_ethAmount <= address(this).balance, "Not Enough ETH");
-
-        IWETH(wETH).deposit{value: _ethAmount}();
-        IWETH(wETH).approve(_pool, _ethAmount);
+        require(_safEthAmount <= address(this).balance, "Not Enough ETH");
+        // console.log("ETH", _ethAmount);
+        IERC20(safEth).approve(_pool, _safEthAmount);
         IERC20(afEth).approve(_pool, _afEthAmount);
 
-        uint256[2] memory _amounts = [_afEthAmount, _ethAmount];
+        uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
             uint256(100000), // TODO: why hardcoded

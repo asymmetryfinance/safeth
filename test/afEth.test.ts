@@ -25,8 +25,8 @@ describe.only("CvxStrategy", async function () {
   let initialHardhatBlock: number;
 
   const deployContracts = async () => {
-    const AfCVX1155 = await ethers.getContractFactory("AfCVX1155");
-    afCvx1155 = await AfCVX1155.deploy();
+    const AfCvx1155 = await ethers.getContractFactory("AfCvx1155");
+    afCvx1155 = await AfCvx1155.deploy();
     await afCvx1155.deployed();
 
     const SafEth = await ethers.getContractFactory("SafEth");
@@ -48,6 +48,7 @@ describe.only("CvxStrategy", async function () {
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
+    await afEth.setMinter(cvxStrategy.address);
     await afCvx1155.initialize(cvxStrategy.address);
   };
 
@@ -99,7 +100,9 @@ describe.only("CvxStrategy", async function () {
     await stakeTx.wait();
 
     // verify vlCVX
-    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(cvxStrategy.address);
+    const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
+      cvxStrategy.address
+    );
     expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
 
     // check for cvx nft
