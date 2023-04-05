@@ -11,7 +11,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
-import { AfCVX1155, AfEth, SafEth, CvxStrategy } from "../typechain-types";
+import { AfCvx1155, AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
@@ -21,7 +21,7 @@ describe.only("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
-  let afCvx1155: AfCVX1155;
+  let afCvx1155: AfCvx1155;
   let crvPool: any;
   let initialHardhatBlock: number;
 
