@@ -147,10 +147,9 @@ contract CvxStrategy is
         lockCvx(cvxAmountReceived, id, msg.sender);
         mintCvxNft(cvxAmountReceived, id);
 
-        // TODO: return mint amount from stake function
-        uint256 afEthAmount = ISafEth(safEth).stake{value: ethAmount}();
+        uint256 mintAmount = ISafEth(safEth).stake{value: ethAmount}();
 
-        IAfEth(afEth).mint(address(this), ethAmount);
+        IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             ethAmount,
@@ -162,8 +161,8 @@ contract CvxStrategy is
             owner: msg.sender,
             curveBalance: crvLpAmount,
             convexBalance: cvxAmountReceived,
-            afEthAmount: afEthAmount,
-            safEthAmount: afEthAmount,
+            afEthAmount: mintAmount,
+            safEthAmount: mintAmount,
             createdAt: block.timestamp,
             claimed: false
         });

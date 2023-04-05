@@ -99,9 +99,9 @@ describe.only("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "475549709557732453023";
-    const crvPoolBalance = "1751292831914575705";
-    const mintAmount = "1751467272913866091";
+    const cvxBalance = "473772736286470477988";
+    const crvPoolBalance = "1754096968218504062";
+    const mintAmount = "1754271690084302385";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 
