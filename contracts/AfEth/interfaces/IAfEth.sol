@@ -8,4 +8,3 @@ interface IAfEth is IERC20 {
 
     function burn(address from, uint256 amount) external;
 }
-

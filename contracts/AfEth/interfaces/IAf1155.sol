@@ -8,4 +8,3 @@ interface IAf1155 is IERC1155 {
 
     function burn(address from, uint256 id, uint256 amount) external;
 }
-
