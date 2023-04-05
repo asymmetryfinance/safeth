@@ -217,7 +217,7 @@ describe("CvxStrategy", async function () {
   });
 
   it("Should test crvPerCvx()", async function () {
-    const crvPerCvx = await afEth.crvPerCvx();
+    const crvPerCvx = await cvxStrategy.crvPerCvx();
     expect(crvPerCvx).eq("5638769963118260689");
   });
 });
