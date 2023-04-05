@@ -148,12 +148,11 @@ contract CvxStrategy is
         mintCvxNft(cvxAmountReceived, id);
 
         uint256 mintAmount = ISafEth(safEth).stake{value: ethAmount}();
-
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
-            ethAmount,
-            ethAmount
+            mintAmount,
+            mintAmount
         );
 
         // storage of individual balances associated w/ user deposit
@@ -174,9 +173,9 @@ contract CvxStrategy is
         require(position.claimed == false, "position claimed");
         position.claimed = true;
 
-        withdrawCVXNft(_instantWithdraw, id);
+        withdrawCvxNft(_instantWithdraw, id);
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
-        withdrawCRVPool(crvPool, position.curveBalance);
+        withdrawCrvPool(crvPool, position.curveBalance);
         uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
         uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
         IAfEth(afEth).burn(address(this), afEthBalance);
@@ -247,10 +246,14 @@ contract CvxStrategy is
         uint256 _safEthAmount,
         uint256 _afEthAmount
     ) private returns (uint256 mintAmount) {
-        require(_safEthAmount <= address(this).balance, "Not Enough ETH");
-
-        // IWETH(wETH).deposit{value: _safEthAmount}();
-        // IWETH(wETH).approve(_pool, _safEthAmount);
+        require(
+            _safEthAmount <= IERC20(safEth).balanceOf(address(this)),
+            "Not Enough safETH"
+        );
+        require(
+            _afEthAmount <= IERC20(afEth).balanceOf(address(this)),
+            "Not Enough afETH"
+        );
 
         IERC20(safEth).approve(_pool, _safEthAmount);
         IERC20(afEth).approve(_pool, _afEthAmount);
@@ -264,7 +267,7 @@ contract CvxStrategy is
         return (poolTokensMinted);
     }
 
-    function withdrawCRVPool(address _pool, uint256 _amount) private {
+    function withdrawCrvPool(address _pool, uint256 _amount) private {
         uint256[2] memory min_amounts;
         // TODO: update min amounts
         min_amounts[0] = 0;
@@ -286,7 +289,7 @@ contract CvxStrategy is
     // True - user is transferred the 1155 NFT holding their CVX deposit
     // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
     // False - user pays fee to unlock their CVX and burn their NFT
-    function withdrawCVXNft(bool _instantWithdraw, uint256 _id) private {
+    function withdrawCvxNft(bool _instantWithdraw, uint256 _id) private {
         if (_instantWithdraw == false) {
             uint256 id = _id;
             IAf1155(cvxNft).safeTransferFrom(

@@ -17,7 +17,7 @@ import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.only("CvxStrategy", async function () {
+describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -95,13 +95,11 @@ describe.only("CvxStrategy", async function () {
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
-    // verify vlCVX
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "473772736286470477988";
-    const crvPoolBalance = "1754096968218504062";
-    const mintAmount = "1754271690084302385";
+    const cvxBalance = "474436277918812750007";
+    const crvPoolBalance = "1754281178577649233";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 
@@ -117,17 +115,29 @@ describe.only("CvxStrategy", async function () {
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from(mintAmount));
+    expect(positions.afEthAmount).eq(BigNumber.from(crvPoolBalance));
     expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
     expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    console.log(await ethers.provider.getBalance(accounts[0].address));
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
+    console.log(await ethers.provider.getBalance(accounts[0].address));
+
+    const unstakeTx = await cvxStrategy.unstake(false, 0);
+    await unstakeTx.wait();
+    console.log(await ethers.provider.getBalance(accounts[0].address));
+
+    // check for cvx nft in users address
+    const cvxNftAmount = await afCvx1155.balanceOf(accounts[0].address, 0);
+    expect(cvxNftAmount).eq(BigNumber.from("474436277918812750007"));
+
+    // TODO: check every scenario for unstaking
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");

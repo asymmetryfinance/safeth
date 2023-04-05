@@ -20,7 +20,7 @@ import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
-describe("Af Strategy", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEthProxy: SafEth;
   let snapshot: SnapshotRestorer;
