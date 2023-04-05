@@ -144,18 +144,12 @@ contract CvxStrategy is
             id = positionId;
             positionId++;
         }
-        console.log("id: ", id);
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
+        lockCvx(cvxAmountReceived, id, msg.sender);
         mintCvxNft(cvxAmountReceived, id);
 
-        lockCvx(cvxAmountReceived, id, msg.sender);
-        console.log("cvxAmount", cvxAmountReceived);
-
-        uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
         // TODO: return mint amount from stake function
-        ISafEth(safEth).stake{value: ethAmount}();
-        uint256 safEthBalanceAfter = IERC20(safEth).balanceOf(address(this));
-        uint256 afEthAmount = safEthBalanceAfter - safEthBalanceBefore;
+        uint256 afEthAmount = ISafEth(safEth).stake{value: ethAmount}();
 
         IAfEth(afEth).mint(address(this), ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(

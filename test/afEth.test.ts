@@ -121,6 +121,16 @@ describe.only("CvxStrategy", async function () {
     expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
     expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
   });
+  it("Should unstake", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+
+    
+  });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // impersonate an account that has rewards to withdraw at the current block
