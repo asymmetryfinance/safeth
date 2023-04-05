@@ -198,11 +198,11 @@ describe.only("CvxStrategy", async function () {
   });
 
   it("Should update emissions per year", async function () {
-    const year0EmissionsBefore = await cvxStrategy.emissionsPerYear(0);
+    const year0EmissionsBefore = await cvxStrategy.crvEmissionsPerYear(0);
 
     const tx = await cvxStrategy.setEmissionsPerYear(0, 1234567890);
     await tx.wait();
-    const year0EmissionsAfter = await cvxStrategy.emissionsPerYear(0);
+    const year0EmissionsAfter = await cvxStrategy.crvEmissionsPerYear(0);
 
     expect(year0EmissionsBefore).eq(BigNumber.from(0));
     expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));
