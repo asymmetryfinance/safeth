@@ -288,14 +288,14 @@ describe("AfEth (CvxLockManager)", async function () {
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
-    console.log(1)
+    console.log(1);
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(2)
+    console.log(2);
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
-    console.log(3)
+    console.log(3);
     // wait 10 more lock durations
 
     await time.increase((await vlCvxContract.lockDuration()) * 10);
@@ -306,10 +306,10 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.withdrawCvx(0);
     const mined = await tx.wait();
     const gasUsedWithoutRelock = mined.gasUsed;
-    console.log(4)
+    console.log(4);
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(5)
+    console.log(5);
 
     // close position
     tx = await cvxStrategy.unstake(false, 1);
