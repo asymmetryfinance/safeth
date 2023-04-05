@@ -197,6 +197,11 @@ describe("AfEth", async function () {
     expect(year0EmissionsBefore).eq(BigNumber.from(0));
     expect(year0EmissionsAfter).eq(BigNumber.from(1234567890));
   });
+
+  it("Should test crvPerCvx()", async function () {
+    const crvPerCvx = await afEth.crvPerCvx();
+    expect(crvPerCvx).eq("5638769963118260689");
+  });
 });
 
 const resetToBlock = async (blockNumber: number) => {

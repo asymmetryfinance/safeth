@@ -13,6 +13,7 @@ import {
 import {
   SnapshotRestorer,
   takeSnapshot,
+  time,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
 import { RETH_MAX, WSTETH_ADRESS, WSTETH_WHALE } from "./helpers/constants";
@@ -565,6 +566,23 @@ describe("Af Strategy", function () {
       expect(
         within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))
       ).eq(true);
+    });
+  });
+
+  describe("Price", function () {
+    it("Should correctly get approxPrice()", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      await safEthProxy.stake({ value: depositAmount });
+
+      const price1 = await safEthProxy.approxPrice();
+      // starting price = 1 Eth
+      expect(price1).eq("1000000000000000000");
+
+      await time.increase(10000);
+      const price2 = await safEthProxy.approxPrice();
+
+      // price has increased after some time
+      expect(price2).gt(price1);
     });
   });
 
