@@ -244,7 +244,7 @@ contract SafEth is
     }
 
     /**
-     * @notice - Get the approx price of safEth. 
+     * @notice - Get the approx price of safEth.
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
      */
     function approxPrice() external view returns (uint256) {
