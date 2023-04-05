@@ -15,6 +15,7 @@ import { AfCVX1155, AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
+import { deploySafEth } from "./helpers/upgradeHelpers";
 
 describe.only("CvxStrategy", async function () {
   let afEth: AfEth;
@@ -29,12 +30,7 @@ describe.only("CvxStrategy", async function () {
     afCvx1155 = await AfCvx1155.deploy();
     await afCvx1155.deployed();
 
-    const SafEth = await ethers.getContractFactory("SafEth");
-    safEth = (await upgrades.deployProxy(SafEth, [
-      "Asymmetry Finance ETH",
-      "safETH",
-    ])) as SafEth;
-    await safEth.deployed();
+    safEth = (await deploySafEth()) as SafEth;
 
     const AfEth = await ethers.getContractFactory("AfEth");
     afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
@@ -103,23 +99,27 @@ describe.only("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    expect(vlCvxBalance).eq(BigNumber.from("476216053286032795841"));
+    const cvxBalance = "475549709557732453023";
+    const crvPoolBalance = "1751292831914575705";
+    const mintAmount = "1751467272913866091";
+
+    expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 
     // check for cvx nft
-    const cvxNftAmount = await afCvx1155.balanceOf(cvxStrategy.address, 1);
-    expect(cvxNftAmount).eq(BigNumber.from("476216053286032795841"));
+    const cvxNftAmount = await afCvx1155.balanceOf(cvxStrategy.address, 0);
+    expect(cvxNftAmount).eq(BigNumber.from(cvxBalance));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1751292060282684770");
-    expect(crvPoolEthAmount).eq("1751292060282684770");
+    expect(crvPoolAfEthAmount).eq(crvPoolBalance);
+    expect(crvPoolEthAmount).eq(crvPoolBalance);
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from("1751292060282684770"));
-    expect(positions.curveBalance).eq(BigNumber.from("1751292060282684770"));
-    expect(positions.convexBalance).eq(BigNumber.from("476216053286032795841"));
+    expect(positions.afEthAmount).eq(BigNumber.from(mintAmount));
+    expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
+    expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");

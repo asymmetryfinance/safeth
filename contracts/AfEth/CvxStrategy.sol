@@ -144,13 +144,14 @@ contract CvxStrategy is
             id = positionId;
             positionId++;
         }
+        console.log("id: ", id);
         uint256 cvxAmountReceived = swapCvx(cvxAmount);
         mintCvxNft(cvxAmountReceived, id);
 
         lockCvx(cvxAmountReceived, id, msg.sender);
+        console.log("cvxAmount", cvxAmountReceived);
 
         uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
-
         // TODO: return mint amount from stake function
         ISafEth(safEth).stake{value: ethAmount}();
         uint256 safEthBalanceAfter = IERC20(safEth).balanceOf(address(this));
@@ -159,8 +160,8 @@ contract CvxStrategy is
         IAfEth(afEth).mint(address(this), ethAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
-            afEthAmount,
-            afEthAmount
+            ethAmount,
+            ethAmount
         );
 
         // storage of individual balances associated w/ user deposit
@@ -262,7 +263,10 @@ contract CvxStrategy is
         uint256 _afEthAmount
     ) private returns (uint256 mintAmount) {
         require(_safEthAmount <= address(this).balance, "Not Enough ETH");
-        // console.log("ETH", _ethAmount);
+
+        // IWETH(wETH).deposit{value: _safEthAmount}();
+        // IWETH(wETH).approve(_pool, _safEthAmount);
+
         IERC20(safEth).approve(_pool, _safEthAmount);
         IERC20(afEth).approve(_pool, _afEthAmount);
 
@@ -290,7 +294,7 @@ contract CvxStrategy is
         uint256 amountLocked = _amountLocked;
 
         IAf1155(cvxNft).mint(address(this), _id, amountLocked);
-        return (amountLocked, positionId);
+        return (amountLocked, _id);
     }
 
     // user selection in front-end:

@@ -9,6 +9,7 @@ import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -96,6 +97,9 @@ contract SafEth is
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        console.log("mintAmount: ", mintAmount);
+        console.log("totalStakeValueEth: ", totalStakeValueEth);
+        console.log("preDepositPrice: ", preDepositPrice);
         _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth);
     }

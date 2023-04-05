@@ -6,7 +6,7 @@ import { BigNumber } from "ethers";
 import { SafEth } from "../typechain-types";
 
 import {
-  initialUpgradeableDeploy,
+  deploySafEth,
   upgrade,
   getLatestContract,
 } from "./helpers/upgradeHelpers";
@@ -39,7 +39,7 @@ describe("Af Strategy", function () {
       ],
     });
 
-    safEthProxy = (await initialUpgradeableDeploy()) as SafEth;
+    safEthProxy = (await deploySafEth()) as SafEth;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
   };
