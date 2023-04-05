@@ -191,29 +191,35 @@ contract CvxLockManager is OwnableUpgradeable {
         // use vlCvx.balanceAtEpochOf() to determine total locked amount at each epoch and get the ratio relative to their position
         // give user ratio * rewardsClaimed[i] for all epochs iterated
         // calculate their portion of the rewards
+
+        uint256 rewards = getPositionRewards(positionId);
+        console.log('rewards is', rewards);
     }
 
-    function getPositionRewards(uint256 positionId) public returns (uint256) {
+    function getPositionRewards(uint256 positionId) public view returns (uint256) {
+        console.log('getPositionRewards 0');
         uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
         uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
         address positionOwner = cvxPositions[positionId].owner;
+        console.log('getPositionRewards 1');
 
         uint256 totalRewards = 0;
         for(uint256 i=startingEpoch;i<unlockEpoch-1;i++) {
+            console.log('getPositionRewards 2', i);
+            uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
+            console.log('balance at epoch', balanceAtEpoch);
             uint256 positionLockRatio = (positionAmount * 10 ** 18) / ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
+            console.log('getPositionRewards 3');
             totalRewards += positionLockRatio * rewardsClaimed[i];
+            console.log('getPositionRewards 4');
         }
-
-        console.log('totalRewards is', totalRewards);
-
         return totalRewards;
     }
 
     function getCurrentEpoch() public view returns (uint) {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
-
 
     function claimRewards(uint256 _maxSlippage) public onlyOwner {
         address[] memory emptyArray;
