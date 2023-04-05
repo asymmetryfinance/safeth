@@ -197,7 +197,7 @@ contract CvxStrategy is
         return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
     }
 
-    function crvPerCvx() private view returns (uint256) {
+    function crvPerCvx() public view returns (uint256) {
         (, int256 chainLinkCrvEthPrice, , , ) = chainLinkCrvEthFeed
             .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
