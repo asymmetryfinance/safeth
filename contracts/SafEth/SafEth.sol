@@ -243,5 +243,19 @@ contract SafEth is
         emit UnstakingPaused(pauseUnstaking);
     }
 
+    /**
+     * @notice - Get the approx price of safEth. 
+     * @dev - This is approximate because of slippage when acquiring / selling the underlying
+     */
+    function approxPrice() external view returns (uint256) {
+        uint256 underlyingValue = 0;
+        for (uint i = 0; i < derivativeCount; i++)
+            underlyingValue +=
+                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
+                    derivatives[i].balance()) /
+                10 ** 18;
+        return (10 ** 18 * underlyingValue) / totalSupply();
+    }
+
     receive() external payable {}
 }
