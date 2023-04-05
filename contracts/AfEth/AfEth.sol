@@ -54,24 +54,6 @@ contract AfEth is
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 currentPositionId;
 
-    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
-
-    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
-    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
-    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
-
-    address public constant FXS_ETH_CRV_POOL_ADDRESS =
-        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
-    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
-        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
-    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
-        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
-    address public constant CRV_ETH_CRV_POOL_ADDRESS =
-        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-    address public constant CVX_ETH_CRV_POOL_ADDRESS =
-        0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
-
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
@@ -356,97 +338,6 @@ contract AfEth is
     function updateCrvPool(address _crvPool) public onlyOwner {
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
-    }
-
-    function claimRewards(uint256 _maxSlippage) public onlyOwner {
-        address[] memory emptyArray;
-        IClaimZap(cvxClaimZap).claimRewards(
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            0,
-            0,
-            0,
-            0,
-            8
-        );
-        // cvxFxs -> fxs
-        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
-        if (cvxFxsBalance > 0) {
-            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
-            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
-                1,
-                0,
-                cvxFxsBalance,
-                minOut
-            );
-        }
-
-        // fxs -> eth
-        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
-        if (fxsBalance > 0) {
-            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
-                1,
-                0,
-                10 ** 18
-            );
-            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
-
-            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
-
-            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
-                1,
-                0,
-                fxsBalance,
-                minOut
-            );
-        }
-        // cvxCrv -> crv
-        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
-        if (cvxCrvBalance > 0) {
-            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
-            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
-                1,
-                0,
-                cvxCrvBalance,
-                minOut
-            );
-        }
-
-        // crv -> eth
-        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
-        if (crvBalance > 0) {
-            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
-                1,
-                0,
-                10 ** 18
-            );
-            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
-            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
-                1,
-                0,
-                crvBalance,
-                minOut
-            );
-        }
-
-        return;
     }
 
     receive() external payable {}
