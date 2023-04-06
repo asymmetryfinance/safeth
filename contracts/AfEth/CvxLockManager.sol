@@ -61,6 +61,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 positionId,
         address owner
     ) internal {
+        console.log('lock called');
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         cvxPositions[positionId].cvxAmount = cvxAmount;
@@ -74,6 +75,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
     // at the beginning of each new epoch to process the previous
     function relockCvx() public {
+        console.log('relock called');
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         // alredy called for this epoch
         if (lastRelockEpoch == currentEpoch) return;
@@ -110,15 +112,21 @@ contract CvxLockManager is OwnableUpgradeable {
 
         IERC20(CVX).approve(vlCVX, cvxAmountToRelock);
         ILockedCvx(vlCVX).lock(address(this), cvxAmountToRelock, 0);
+        lastRelockEpoch = currentEpoch;
+    }
 
+    // claim vlCvx locker rewards and crv pool rewards
+    // convert to eth
+    // save which epoch the rewards were claimed in
+
+    // TODO claim crv pool rewards
+    function claimRewards() private {
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         uint256 balanceBeforeClaim = address(this).balance;
-        claimRewards(10000000000000000);
+        claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = balanceAfterClaim - balanceBeforeClaim;
-
-        rewardsClaimed[currentEpoch] = amountClaimed;
-
-        lastRelockEpoch = currentEpoch;
+        rewardsClaimed[currentEpoch] += amountClaimed;
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
@@ -146,6 +154,14 @@ contract CvxLockManager is OwnableUpgradeable {
 
         cvxPositions[positionId].unlockEpoch = unlockEpoch;
         unlockSchedule[unlockEpoch] += cvxPositions[positionId].cvxAmount;
+
+
+        uint256 rewards = getPositionRewards(positionId);
+
+        // mayeb only call this we need to have enough to transfer to the user? otherwise skip it to save gas?
+        // also should we claim rewards in relock maybe() so users usualy dont have to spend the extra gas
+        claimRewards();
+        console.log('rewards is', rewards);
     }
 
     // Try to withdraw cvx from a closed position
@@ -186,28 +202,32 @@ contract CvxLockManager is OwnableUpgradeable {
     function getPositionRewards(uint256 positionId) public view returns (uint256) {
         console.log('getPositionRewards 0');
         uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
-        uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
-        address positionOwner = cvxPositions[positionId].owner;
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         console.log('getPositionRewards 1');
+        console.log('startingEpoch', startingEpoch);
         console.log('currentEpoch', currentEpoch);
-        if(currentEpoch < unlockEpoch) return 0;
         uint256 totalRewards = 0;
-        for(uint256 i=startingEpoch;i<unlockEpoch-1;i++) {
-            console.log('getPositionRewards 2', i);
-            uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
-            console.log('balance at epoch', balanceAtEpoch);
+
+
+        // get rewars up through previous epoch
+        for(uint256 i=startingEpoch;i<currentEpoch-1;i++) {
+            uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, address(this));
+            console.log('balance at epoch', i, balanceAtEpoch);
             if(balanceAtEpoch == 0) continue;
+            console.log('positionAmount', positionAmount);
             uint256 positionLockRatio = (positionAmount * 10 ** 18) / balanceAtEpoch;
-            console.log('getPositionRewards 3');
+            console.log('positionLockRatio', positionLockRatio);
+
+            console.log('rewardsClaimed[i]', rewardsClaimed[i]);
             totalRewards += positionLockRatio * rewardsClaimed[i];
-            console.log('getPositionRewards 4');
+            console.log('totalRewards', totalRewards);
         }
         return totalRewards;
     }
 
-    function claimRewards(uint256 _maxSlippage) public onlyOwner {
+    // claim vlCvx rewards and convert to eth
+    function claimvlCvxRewards(uint256 _maxSlippage) public onlyOwner {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,

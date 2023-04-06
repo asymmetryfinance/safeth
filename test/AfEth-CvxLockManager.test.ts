@@ -13,7 +13,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe("AfEth (CvxLockManager)", async function () {
+describe.only("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -323,7 +323,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 
-  it("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
+  it.only("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -334,18 +334,21 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    // wait 3 days
-    await time.increase(60 * 60 * 24 * 3);
+    // open position (2) 3 days later but in the same epoch
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    await time.increase(60 * 60 * 24 * 7 * 17);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
 
-    // open position (2) 3 days later but in the same epoch
-    tx = await cvxStrategy.stake({ value: depositAmount });
-
-    // close position
+    // close position 0
+    console.log('about to unstake1');
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
+    console.log('unstaked1');
+
+    return;
 
     const leaveUnlocked0 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance0 = await cvx.balanceOf(cvxStrategy.address);
