@@ -33,7 +33,6 @@ contract CvxStrategy is
 
     mapping(uint256 => uint256) public crvEmissionsPerYear;
 
-    mapping(address => uint256) public nftIds;
     uint256 positionId;
 
     AggregatorV3Interface constant chainLinkCvxEthFeed =
@@ -136,18 +135,16 @@ contract CvxStrategy is
 
     function stake() external payable {
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
-        uint256 cvxAmount = (msg.value * ratio) / 10 ** 18;
-        uint256 ethAmount = (msg.value - cvxAmount) / 2;
-        uint256 id = nftIds[msg.sender];
-        if (id == 0) {
-            id = positionId;
-            positionId++;
-        }
-        uint256 cvxAmountReceived = swapCvx(cvxAmount);
-        lockCvx(cvxAmountReceived, id, msg.sender);
-        mintCvxNft(cvxAmountReceived, id);
+        uint256 ethAmountForCvx = (msg.value * ratio) / 10 ** 18;
+        uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
+        uint256 id = positionId;
+        uint256 cvxAmount = swapCvx(ethAmountForCvx);
+        lockCvx(cvxAmount, id, msg.sender);
 
-        uint256 mintAmount = ISafEth(safEth).stake{value: ethAmount}();
+        uint256 safEthAmount = ISafEth(safEth).stake{
+            value: ethAmountForSafEth
+        }();
+        uint256 mintAmount = safEthAmount / 2; // TODO: dust will be left over from rounding
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
@@ -159,12 +156,13 @@ contract CvxStrategy is
         positions[id] = Position({
             owner: msg.sender,
             curveBalance: crvLpAmount,
-            convexBalance: cvxAmountReceived,
+            convexBalance: cvxAmount,
             afEthAmount: mintAmount,
             safEthAmount: mintAmount,
             createdAt: block.timestamp,
             claimed: false
         });
+        positionId++;
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
@@ -172,8 +170,20 @@ contract CvxStrategy is
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
         position.claimed = true;
-
-        withdrawCvxNft(_instantWithdraw, id);
+        if (_instantWithdraw) {
+            // TODO: add instant withdraw function
+            // fees: 119 days - 1% per day to max 12% fee: 88 days to min fee
+            // 119 - 88 = 31
+            // block.timestamp - positions[createdAt] = time locked
+            // 1 day = 86400 seconds
+            // burn NFT
+            // swap CVX for ETH
+            // transfer ETH to user minus fee for unlock
+            // fee schedule:
+        } else {
+            requestUnlockCvx(id, msg.sender);
+        }
+        
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
         withdrawCrvPool(crvPool, position.curveBalance);
         uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
@@ -273,46 +283,6 @@ contract CvxStrategy is
         min_amounts[0] = 0;
         min_amounts[1] = 0;
         IAfEthPool(_pool).remove_liquidity(_amount, min_amounts);
-    }
-
-    function mintCvxNft(
-        uint256 _amountLocked,
-        uint256 _id
-    ) private returns (uint256 balance, uint256 id) {
-        uint256 amountLocked = _amountLocked;
-
-        IAf1155(cvxNft).mint(address(this), _id, amountLocked);
-        return (amountLocked, _id);
-    }
-
-    // user selection in front-end:
-    // True - user is transferred the 1155 NFT holding their CVX deposit
-    // until CVX lockup period is over (16 weeks plus days to thursday 0000 UTC)
-    // False - user pays fee to unlock their CVX and burn their NFT
-    function withdrawCvxNft(bool _instantWithdraw, uint256 _id) private {
-        if (_instantWithdraw == false) {
-            uint256 id = _id;
-            IAf1155(cvxNft).safeTransferFrom(
-                address(this),
-                msg.sender,
-                id,
-                positions[id].convexBalance,
-                ""
-            );
-            // positions[msg.sender].convexBalance = 0;
-            requestUnlockCvx(_id, msg.sender);
-        } else {
-            console.log("instant withdraw: ", _instantWithdraw);
-            // fees: 119 days - 1% per day to max 12% fee: 88 days to min fee
-            // 119 - 88 = 31
-            // block.timestamp - positions[createdAt] = time locked
-            // 1 day = 86400 seconds
-            // burn NFT
-            // swap CVX for ETH
-            // transfer ETH to user minus fee for unlock
-            // fee schedule:
-            //
-        }
     }
 
     function updateCrvPool(address _crvPool) public onlyOwner {

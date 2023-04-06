@@ -99,13 +99,9 @@ describe("CvxStrategy", async function () {
       cvxStrategy.address
     );
     const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1754281178577649233";
+    const crvPoolBalance = "1754282151343265789";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
-
-    // check for cvx nft
-    const cvxNftAmount = await afCvx1155.balanceOf(cvxStrategy.address, 0);
-    expect(cvxNftAmount).eq(BigNumber.from(cvxBalance));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
@@ -132,10 +128,6 @@ describe("CvxStrategy", async function () {
     const unstakeTx = await cvxStrategy.unstake(false, 0);
     await unstakeTx.wait();
     console.log(await ethers.provider.getBalance(accounts[0].address));
-
-    // check for cvx nft in users address
-    const cvxNftAmount = await afCvx1155.balanceOf(accounts[0].address, 0);
-    expect(cvxNftAmount).eq(BigNumber.from("474436277918812750007"));
 
     // TODO: check every scenario for unstaking
   });
