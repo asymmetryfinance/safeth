@@ -202,14 +202,17 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
         address positionOwner = cvxPositions[positionId].owner;
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         console.log('getPositionRewards 1');
-
+        console.log('currentEpoch', currentEpoch);
+        if(currentEpoch < unlockEpoch) return 0;
         uint256 totalRewards = 0;
         for(uint256 i=startingEpoch;i<unlockEpoch-1;i++) {
             console.log('getPositionRewards 2', i);
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
             console.log('balance at epoch', balanceAtEpoch);
-            uint256 positionLockRatio = (positionAmount * 10 ** 18) / ILockedCvx(vlCVX).balanceAtEpochOf(i, positionOwner);
+            if(balanceAtEpoch == 0) continue;
+            uint256 positionLockRatio = (positionAmount * 10 ** 18) / balanceAtEpoch;
             console.log('getPositionRewards 3');
             totalRewards += positionLockRatio * rewardsClaimed[i];
             console.log('getPositionRewards 4');
