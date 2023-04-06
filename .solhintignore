@@ -1,5 +1,4 @@
 node_modules
-contracts/AsymmetryStrategy
 coverage
 artifacts
 contracts/interfaces/curve

@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 
-export const initialUpgradeableDeploy = async function () {
+export const deploySafEth = async function () {
   const SafEth = await ethers.getContractFactory("SafEth");
   const safEth = await upgrades.deployProxy(SafEth, [
     "Asymmetry Finance ETH",

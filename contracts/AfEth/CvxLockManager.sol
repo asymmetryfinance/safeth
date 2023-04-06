@@ -1,25 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "../interfaces/uniswap/ISwapRouter.sol";
-import "../interfaces/IWETH.sol";
-import "../interfaces/ISnapshotDelegationRegistry.sol";
-import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/IClaimZap.sol";
-import "../interfaces/curve/ICvxCrvCrvPool.sol";
-import "../interfaces/curve/IFxsEthPool.sol";
-import "../interfaces/curve/ICrvEthPool.sol";
-import "../interfaces/curve/ICvxFxsFxsPool.sol";
-import "../interfaces/curve/IAfEthPool.sol";
-import "./interfaces/IAf1155.sol";
-import "./interfaces/ISafEth.sol";
 
-import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/convex/ILockedCvx.sol";
 
 contract CvxLockManager {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;

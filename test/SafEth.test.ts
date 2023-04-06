@@ -6,7 +6,7 @@ import { BigNumber } from "ethers";
 import { SafEth } from "../typechain-types";
 
 import {
-  initialUpgradeableDeploy,
+  deploySafEth,
   upgrade,
   getLatestContract,
 } from "./helpers/upgradeHelpers";
@@ -21,7 +21,7 @@ import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 
-describe("Af Strategy", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEthProxy: SafEth;
   let snapshot: SnapshotRestorer;
@@ -40,7 +40,7 @@ describe("Af Strategy", function () {
       ],
     });
 
-    safEthProxy = (await initialUpgradeableDeploy()) as SafEth;
+    safEthProxy = (await deploySafEth()) as SafEth;
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
   };
@@ -104,7 +104,6 @@ describe("Af Strategy", function () {
       await safEthProxy.stake({ value: depositAmount });
     });
   });
-
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
