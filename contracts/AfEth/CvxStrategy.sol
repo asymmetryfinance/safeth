@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
@@ -16,18 +14,12 @@ import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
-import "./interfaces/IAf1155.sol";
 import "./interfaces/ISafEth.sol";
 import "./interfaces/IAfEth.sol";
 import "hardhat/console.sol";
 import "./CvxLockManager.sol";
 
-contract CvxStrategy is
-    Initializable,
-    ERC1155Holder,
-    OwnableUpgradeable,
-    CvxLockManager
-{
+contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
 
@@ -65,7 +57,6 @@ contract CvxStrategy is
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
     address afEth;
-    address cvxNft;
     address crvPool;
     address safEth;
 
@@ -99,14 +90,9 @@ contract CvxStrategy is
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
     */
-    function initialize(
-        address _cvxNft,
-        address _safEth,
-        address _afEth
-    ) external initializer {
+    function initialize(address _safEth, address _afEth) external initializer {
         _transferOwnership(msg.sender);
 
-        cvxNft = _cvxNft;
         safEth = _safEth;
         afEth = _afEth;
 
@@ -183,7 +169,7 @@ contract CvxStrategy is
         } else {
             requestUnlockCvx(id, msg.sender);
         }
-        
+
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
         withdrawCrvPool(crvPool, position.curveBalance);
         uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));

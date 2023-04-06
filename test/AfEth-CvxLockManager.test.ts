@@ -6,7 +6,7 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import { AfCvx1155, AfEth, CvxStrategy, SafEth } from "../typechain-types";
+import { AfEth, CvxStrategy, SafEth } from "../typechain-types";
 import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
@@ -16,15 +16,10 @@ import { deploySafEth } from "./helpers/upgradeHelpers";
 describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
-  let afCvx1155: AfCvx1155;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
 
   const deployContracts = async () => {
-    const AfCVX1155 = await ethers.getContractFactory("AfCvx1155");
-    afCvx1155 = (await AfCVX1155.deploy()) as AfCvx1155;
-    await afCvx1155.deployed();
-
     safEth = (await deploySafEth()) as SafEth;
 
     const AfEth = await ethers.getContractFactory("AfEth");
@@ -33,14 +28,12 @@ describe("AfEth (CvxLockManager)", async function () {
 
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
     cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      afCvx1155.address,
       safEth.address,
       afEth.address,
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
     await afEth.setMinter(cvxStrategy.address);
-    await afCvx1155.initialize(cvxStrategy.address);
   };
 
   beforeEach(async () => {

@@ -11,7 +11,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
-import { AfCvx1155, AfEth, SafEth, CvxStrategy } from "../typechain-types";
+import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
@@ -21,15 +21,10 @@ describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
-  let afCvx1155: AfCvx1155;
   let crvPool: any;
   let initialHardhatBlock: number;
 
   const deployContracts = async () => {
-    const AfCvx1155 = await ethers.getContractFactory("AfCvx1155");
-    afCvx1155 = await AfCvx1155.deploy();
-    await afCvx1155.deployed();
-
     safEth = (await deploySafEth()) as SafEth;
 
     const AfEth = await ethers.getContractFactory("AfEth");
@@ -38,14 +33,12 @@ describe("CvxStrategy", async function () {
 
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
     cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      afCvx1155.address,
       safEth.address,
       afEth.address,
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
     await afEth.setMinter(cvxStrategy.address);
-    await afCvx1155.initialize(cvxStrategy.address);
   };
 
   before(async () => {
@@ -99,7 +92,7 @@ describe("CvxStrategy", async function () {
       cvxStrategy.address
     );
     const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1754282151343265789";
+    const crvPoolBalance = "1754280915975480240";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 
