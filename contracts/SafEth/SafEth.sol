@@ -96,7 +96,6 @@ contract SafEth is
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        require(mintAmount > 0, "mint amount is 0");
 
         _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth);
