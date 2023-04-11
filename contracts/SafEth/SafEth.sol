@@ -110,10 +110,11 @@ contract SafEth is
     function unstake(uint256 _safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
         require(_safEthAmount > 0, "amount too low");
-        
+
+        _burn(msg.sender, _safEthAmount);
+
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
-
         for (uint256 i = 0; i < derivativeCount; i++) {
             // withdraw a percentage of each asset based on the amount of safETH
             uint256 derivativeAmount = (derivatives[i].balance() *
@@ -121,7 +122,7 @@ contract SafEth is
             if (derivativeAmount == 0) continue; // if derivative empty ignore
             derivatives[i].withdraw(derivativeAmount);
         }
-        _burn(msg.sender, _safEthAmount);
+        
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         // solhint-disable-next-line
