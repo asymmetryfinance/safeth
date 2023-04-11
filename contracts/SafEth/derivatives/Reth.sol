@@ -124,21 +124,21 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @dev - will either get rETH on exchange or deposit into contract depending on availability
      */
     function deposit() external payable onlyOwner returns (uint256) {
-            uint rethPerEth = (10 ** 36) / ethPerDerivative();
+        uint rethPerEth = (10 ** 36) / ethPerDerivative();
 
-            uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
-                ((10 ** 18 - maxSlippage))) / 10 ** 18);
+        uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
+            ((10 ** 18 - maxSlippage))) / 10 ** 18);
 
-            IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
-            uint256 amountSwapped = swapExactInputSingleHop(
-                W_ETH_ADDRESS,
-                rethAddress(),
-                500,
-                msg.value,
-                minOut
-            );
+        IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
+        uint256 amountSwapped = swapExactInputSingleHop(
+            W_ETH_ADDRESS,
+            rethAddress(),
+            500,
+            msg.value,
+            minOut
+        );
 
-            return amountSwapped;
+        return amountSwapped;
     }
 
     /**
