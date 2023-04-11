@@ -73,6 +73,11 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
+    it("Should fail unstake on invalid safEthAmount", async function () {
+      await expect(safEthProxy.unstake(10)).revertedWith(
+        "insufficient balance"
+      );
+    });
     it("Should fail with wrong min/max", async function () {
       let depositAmount = ethers.utils.parseEther(".2");
       await expect(
