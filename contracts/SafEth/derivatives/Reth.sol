@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
+import "../../interfaces/rocketpool/RocketSwapRouterInterface.sol";
 import "../../interfaces/rocketpool/RocketDAOProtocolSettingsDepositInterface.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/uniswap/ISwapRouter.sol";
@@ -28,6 +29,10 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address public constant UNI_V3_FACTORY =
         0x1F98431c8aD98523631AE4a59f267346ea31F984;
+
+    /// Swap router is not available in rocket storage contract so we hardcode it
+    /// https://docs.rocketpool.net/developers/usage/contracts/contracts.html#interacting-with-rocket-pool
+    address public constant ROCKET_SWAP_ROUTER = 0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
     AggregatorV3Interface constant chainLinkRethEthFeed =
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
@@ -79,35 +84,6 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Swap tokens through Uniswap
-        @param _tokenIn - token to swap from
-        @param _tokenOut - token to swap to
-        @param _poolFee - pool fee for particular swap
-        @param _amountIn - amount of token to swap from
-        @param _minOut - minimum amount of token to receive (slippage)
-     */
-    function swapExactInputSingleHop(
-        address _tokenIn,
-        address _tokenOut,
-        uint24 _poolFee,
-        uint256 _amountIn,
-        uint256 _minOut
-    ) private returns (uint256 amountOut) {
-        IERC20(_tokenIn).approve(UNISWAP_ROUTER, _amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: _tokenIn,
-                tokenOut: _tokenOut,
-                fee: _poolFee,
-                recipient: address(this),
-                amountIn: _amountIn,
-                amountOutMinimum: _minOut,
-                sqrtPriceLimitX96: 0
-            });
-        amountOut = ISwapRouter(UNISWAP_ROUTER).exactInputSingle(params);
-    }
-
-    /**
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 amount) external onlyOwner {
@@ -120,24 +96,19 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Deposit into derivative
-        @dev - will either get rETH on exchange or deposit into contract depending on availability
+        @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint rethPerEth = (10 ** 36) / ethPerDerivative();
-
         uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
             ((10 ** 18 - maxSlippage))) / 10 ** 18);
-
-        IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
-        uint256 amountSwapped = swapExactInputSingleHop(
-            W_ETH_ADDRESS,
-            rethAddress(),
-            500,
-            msg.value,
-            minOut
-        );
-
+        uint256 idealOut = ((((rethPerEth * msg.value) / 10 ** 18) *
+            ((10 ** 18))) / 10 ** 18);
+        uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(address(this));
+        // swaps into reth using 100% balancer pool
+        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapTo{value: msg.value}(0, 10, minOut, idealOut);
+        uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(address(this));
+        uint256 amountSwapped = rethBalanceAfter - rethBalanceBefore;
         return amountSwapped;
     }
 

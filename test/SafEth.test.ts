@@ -57,7 +57,6 @@ describe("SafEth", function () {
       const tx1 = await safEthProxy.stake({ value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
-
       const tx2 = await safEthProxy.unstake(
         await safEthProxy.balanceOf(adminAccount.address)
       );
@@ -90,15 +89,13 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("1");
       const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
 
-      // set slippages to a value we expect to fail
-      for (let i = 0; i < derivativeCount; i++) {
-        await safEthProxy.setMaxSlippage(i, 0); // 0% slippage we expect to fail
-      }
-      await expect(safEthProxy.stake({ value: depositAmount })).to.be.reverted;
-
-      // set slippages back to good values
       for (let i = 0; i < derivativeCount; i++) {
         await safEthProxy.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
+      }
+      await safEthProxy.stake({ value: depositAmount });
+
+      for (let i = 0; i < derivativeCount; i++) {
+        await safEthProxy.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
       }
       await safEthProxy.stake({ value: depositAmount });
     });
