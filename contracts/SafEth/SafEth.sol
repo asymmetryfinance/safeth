@@ -70,7 +70,7 @@ contract SafEth is
         // Getting underlying value in terms of ETH for each derivative
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
+                (derivatives[i].ethPerDerivative() *
                     derivatives[i].balance()) /
                 10 ** 18;
 
@@ -89,9 +89,7 @@ contract SafEth is
 
             // This is slightly less than ethAmount because slippage
             uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
-                depositAmount
-            ) * depositAmount) / 10 ** 18;
+            uint derivativeReceivedEthValue = (derivative.ethPerDerivative() * depositAmount) / 10 ** 18;
             totalStakeValueEth += derivativeReceivedEthValue;
         }
         // mintAmount represents a percentage of the total assets in the system
@@ -253,7 +251,7 @@ contract SafEth is
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
+                (derivatives[i].ethPerDerivative() *
                     derivatives[i].balance()) /
                 10 ** 18;
         return (10 ** 18 * underlyingValue) / totalSupply();

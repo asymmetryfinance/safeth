@@ -194,51 +194,6 @@ describe("SafEth", function () {
       derivatives.push(derivative2);
     });
 
-    // Special case for testing rEth specific code path
-    it("Should use reth deposit contract", async () => {
-      await resetToBlock(15430855); // Deposit contract not full here
-      const factory = await ethers.getContractFactory("Reth");
-      const rEthDerivative = await upgrades.deployProxy(factory, [
-        adminAccount.address,
-      ]);
-      await rEthDerivative.deployed();
-
-      const depositPoolAddress = "0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4";
-      const depositPool = new ethers.Contract(
-        depositPoolAddress,
-        rEthDepositPoolAbi,
-        adminAccount
-      );
-      const balance = await depositPool.getBalance();
-      expect(balance).lt(RETH_MAX);
-
-      const preStakeBalance = await rEthDerivative.balance();
-      expect(preStakeBalance.eq(0)).eq(true);
-
-      const ethDepositAmount = "1";
-
-      const ethPerDerivative = await rEthDerivative.ethPerDerivative(
-        ethers.utils.parseEther(ethDepositAmount)
-      );
-      const derivativePerEth = BigNumber.from(
-        "1000000000000000000000000000000000000"
-      ).div(ethPerDerivative);
-
-      const derivativeBalanceEstimate =
-        BigNumber.from(ethDepositAmount).mul(derivativePerEth);
-
-      const tx1 = await rEthDerivative.deposit({
-        value: ethers.utils.parseEther(ethDepositAmount),
-      });
-      await tx1.wait();
-
-      const postStakeBalance = await rEthDerivative.balance();
-
-      expect(within1Percent(postStakeBalance, derivativeBalanceEstimate)).eq(
-        true
-      );
-    });
-
     it("Should test deposit & withdraw on each derivative contract", async () => {
       const ethDepositAmount = "200";
 
@@ -249,9 +204,7 @@ describe("SafEth", function () {
         const preStakeBalance = await derivatives[i].balance();
         expect(preStakeBalance.eq(0)).eq(true);
 
-        const ethPerDerivative = await derivatives[i].ethPerDerivative(
-          ethDepositAmount
-        );
+        const ethPerDerivative = await derivatives[i].ethPerDerivative();
         const derivativePerEth = BigNumber.from(
           "1000000000000000000000000000000000000"
         ).div(ethPerDerivative);
@@ -435,6 +388,7 @@ describe("SafEth", function () {
         method: "hardhat_impersonateAccount",
         params: [WSTETH_WHALE],
       });
+
       const whaleSigner = await ethers.getSigner(WSTETH_WHALE);
       const erc20 = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, adminAccount);
       const erc20Whale = erc20.connect(whaleSigner);
@@ -487,7 +441,6 @@ describe("SafEth", function () {
       await tx3.wait();
 
       const ethBalances = await estimatedDerivativeValues();
-
       // TODO make this test work for any number of derivatives
       expect(within1Percent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
       expect(within1Percent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
@@ -592,20 +545,17 @@ describe("SafEth", function () {
     const ethBalances: BigNumber[] = [];
     for (let i = 0; i < derivativeCount; i++) {
       const derivativeAddress = await safEthProxy.derivatives(i);
-
       const derivative = new ethers.Contract(
         derivativeAddress,
         derivativeAbi,
         adminAccount
       );
-
-      const db = await derivative.balance();
-
-      const ethPerDerivative = await derivative.ethPerDerivative(db);
+      const ethPerDerivative = await derivative.ethPerDerivative();
 
       const ethBalanceEstimate = (await derivative.balance())
         .mul(ethPerDerivative)
         .div("1000000000000000000");
+
       ethBalances.push(ethBalanceEstimate);
     }
     return ethBalances;
