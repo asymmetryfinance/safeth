@@ -64,6 +64,7 @@ contract SafEth is
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
+        require(derivativeCount > 0, "no derivatives");
 
         uint256 underlyingValue = 0;
 

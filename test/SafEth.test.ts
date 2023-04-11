@@ -84,6 +84,18 @@ describe("SafEth", function () {
         safEthProxy.stake({ value: depositAmount })
       ).to.be.revertedWith("amount too high");
     });
+    it("Should fail to stake with no derivatives", async function () {
+      const SafEth = await ethers.getContractFactory("SafEth");
+      const safEth = await upgrades.deployProxy(SafEth, [
+        "Asymmetry Finance ETH",
+        "safETH",
+      ]);
+      await safEth.deployed();
+
+      await expect(
+        safEth.stake({ value: ethers.utils.parseEther("1") })
+      ).revertedWith("no derivatives");
+    });
   });
 
   describe("Slippage", function () {
