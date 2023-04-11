@@ -61,9 +61,10 @@ contract SafEth is
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
     */
     function stake() external payable returns (uint256 mintedAmount) {
+        uint256 msgValue = msg.value;
         require(pauseStaking == false, "staking is paused");
-        require(msg.value >= minAmount, "amount too low");
-        require(msg.value <= maxAmount, "amount too high");
+        require(msgValue >= minAmount, "amount too low");
+        require(msgValue <= maxAmount, "amount too high");
 
         uint256 underlyingValue = 0;
 
@@ -85,7 +86,7 @@ contract SafEth is
             uint256 weight = weights[i];
             IDerivative derivative = derivatives[i];
             if (weight == 0) continue;
-            uint256 ethAmount = (msg.value * weight) / totalWeight;
+            uint256 ethAmount = (msgValue * weight) / totalWeight;
 
             // This is slightly less than ethAmount because slippage
             uint256 depositAmount = derivative.deposit{value: ethAmount}();
@@ -98,7 +99,7 @@ contract SafEth is
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
 
         _mint(msg.sender, mintAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth);
+        emit Staked(msg.sender, msgValue, totalStakeValueEth);
         return (mintAmount);
     }
 
