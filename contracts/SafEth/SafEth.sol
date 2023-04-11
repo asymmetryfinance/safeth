@@ -76,7 +76,7 @@ contract SafEth is
 
         uint256 totalSupply = totalSupply();
         uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0)
+        if (totalSupply == 0 || underlyingValue == 0)
             preDepositPrice = 10 ** 18; // initializes with a price of 1
         else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
 
