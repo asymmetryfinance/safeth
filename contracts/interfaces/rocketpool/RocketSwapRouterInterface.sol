@@ -2,5 +2,10 @@
 pragma solidity ^0.8.13;
 
 interface RocketSwapRouterInterface {
-    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable;
+    function swapTo(
+        uint256 _uniswapPortion,
+        uint256 _balancerPortion,
+        uint256 _minTokensOut,
+        uint256 _idealTokensOut
+    ) external payable;
 }

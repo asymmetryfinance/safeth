@@ -32,7 +32,8 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
 
     /// Swap router is not available in rocket storage contract so we hardcode it
     /// https://docs.rocketpool.net/developers/usage/contracts/contracts.html#interacting-with-rocket-pool
-    address public constant ROCKET_SWAP_ROUTER = 0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
+    address public constant ROCKET_SWAP_ROUTER =
+        0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
     AggregatorV3Interface constant chainLinkRethEthFeed =
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
@@ -104,10 +105,19 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             ((10 ** 18 - maxSlippage))) / 10 ** 18);
         uint256 idealOut = ((((rethPerEth * msg.value) / 10 ** 18) *
             ((10 ** 18))) / 10 ** 18);
-        uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(address(this));
+        uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
+            address(this)
+        );
         // swaps into reth using 100% balancer pool
-        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapTo{value: msg.value}(0, 10, minOut, idealOut);
-        uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(address(this));
+        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapTo{value: msg.value}(
+            0,
+            10,
+            minOut,
+            idealOut
+        );
+        uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(
+            address(this)
+        );
         uint256 amountSwapped = rethBalanceAfter - rethBalanceBefore;
         return amountSwapped;
     }
