@@ -123,7 +123,7 @@ contract SafEth is
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
         require(ethAmountToWithdraw > 0, "no ETH to withdraw");
-        
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
             ""
