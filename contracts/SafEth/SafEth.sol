@@ -71,13 +71,12 @@ contract SafEth is
         // Getting underlying value in terms of ETH for each derivative
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
-                    derivatives[i].balance()) /
+                (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
                 10 ** 18;
 
         uint256 totalSupply = totalSupply();
         uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0)
+        if (totalSupply == 0 || underlyingValue == 0)
             preDepositPrice = 10 ** 18; // initializes with a price of 1
         else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
 
@@ -88,15 +87,17 @@ contract SafEth is
             if (weight == 0) continue;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
-            // This is slightly less than ethAmount because slippage
-            uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
-                depositAmount
-            ) * depositAmount) / 10 ** 18;
-            totalStakeValueEth += derivativeReceivedEthValue;
+            if (ethAmount > 0) {
+                // This is slightly less than ethAmount because slippage
+                uint256 depositAmount = derivative.deposit{value: ethAmount}();
+                uint derivativeReceivedEthValue = (derivative
+                    .ethPerDerivative() * depositAmount) / 10 ** 18;
+                totalStakeValueEth += derivativeReceivedEthValue;
+            }
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        require(mintAmount > 0, "mint amount 0");
 
         _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth);
@@ -110,6 +111,9 @@ contract SafEth is
     */
     function unstake(uint256 _safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
+        require(_safEthAmount > 0, "amount too low");
+        require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
+
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
 
@@ -123,6 +127,8 @@ contract SafEth is
         _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        require(ethAmountToWithdraw > 0, "no ETH to withdraw");
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
             ""
@@ -139,13 +145,11 @@ contract SafEth is
         @dev - Probably not going to be used often, if at all
     */
     function rebalanceToWeights() external onlyOwner {
-        uint256 ethAmountBefore = address(this).balance;
         for (uint i = 0; i < derivativeCount; i++) {
             if (derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
         }
-        uint256 ethAmountAfter = address(this).balance;
-        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
+        uint256 ethAmountToRebalance = address(this).balance;
 
         for (uint i = 0; i < derivativeCount; i++) {
             if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
@@ -200,13 +204,13 @@ contract SafEth is
 
         derivatives[derivativeCount] = IDerivative(_contractAddress);
         weights[derivativeCount] = _weight;
+        emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         derivativeCount++;
 
         uint256 localTotalWeight = 0;
         for (uint256 i = 0; i < derivativeCount; i++)
             localTotalWeight += weights[i];
         totalWeight = localTotalWeight;
-        emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
     }
 
     /**
@@ -266,8 +270,7 @@ contract SafEth is
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
-                    derivatives[i].balance()) /
+                (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
                 10 ** 18;
         return (10 ** 18 * underlyingValue) / totalSupply();
     }

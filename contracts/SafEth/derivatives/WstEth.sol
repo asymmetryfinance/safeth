@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IStEthEthPool.sol";
 import "../../interfaces/lido/IWStETH.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
@@ -22,6 +23,9 @@ contract WstEth is
         0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address public constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+
+    AggregatorV3Interface constant chainLinkStEthEthFeed =
+        AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
     uint256 public maxSlippage;
 
@@ -61,15 +65,20 @@ contract WstEth is
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        uint256 stEthBalBefore = IERC20(STETH_TOKEN).balanceOf(address(this));
         IWStETH(WST_ETH).unwrap(_amount);
-        uint256 stEthBal = IERC20(STETH_TOKEN).balanceOf(address(this));
-        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthBal);
-        uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
-        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthBal, minOut);
+        uint256 stEthBalAfter = IERC20(STETH_TOKEN).balanceOf(address(this));
+        uint256 stEthUnwrapped = stEthBalAfter - stEthBalBefore;
+
+        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthUnwrapped);
+        uint256 minOut = (stEthUnwrapped * (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+        uint256 ethBalanceBefore = address(this).balance;
+        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthUnwrapped, minOut);
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -90,8 +99,14 @@ contract WstEth is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        return IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+    function ethPerDerivative() public view returns (uint256) {
+        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+        (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
+            .latestRoundData();
+        if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
+        uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) /
+            10 ** 18;
+        return ethPerWstEth;
     }
 
     /**

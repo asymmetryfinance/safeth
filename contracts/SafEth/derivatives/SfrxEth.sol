@@ -65,32 +65,37 @@ contract SfrxEth is
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        uint256 frxEthBalanceBefore = IERC20(FRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
         IsFrxEth(SFRX_ETH_ADDRESS).redeem(
             _amount,
             address(this),
             address(this)
         );
-        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(
+        uint256 frxEthBalanceAfter = IERC20(FRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
+        uint256 frxEthReceived = frxEthBalanceAfter - frxEthBalanceBefore;
         IsFrxEth(FRX_ETH_ADDRESS).approve(
             FRX_ETH_CRV_POOL_ADDRESS,
-            frxEthBalance
+            frxEthReceived
         );
 
-        uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
+        uint256 minOut = (((ethPerDerivative() * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
+        uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
             1,
             0,
-            frxEthBalance,
+            frxEthReceived,
             minOut
         );
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -115,7 +120,7 @@ contract SfrxEth is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+    function ethPerDerivative() public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
             10 ** 18
         );

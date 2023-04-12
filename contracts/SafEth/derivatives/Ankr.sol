@@ -95,7 +95,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+    function ethPerDerivative() public view returns (uint256) {
         return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(10 ** 18);
     }
 

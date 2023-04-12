@@ -108,7 +108,7 @@ contract StakeWise is
         @notice - Get price of derivative in terms of ETH
         @dev - TODO: This should return the rate being used for IStakewiseStaker(staker).stake().
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+    function ethPerDerivative() public view returns (uint256) {
         uint256 wethOutput = estimatedSellSeth2Output(10 ** 18); // we can assume weth is always 1-1 with eth
         return wethOutput;
     }
