@@ -12,7 +12,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract SafEth is
     Initializable,
