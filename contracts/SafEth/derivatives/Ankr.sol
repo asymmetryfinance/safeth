@@ -7,11 +7,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ankr/AnkrStaker.sol";
 import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/IAnkrEthEthPool.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
 /// @dev This derivative's liquidity is too low to pass the automated tests and we wont be enabling this derivative in the initial release.
-contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
+contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ANKR_ETH_ADDRESS =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
     address public constant ANKR_STAKER_ADDRESS =
@@ -33,6 +34,7 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) public initializer {
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
     }

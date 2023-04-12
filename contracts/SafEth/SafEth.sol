@@ -9,6 +9,7 @@ import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -189,6 +190,18 @@ contract SafEth is
         address _contractAddress,
         uint256 _weight
     ) external onlyOwner {
+        try
+            ERC165(_contractAddress).supportsInterface(
+                type(IDerivative).interfaceId
+            )
+        returns (bool supported) {
+            // Contract supports ERC-165 but invalid
+            require(supported, "invalid derivative");
+        } catch {
+            // Contract doesn't support ERC-165
+            revert("invalid contract");
+        }
+
         derivatives[derivativeCount] = IDerivative(_contractAddress);
         weights[derivativeCount] = _weight;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);

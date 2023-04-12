@@ -14,12 +14,12 @@ import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../../interfaces/uniswap/IUniswapV3Factory.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
-
-contract Reth is IDerivative, Initializable, OwnableUpgradeable {
+contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
     address public constant W_ETH_ADDRESS =
@@ -51,6 +51,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
     }

@@ -6,12 +6,17 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IStEthEthPool.sol";
 import "../../interfaces/lido/IWStETH.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
-
-contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
+contract WstEth is
+    ERC165Storage,
+    IDerivative,
+    Initializable,
+    OwnableUpgradeable
+{
     address public constant WST_ETH =
         0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address public constant LIDO_CRV_POOL =
@@ -36,6 +41,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
     }
