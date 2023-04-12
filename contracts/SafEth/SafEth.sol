@@ -187,13 +187,13 @@ contract SafEth is
     ) external onlyOwner {
         derivatives[derivativeCount] = IDerivative(_contractAddress);
         weights[derivativeCount] = _weight;
+        emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         derivativeCount++;
 
         uint256 localTotalWeight = 0;
         for (uint256 i = 0; i < derivativeCount; i++)
             localTotalWeight += weights[i];
         totalWeight = localTotalWeight;
-        emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
     }
 
     /**
