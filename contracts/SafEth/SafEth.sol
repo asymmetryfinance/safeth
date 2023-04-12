@@ -138,13 +138,11 @@ contract SafEth is
         @dev - Probably not going to be used often, if at all
     */
     function rebalanceToWeights() external onlyOwner {
-        uint256 ethAmountBefore = address(this).balance;
         for (uint i = 0; i < derivativeCount; i++) {
             if (derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
         }
-        uint256 ethAmountAfter = address(this).balance;
-        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
+        uint256 ethAmountToRebalance = address(this).balance;
 
         for (uint i = 0; i < derivativeCount; i++) {
             if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
