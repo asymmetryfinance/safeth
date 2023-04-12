@@ -87,8 +87,8 @@ contract SafEth is
             if (weight == 0) continue;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
-            // This is slightly less than ethAmount because slippage
             if (ethAmount > 0) {
+                // This is slightly less than ethAmount because slippage
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
                 uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
                     depositAmount
