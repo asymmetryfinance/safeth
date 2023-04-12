@@ -8,13 +8,19 @@ import "../../interfaces/uniswap/ISwapRouter.sol";
 import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/stakewise/IStakewiseStaker.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
 /// @dev Stakewise if kindof weird, theres 2 underlying tokens. sEth2 and rEth2.  Both are stable(ish) to eth but you receive rewards in rEth2
 /// @dev There is also an "activation period" that applies to larger deposits.
 /// @dev This derivative wont be enabled for the initial release
-contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
+contract StakeWise is
+    ERC165Storage,
+    IDerivative,
+    Initializable,
+    OwnableUpgradeable
+{
     address public constant UNISWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address public constant SETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
@@ -40,6 +46,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
     }
