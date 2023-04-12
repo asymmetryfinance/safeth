@@ -12,6 +12,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
+import "hardhat/console.sol";
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -262,5 +264,23 @@ contract SafEth is
         return (10 ** 18 * underlyingValue) / totalSupply();
     }
 
-    receive() external payable {}
+    receive() external payable {
+        console.log('receive msg.sender is', msg.sender, msg.value);
+        // Initialize a flag to track if the Ether sender is a registered derivative
+        bool acceptSender;
+
+        // Loop through the registered derivatives
+        uint256 count = derivativeCount;
+        console.log('derivativeCount');
+        for (uint256 i; i < count; ++i) {
+            console.log('i', i, address(derivatives[i]), msg.sender);
+            acceptSender = (address(derivatives[i]) == msg.sender);
+            if(acceptSender) {
+                break;
+            }
+        }
+        console.log('acceptSender is', acceptSender);
+        // Require that the sender is a registered derivative to accept the Ether transfer
+        require(acceptSender, "Not a derivative contract");
+    }
 }
