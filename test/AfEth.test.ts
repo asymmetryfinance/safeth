@@ -92,7 +92,7 @@ describe("CvxStrategy", async function () {
       cvxStrategy.address
     );
     const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1753610536404128026";
+    const crvPoolBalance = "1753573896811820076";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 

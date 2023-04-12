@@ -10,7 +10,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant WST_ETH =
