@@ -61,7 +61,9 @@ contract SafEth is
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
         @param _minOut - minimum amount of safEth to receive or revert
     */
-    function stake(uint256 _minOut) external payable returns (uint256 mintedAmount) {
+    function stake(
+        uint256 _minOut
+    ) external payable returns (uint256 mintedAmount) {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
@@ -97,7 +99,7 @@ contract SafEth is
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
-        require(mintAmount > _minOut, 'mint amount less than minOut');
+        require(mintAmount > _minOut, "mint amount less than minOut");
         _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth);
         return (mintAmount);
