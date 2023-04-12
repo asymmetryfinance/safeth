@@ -71,7 +71,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
             frxEthBalance
         );
 
-        uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
+        uint256 minOut = (((ethPerDerivative() * _amount) / 10 ** 18) *
             (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
@@ -108,7 +108,7 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+    function ethPerDerivative() public view returns (uint256) {
         uint256 frxAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
             10 ** 18
         );
