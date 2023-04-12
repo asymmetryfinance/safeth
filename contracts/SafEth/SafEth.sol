@@ -109,6 +109,7 @@ contract SafEth is
     */
     function unstake(uint256 _safEthAmount) external {
         require(pauseUnstaking == false, "unstaking is paused");
+        require(_safEthAmount > 0, "amount too low");
         require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
 
         uint256 safEthTotalSupply = totalSupply();

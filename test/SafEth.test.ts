@@ -73,6 +73,9 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
+    it("Should fail unstake on zero safEthAmount", async function () {
+      await expect(safEthProxy.unstake(0)).revertedWith("amount too low");
+    });
     it("Should fail unstake on invalid safEthAmount", async function () {
       await expect(safEthProxy.unstake(10)).revertedWith(
         "insufficient balance"
