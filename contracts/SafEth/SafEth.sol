@@ -271,7 +271,7 @@ contract SafEth is
         uint256 count = derivativeCount;
         for (uint256 i; i < count; ++i) {
             acceptSender = (address(derivatives[i]) == msg.sender);
-            if(acceptSender) {
+            if (acceptSender) {
                 break;
             }
         }
