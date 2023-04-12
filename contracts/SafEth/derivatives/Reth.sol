@@ -105,11 +105,12 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 amount) external onlyOwner {
+        uint256 ethBalanceBefore = address(this).balance;
         RocketTokenRETHInterface(rethAddress()).burn(amount);
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
