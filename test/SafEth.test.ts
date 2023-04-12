@@ -108,6 +108,16 @@ describe("SafEth", function () {
       await safEthProxy.stake({ value: depositAmount });
     });
   });
+  describe("Receive Eth", function () {
+    it("Should revert if sent eth by a user", async function () {
+      await expect(
+        adminAccount.sendTransaction({
+          to: safEthProxy.address,
+          value: ethers.utils.parseEther("1.0"),
+        })
+      ).to.be.revertedWith("Not a derivative contract");
+    });
+  });
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();

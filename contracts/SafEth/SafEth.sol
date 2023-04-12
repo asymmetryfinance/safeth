@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -275,5 +276,19 @@ contract SafEth is
         return (10 ** 18 * underlyingValue) / totalSupply();
     }
 
-    receive() external payable {}
+    receive() external payable {
+        // Initialize a flag to track if the Ether sender is a registered derivative
+        bool acceptSender;
+
+        // Loop through the registered derivatives
+        uint256 count = derivativeCount;
+        for (uint256 i; i < count; ++i) {
+            acceptSender = (address(derivatives[i]) == msg.sender);
+            if (acceptSender) {
+                break;
+            }
+        }
+        // Require that the sender is a registered derivative to accept the Ether transfer
+        require(acceptSender, "Not a derivative contract");
+    }
 }
