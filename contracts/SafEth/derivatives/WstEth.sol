@@ -89,7 +89,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
+    function ethPerDerivative() public view returns (uint256) {
         uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
                 (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
             .latestRoundData();
