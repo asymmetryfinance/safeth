@@ -20,9 +20,6 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
-// chainlink stEth
-//0x86392dc19c0b719886221c78ab11eb8cf5c52812
-
     AggregatorV3Interface constant chainLinkStEthEthFeed =
         AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
@@ -97,15 +94,8 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
                 (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
             .latestRoundData();
         if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
-
-        console.log('stPerWst', stPerWst);
-        console.log('chainLinkStEthEthPrice', uint256(chainLinkStEthEthPrice));
-
         uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) / 10 ** 18;
-
-        console.log('ethPerWstEth', ethPerWstEth);
-
-        return stPerWst;
+        return ethPerWstEth;
     }
 
     /**
