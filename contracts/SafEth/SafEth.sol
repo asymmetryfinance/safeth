@@ -265,21 +265,17 @@ contract SafEth is
     }
 
     receive() external payable {
-        console.log('receive msg.sender is', msg.sender, msg.value);
         // Initialize a flag to track if the Ether sender is a registered derivative
         bool acceptSender;
 
         // Loop through the registered derivatives
         uint256 count = derivativeCount;
-        console.log('derivativeCount');
         for (uint256 i; i < count; ++i) {
-            console.log('i', i, address(derivatives[i]), msg.sender);
             acceptSender = (address(derivatives[i]) == msg.sender);
             if(acceptSender) {
                 break;
             }
         }
-        console.log('acceptSender is', acceptSender);
         // Require that the sender is a registered derivative to accept the Ether transfer
         require(acceptSender, "Not a derivative contract");
     }
