@@ -18,7 +18,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_STORAGE_ADDRESS =

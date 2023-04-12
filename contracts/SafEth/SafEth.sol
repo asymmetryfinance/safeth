@@ -89,12 +89,14 @@ contract SafEth is
             if (ethAmount > 0) {
                 // This is slightly less than ethAmount because slippage
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
-                uint derivativeReceivedEthValue = (derivative.ethPerDerivative() * depositAmount) / 10 ** 18;
+                uint derivativeReceivedEthValue = (derivative
+                    .ethPerDerivative() * depositAmount) / 10 ** 18;
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        require(mintAmount > 0, "mint amount 0");
 
         _mint(msg.sender, mintAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth);
