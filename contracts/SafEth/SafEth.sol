@@ -87,12 +87,14 @@ contract SafEth is
             if (weight == 0) continue;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
-            // This is slightly less than ethAmount because slippage
-            uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
-                depositAmount
-            ) * depositAmount) / 10 ** 18;
-            totalStakeValueEth += derivativeReceivedEthValue;
+            if (ethAmount > 0) {
+                // This is slightly less than ethAmount because slippage
+                uint256 depositAmount = derivative.deposit{value: ethAmount}();
+                uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
+                    depositAmount
+                ) * depositAmount) / 10 ** 18;
+                totalStakeValueEth += derivativeReceivedEthValue;
+            }
         }
         // mintAmount represents a percentage of the total assets in the system
         uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
