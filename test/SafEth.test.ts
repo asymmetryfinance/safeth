@@ -16,7 +16,7 @@ import {
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { rEthDepositPoolAbi } from "./abi/rEthDepositPoolAbi";
-import { RETH_MAX, WSTETH_ADRESS, WSTETH_WHALE } from "./helpers/constants";
+import { RETH_MAX, WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
@@ -131,6 +131,23 @@ describe("SafEth", function () {
 
       // dont stay paused
       await snapshot.restore();
+    });
+    it("Should fail with adding non erc 165 compliant derivative", async function () {
+      await expect(
+        safEthProxy.addDerivative(WSTETH_ADDRESS, "1000000000000000000")
+      ).to.be.revertedWith("invalid contract");
+    });
+    it("Should fail with adding invalid erc165 derivative", async function () {
+      const derivativeFactory0 = await ethers.getContractFactory(
+        "InvalidErc165Derivative"
+      );
+      const derivative0 = await upgrades.deployProxy(derivativeFactory0, [
+        safEthProxy.address,
+      ]);
+      await derivative0.deployed();
+      await expect(
+        safEthProxy.addDerivative(derivative0.address, "1000000000000000000")
+      ).to.be.revertedWith("invalid derivative");
     });
     it("Should only allow owner to call pausing functions", async function () {
       const accounts = await ethers.getSigners();
@@ -436,7 +453,11 @@ describe("SafEth", function () {
         params: [WSTETH_WHALE],
       });
       const whaleSigner = await ethers.getSigner(WSTETH_WHALE);
-      const erc20 = new ethers.Contract(WSTETH_ADRESS, ERC20.abi, adminAccount);
+      const erc20 = new ethers.Contract(
+        WSTETH_ADDRESS,
+        ERC20.abi,
+        adminAccount
+      );
       const erc20Whale = erc20.connect(whaleSigner);
       const erc20Amount = ethers.utils.parseEther("1000");
       await erc20Whale.transfer(safEth2.address, erc20Amount);
@@ -445,7 +466,7 @@ describe("SafEth", function () {
 
       // recover accidentally deposited erc20 with new admin functionality
       const tx4 = await safEth2.adminWithdrawErc20(
-        WSTETH_ADRESS,
+        WSTETH_ADDRESS,
         await erc20.balanceOf(safEth2.address)
       );
       await tx4.wait();

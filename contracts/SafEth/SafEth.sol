@@ -9,6 +9,7 @@ import "../interfaces/lido/IstETH.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -176,6 +177,26 @@ contract SafEth is
         emit WeightChange(_derivativeIndex, _weight);
     }
 
+    function toHexDigit(uint8 d) internal pure returns (bytes1) {
+        if (0 <= d && d <= 9) {
+            return bytes1(uint8(bytes1("0")) + d);
+        } else if (10 <= uint8(d) && uint8(d) <= 15) {
+            return bytes1(uint8(bytes1("a")) + d - 10);
+        }
+        revert();
+    }
+
+    function fromCode(bytes4 code) public pure returns (string memory) {
+        bytes memory result = new bytes(10);
+        result[0] = bytes1("0");
+        result[1] = bytes1("x");
+        for (uint i = 0; i < 4; ++i) {
+            result[2 * i + 2] = toHexDigit(uint8(code[i]) / 16);
+            result[2 * i + 3] = toHexDigit(uint8(code[i]) % 16);
+        }
+        return string(result);
+    }
+
     /**
         @notice - Adds new derivative to the index fund
         @param _contractAddress - Address of the derivative contract launched by AF
@@ -185,6 +206,18 @@ contract SafEth is
         address _contractAddress,
         uint256 _weight
     ) external onlyOwner {
+        try
+            ERC165(_contractAddress).supportsInterface(
+                type(IDerivative).interfaceId
+            )
+        returns (bool supported) {
+            // Contracts support ERC-165
+            require(supported, "invalid derivative");
+        } catch {
+            // Contracts doesn't support ERC-165
+            revert("invalid contract");
+        }
+
         derivatives[derivativeCount] = IDerivative(_contractAddress);
         weights[derivativeCount] = _weight;
         derivativeCount++;
