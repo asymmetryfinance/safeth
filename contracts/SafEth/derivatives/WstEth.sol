@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IStEthEthPool.sol";
 import "../../interfaces/lido/IWStETH.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
@@ -16,6 +17,9 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address public constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+
+    AggregatorV3Interface constant chainLinkStEthEthFeed =
+        AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
     uint256 public maxSlippage;
 
@@ -84,7 +88,13 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        return IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+        (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
+            .latestRoundData();
+        if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
+        uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) /
+            10 ** 18;
+        return ethPerWstEth;
     }
 
     /**
