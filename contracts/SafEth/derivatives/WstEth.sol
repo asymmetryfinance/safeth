@@ -72,9 +72,7 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}(
-            ""
-        );
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 

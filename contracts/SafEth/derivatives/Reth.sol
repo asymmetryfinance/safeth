@@ -92,9 +92,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}(
-            ""
-        );
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
