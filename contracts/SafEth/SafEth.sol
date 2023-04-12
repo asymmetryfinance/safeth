@@ -123,7 +123,13 @@ contract SafEth is
             uint256 derivativeAmount = (derivatives[i].balance() *
                 _safEthAmount) / safEthTotalSupply;
             if (derivativeAmount == 0) continue; // if derivative empty ignore
+            // Add check for a zero Ether received
+            uint256 ethBefore = address(this).balance;
             derivatives[i].withdraw(derivativeAmount);
+            require(
+                address(this).balance - ethBefore != 0,
+                "Receive zero Ether"
+            );
         }
         _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
