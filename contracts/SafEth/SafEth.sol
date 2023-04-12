@@ -195,10 +195,10 @@ contract SafEth is
                 type(IDerivative).interfaceId
             )
         returns (bool supported) {
-            // Contracts support ERC-165
+            // Contract supports ERC-165 but invalid
             require(supported, "invalid derivative");
         } catch {
-            // Contracts doesn't support ERC-165
+            // Contract doesn't support ERC-165
             revert("invalid contract");
         }
 
