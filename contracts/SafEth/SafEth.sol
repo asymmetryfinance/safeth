@@ -25,13 +25,18 @@ contract SafEth is
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 slippage);
-    event Staked(address indexed recipient, uint ethIn, uint totalStakeValue);
-    event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
-    event WeightChange(uint indexed index, uint weight);
+    event Staked(
+        address indexed recipient,
+        uint256 ethIn,
+        uint256 totalStakeValue,
+        uint256 price
+    );
+    event Unstaked(address indexed recipient, uint256 ethOut, uint256 safEthIn);
+    event WeightChange(uint256 indexed index, uint256 weight);
     event DerivativeAdded(
         address indexed contractAddress,
-        uint weight,
-        uint index
+        uint256 weight,
+        uint256 index
     );
     event Rebalanced();
 
@@ -103,7 +108,7 @@ contract SafEth is
         require(mintAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth);
+        emit Staked(msg.sender, msg.value, totalStakeValueEth, approxPrice());
         return (mintAmount);
     }
 
@@ -275,7 +280,7 @@ contract SafEth is
      * @notice - Get the approx price of safEth.
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
      */
-    function approxPrice() external view returns (uint256) {
+    function approxPrice() public view returns (uint256) {
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++)
             underlyingValue +=
