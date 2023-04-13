@@ -155,7 +155,7 @@ describe("SafEth Integration Test", function () {
       const withdrawAmount = await strategy.balanceOf(userAccounts[i].address);
       if (withdrawAmount.eq(0)) continue;
       const userStrategySigner = strategy.connect(userAccounts[i]);
-      const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
+      const unstakeResult = await userStrategySigner.unstake(withdrawAmount, 0);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
       networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
