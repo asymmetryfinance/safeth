@@ -119,6 +119,15 @@ describe("SafEth", function () {
       ).to.be.revertedWith("Not a derivative contract");
     });
   });
+  describe("Min Out", function () {
+    it("Should fail staking with minOut higher than expected safEth output", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      const minOut = ethers.utils.parseEther("2");
+      await expect(
+        safEthProxy.stake(minOut, { value: depositAmount })
+      ).to.be.revertedWith("mint amount less than minOut");
+    });
+  });
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
