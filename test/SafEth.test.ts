@@ -208,8 +208,24 @@ describe("SafEth", function () {
       const tx1 = await rEthDerivative.deposit({ value: weiDepositAmount });
       await tx1.wait();
 
-      const tx2 = await rEthDerivative.withdraw(weiDepositAmount.div(2));
+      const ethBalancePre = await ethers.provider.getBalance(
+        rEthDerivative.address
+      );
+      expect(ethBalancePre).eq(0);
+
+      const balance = await rEthDerivative.balance();
+      expect(balance).gt(0);
+
+      const tx2 = await rEthDerivative.withdraw(balance);
       await tx2.wait();
+
+      const balanceAfter = await rEthDerivative.balance();
+      expect(balanceAfter).eq(0);
+
+      const ethBalancePost = await ethers.provider.getBalance(
+        rEthDerivative.address
+      );
+      expect(ethBalancePost).eq(0);
     });
 
     // Special case for testing rEth specific code path
