@@ -55,12 +55,12 @@ describe("SafEth", function () {
     it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
       const depositAmount = ethers.utils.parseEther("200");
-      const tx1 = await safEthProxy.stake({ value: depositAmount });
+      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
 
       const tx2 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address)
+        await safEthProxy.balanceOf(adminAccount.address), 0
       );
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
@@ -76,12 +76,12 @@ describe("SafEth", function () {
     it("Should fail with wrong min/max", async function () {
       let depositAmount = ethers.utils.parseEther(".2");
       await expect(
-        safEthProxy.stake({ value: depositAmount })
+        safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too low");
 
       depositAmount = ethers.utils.parseEther("2050");
       await expect(
-        safEthProxy.stake({ value: depositAmount })
+        safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too high");
     });
   });
@@ -95,13 +95,23 @@ describe("SafEth", function () {
       for (let i = 0; i < derivativeCount; i++) {
         await safEthProxy.setMaxSlippage(i, 0); // 0% slippage we expect to fail
       }
-      await expect(safEthProxy.stake({ value: depositAmount })).to.be.reverted;
+      await expect(safEthProxy.stake(0, { value: depositAmount })).to.be
+        .reverted;
 
       // set slippages back to good values
       for (let i = 0; i < derivativeCount; i++) {
         await safEthProxy.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
       }
-      await safEthProxy.stake({ value: depositAmount });
+      await safEthProxy.stake(0, { value: depositAmount });
+    });
+  });
+  describe("Min Out", function () {
+    it("Should fail staking with minOut higher than expected safEth output", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      const minOut = ethers.utils.parseEther("2");
+      await expect(
+        safEthProxy.stake(minOut, { value: depositAmount })
+      ).to.be.revertedWith("mint amount less than minOut");
     });
   });
   describe("Owner functions", function () {
@@ -119,13 +129,13 @@ describe("SafEth", function () {
         await tx2.wait();
       }
       await expect(
-        safEthProxy.stake({ value: depositAmount })
+        safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("staking is paused");
 
       const tx3 = await safEthProxy.setPauseUnstaking(true);
       await tx3.wait();
 
-      await expect(safEthProxy.unstake(1000)).to.be.revertedWith(
+      await expect(safEthProxy.unstake(1000, 0)).to.be.revertedWith(
         "unstaking is paused"
       );
 
@@ -371,14 +381,14 @@ describe("SafEth", function () {
       await upgradedDerivative.deployed();
 
       const depositAmount = ethers.utils.parseEther("1");
-      const tx1 = await strategy2.stake({ value: depositAmount });
+      const tx1 = await strategy2.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
 
       const balanceBeforeWithdraw = await adminAccount.getBalance();
 
       const tx2 = await strategy2.unstake(
-        await safEthProxy.balanceOf(adminAccount.address)
+        await safEthProxy.balanceOf(adminAccount.address), 0
       );
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined1.effectiveGasPrice);
@@ -399,7 +409,7 @@ describe("SafEth", function () {
       const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
       await safEth2.deployed();
       const depositAmount = ethers.utils.parseEther("1");
-      const tx1 = await safEth2.stake({ value: depositAmount });
+      const tx1 = await safEth2.stake(0, { value: depositAmount });
       await tx1.wait();
 
       const derivativeCount = await safEth2.derivativeCount();
@@ -477,7 +487,7 @@ describe("SafEth", function () {
         const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
         await tx1.wait();
       }
-      const tx2 = await safEthProxy.stake({ value: initialDeposit });
+      const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
       await tx2.wait();
 
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
@@ -508,7 +518,7 @@ describe("SafEth", function () {
 
       const tx2 = await safEthProxy.adjustWeight(0, 0);
       await tx2.wait();
-      const tx3 = await safEthProxy.stake({ value: initialDeposit });
+      const tx3 = await safEthProxy.stake(0, { value: initialDeposit });
       await tx3.wait();
 
       const ethBalances = await estimatedDerivativeValues();
@@ -537,7 +547,7 @@ describe("SafEth", function () {
         const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
         totalNetworkFee = totalNetworkFee.add(networkFee1);
       }
-      const tx2 = await safEthProxy.stake({ value: initialDeposit });
+      const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee2);
@@ -554,7 +564,8 @@ describe("SafEth", function () {
       totalNetworkFee = totalNetworkFee.add(networkFee4);
 
       const tx5 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address)
+        await safEthProxy.balanceOf(adminAccount.address),
+        0
       );
       const mined5 = await tx5.wait();
       const networkFee5 = mined5.gasUsed.mul(mined5.effectiveGasPrice);
@@ -571,7 +582,7 @@ describe("SafEth", function () {
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-      await safEthProxy.stake({ value: depositAmount });
+      await safEthProxy.stake(0, { value: depositAmount });
 
       const price1 = await safEthProxy.approxPrice();
       // starting price = 1 Eth
