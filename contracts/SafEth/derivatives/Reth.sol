@@ -85,11 +85,60 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Convert derivative into ETH
+        @notice - Checks to see if can withdraw from RocketPool
+        @param _amount - amount of rETH to withdraw
+        @return - true if can withdraw, false otherwise
      */
-    function withdraw(uint256 amount) external onlyOwner {
+    function canWithdrawFromRocketPool(
+        uint256 _amount
+    ) private view returns (bool) {
+        address rocketDepositPoolAddress = RocketStorageInterface(
+            ROCKET_STORAGE_ADDRESS
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketDepositPool")
+                )
+            );
+        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                rocketDepositPoolAddress
+            );
+        uint256 _ethAmount = RocketTokenRETHInterface(rethAddress())
+            .getEthValue(_amount);
+        return rocketDepositPool.getExcessBalance() >= _ethAmount;
+    }
+
+    /**
+        @notice - Convert derivative into ETH
+        @param _amount - amount of rETH to convert
+     */
+    function withdraw(uint256 _amount) external onlyOwner {
         uint256 ethBalanceBefore = address(this).balance;
-        RocketTokenRETHInterface(rethAddress()).burn(amount);
+        if (canWithdrawFromRocketPool(_amount)) {
+            RocketTokenRETHInterface(rethAddress()).burn(_amount);
+        } else {
+            uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
+                address(this)
+            );
+            uint256 ethPerReth = ethPerDerivative();
+            uint256 minOut = ((((ethPerReth * _amount) / 10 ** 18) *
+                ((10 ** 18 - maxSlippage))) / 10 ** 18);
+            uint256 idealOut = ((((ethPerReth * _amount) / 10 ** 18) *
+                ((10 ** 18))) / 10 ** 18);
+            IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
+
+            // swaps from reth into weth using 100% balancer pool
+            RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
+                0,
+                10,
+                minOut,
+                idealOut,
+                _amount
+            );
+            uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
+                address(this)
+            );
+            IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
+        }
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;

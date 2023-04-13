@@ -260,7 +260,38 @@ describe("SafEth", function () {
       await derivative2.deployed();
       derivatives.push(derivative2);
     });
+    it("Should withdraw reth on amm if deposit contract empty", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      const rEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await rEthDerivative.deployed();
 
+      const ethDepositAmount = "6000"; // Will use AMM as deposit contract can't hold that much
+      const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
+
+      const tx1 = await rEthDerivative.deposit({ value: weiDepositAmount });
+      await tx1.wait();
+
+      const ethBalancePre = await ethers.provider.getBalance(
+        rEthDerivative.address
+      );
+      expect(ethBalancePre).eq(0);
+
+      const balance = await rEthDerivative.balance();
+      expect(balance).gt(0);
+
+      const tx2 = await rEthDerivative.withdraw(balance);
+      await tx2.wait();
+
+      const balanceAfter = await rEthDerivative.balance();
+      expect(balanceAfter).eq(0);
+
+      const ethBalancePost = await ethers.provider.getBalance(
+        rEthDerivative.address
+      );
+      expect(ethBalancePost).eq(0);
+    });
     it("Should test deposit & withdraw on each derivative contract", async () => {
       const ethDepositAmount = "200";
 
