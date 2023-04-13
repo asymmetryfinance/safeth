@@ -54,11 +54,12 @@ contract WstEth is IDerivative, Initializable, OwnableUpgradeable {
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        IWStETH(WST_ETH).unwrap(_amount);
-        uint256 stEthBal = IERC20(STETH_TOKEN).balanceOf(address(this));
-        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthBal);
-        uint256 minOut = (stEthBal * (10 ** 18 - maxSlippage)) / 10 ** 18;
-        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthBal, minOut);
+        uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
+        require(stEthAmount > 0, "No stETH to unwrap");
+
+        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
+        uint256 minOut = (stEthAmount * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
