@@ -67,7 +67,7 @@ contract SafEth is
     */
     function stake(
         uint256 _minOut
-    ) external payable returns (uint256 mintedAmount) {
+    ) external payable nonReentrant returns (uint256 mintedAmount) {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
@@ -115,7 +115,10 @@ contract SafEth is
         @dev - unstakes a percentage of safEth based on its total value
         @param _safEthAmount - amount of safETH to unstake into ETH
     */
-    function unstake(uint256 _safEthAmount, uint256 _minOut) external nonReentrant {
+    function unstake(
+        uint256 _safEthAmount,
+        uint256 _minOut
+    ) external nonReentrant {
         require(pauseUnstaking == false, "unstaking is paused");
         require(_safEthAmount > 0, "amount too low");
         require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
