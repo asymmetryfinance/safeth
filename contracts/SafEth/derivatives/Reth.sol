@@ -135,15 +135,14 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
         } else {
             uint256 minOut = ((((poolPrice() * amount) / 10 ** 18) *
                 ((10 ** 18 - maxSlippage))) / 10 ** 18);
-
-            IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
-            swapExactInputSingleHop(
+            uint256 amountOut = swapExactInputSingleHop(
                 rethAddress(),
                 W_ETH_ADDRESS,
                 500,
                 amount,
                 minOut
             );
+            IWETH(W_ETH_ADDRESS).withdraw(amountOut);
         }
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
