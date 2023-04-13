@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { SafEth } from "../typechain-types";
+import { SafEth, SafEthReentrancyTest } from "../typechain-types";
 
 import {
   deploySafEth,
@@ -24,6 +24,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEthProxy: SafEth;
+  let safEthReentrancyTest: SafEthReentrancyTest;
   let snapshot: SnapshotRestorer;
   let initialHardhatBlock: number; // incase we need to reset to where we started
 
@@ -41,6 +42,15 @@ describe("SafEth", function () {
     });
 
     safEthProxy = (await deploySafEth()) as SafEth;
+
+    const SafEthReentrancyTestFactory = await ethers.getContractFactory(
+      "SafEthReentrancyTest"
+    );
+    safEthReentrancyTest = (await SafEthReentrancyTestFactory.deploy(
+      safEthProxy.address
+    )) as SafEthReentrancyTest;
+    await safEthReentrancyTest.deployed();
+
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
   };
@@ -85,7 +95,22 @@ describe("SafEth", function () {
       ).to.be.revertedWith("amount too high");
     });
   });
+  describe("Re-entrancy", function () {
+    it("Should revert if re-entering unstake", async function () {
+      console.log("about to send eth");
+      const tx0 = await adminAccount.sendTransaction({
+        to: safEthReentrancyTest.address,
+        value: ethers.utils.parseEther("10.0"),
+      });
+      await tx0.wait();
+      console.log("about to unstake");
+      safEthReentrancyTest.testUnstake();
 
+      await expect(safEthReentrancyTest.testUnstake()).to.be.revertedWith(
+        "Failed to send Ether"
+      );
+    });
+  });
   describe("Slippage", function () {
     it("Should set slippage derivatives via the strategy contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
