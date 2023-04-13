@@ -60,7 +60,8 @@ describe("SafEth", function () {
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
 
       const tx2 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address), 0
+        await safEthProxy.balanceOf(adminAccount.address),
+        0
       );
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
@@ -388,7 +389,8 @@ describe("SafEth", function () {
       const balanceBeforeWithdraw = await adminAccount.getBalance();
 
       const tx2 = await strategy2.unstake(
-        await safEthProxy.balanceOf(adminAccount.address), 0
+        await safEthProxy.balanceOf(adminAccount.address),
+        0
       );
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined1.effectiveGasPrice);
