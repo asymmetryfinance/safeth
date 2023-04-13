@@ -117,17 +117,17 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             RocketTokenRETHInterface(rethAddress()).burn(_amount);
             // solhint-disable-next-line
         } else {
-            uint ethPerReth = ethPerDerivative();
+            uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
+                address(this)
+            );
+            uint256 ethPerReth = ethPerDerivative();
             uint256 minOut = ((((ethPerReth * _amount) / 10 ** 18) *
                 ((10 ** 18 - maxSlippage))) / 10 ** 18);
             uint256 idealOut = ((((ethPerReth * _amount) / 10 ** 18) *
                 ((10 ** 18))) / 10 ** 18);
-            uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
-                address(this)
-            );
             IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
-            // swaps into reth using 100% balancer pool
+            // swaps from reth into weth using 100% balancer pool
             RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
                 0,
                 10,
@@ -135,6 +135,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
                 idealOut,
                 _amount
             );
+            uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
+                address(this)
+            );
+            IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         }
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
