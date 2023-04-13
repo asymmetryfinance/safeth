@@ -72,7 +72,7 @@ contract WstEth is
         uint256 minOut = (stEthAmount * (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         uint256 ethBalanceBefore = address(this).balance;
-        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthUnwrapped, minOut);
+        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
