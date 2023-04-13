@@ -25,7 +25,12 @@ contract SafEth is
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 slippage);
-    event Staked(address indexed recipient, uint256 ethIn, uint256 totalStakeValue, uint256 price);
+    event Staked(
+        address indexed recipient,
+        uint256 ethIn,
+        uint256 totalStakeValue,
+        uint256 price
+    );
     event Unstaked(address indexed recipient, uint256 ethOut, uint256 safEthIn);
     event WeightChange(uint256 indexed index, uint256 weight);
     event DerivativeAdded(
