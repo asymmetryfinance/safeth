@@ -62,7 +62,7 @@ export const randomStakes = async (
       const depositAmount = ethers.utils.parseEther(ethAmount);
       totalStaked = totalStaked.add(depositAmount);
       // console.log("staking ", userAccounts[i].address, depositAmount);
-      const stakeResult = await userStrategySigner.stake({
+      const stakeResult = await userStrategySigner.stake(0, {
         value: depositAmount,
       });
       const mined = await stakeResult.wait();
@@ -98,7 +98,7 @@ export const randomUnstakes = async (
         randomEthAmount(0, parseFloat(safEthBalance))
       );
       const balanceBefore = await userAccounts[i].getBalance();
-      const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
+      const unstakeResult = await userStrategySigner.unstake(withdrawAmount, 0);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
       networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
