@@ -102,14 +102,53 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
+        @notice - Checks to see if can withdraw from RocketPool
+        @param _amount - amount of rETH to withdraw
+        @return - true if can withdraw, false otherwise
+     */
+    function canWithdrawFromRocketPool(
+        uint256 _amount
+    ) private view returns (bool) {
+        address rocketDepositPoolAddress = RocketStorageInterface(
+            ROCKET_STORAGE_ADDRESS
+        ).getAddress(
+                keccak256(
+                    abi.encodePacked("contract.address", "rocketDepositPool")
+                )
+            );
+        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
+                rocketDepositPoolAddress
+            );
+        uint256 _ethAmount = RocketTokenRETHInterface(rethAddress())
+            .getEthValue(_amount);
+        return rocketDepositPool.getExcessBalance() >= _ethAmount;
+    }
+
+    /**
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 amount) external onlyOwner {
-        RocketTokenRETHInterface(rethAddress()).burn(amount);
+        uint256 ethBalanceBefore = address(this).balance;
+        if (canWithdrawFromRocketPool(amount)) {
+            RocketTokenRETHInterface(rethAddress()).burn(amount);
+            // solhint-disable-next-line
+        } else {
+            uint256 minOut = ((((poolPrice() * amount) / 10 ** 18) *
+                ((10 ** 18 - maxSlippage))) / 10 ** 18);
+
+            IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
+            swapExactInputSingleHop(
+                rethAddress(),
+                W_ETH_ADDRESS,
+                500,
+                amount,
+                minOut
+            );
+        }
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
