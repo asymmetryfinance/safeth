@@ -544,7 +544,8 @@ describe("SafEth", function () {
       totalNetworkFee = totalNetworkFee.add(networkFee4);
 
       const tx5 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address), 0
+        await safEthProxy.balanceOf(adminAccount.address),
+        0
       );
       const mined5 = await tx5.wait();
       const networkFee5 = mined5.gasUsed.mul(mined5.effectiveGasPrice);

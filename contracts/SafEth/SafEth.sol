@@ -62,7 +62,9 @@ contract SafEth is
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
     */
-    function stake(uint256 _minOut) external payable returns (uint256 mintedAmount) {
+    function stake(
+        uint256 _minOut
+    ) external payable returns (uint256 mintedAmount) {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
