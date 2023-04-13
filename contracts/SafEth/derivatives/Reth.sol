@@ -115,7 +115,6 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 ethBalanceBefore = address(this).balance;
         if (canWithdrawFromRocketPool(_amount)) {
             RocketTokenRETHInterface(rethAddress()).burn(_amount);
-            // solhint-disable-next-line
         } else {
             uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
                 address(this)
