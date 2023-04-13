@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -18,7 +19,8 @@ contract SafEth is
     Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
-    SafEthStorage
+    SafEthStorage,
+    ReentrancyGuardUpgradeable
 {
     event ChangeMinAmount(uint256 indexed minAmount);
     event ChangeMaxAmount(uint256 indexed maxAmount);
@@ -60,6 +62,7 @@ contract SafEth is
         _transferOwnership(msg.sender);
         minAmount = 5 * 10 ** 17; // initializing with .5 ETH as minimum
         maxAmount = 200 * 10 ** 18; // initializing with 200 ETH as maximum
+        __ReentrancyGuard_init();
     }
 
     /**
@@ -69,7 +72,7 @@ contract SafEth is
     */
     function stake(
         uint256 _minOut
-    ) external payable returns (uint256 mintedAmount) {
+    ) external payable nonReentrant returns (uint256 mintedAmount) {
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
@@ -117,7 +120,10 @@ contract SafEth is
         @dev - unstakes a percentage of safEth based on its total value
         @param _safEthAmount - amount of safETH to unstake into ETH
     */
-    function unstake(uint256 _safEthAmount, uint256 _minOut) external {
+    function unstake(
+        uint256 _safEthAmount,
+        uint256 _minOut
+    ) external nonReentrant {
         require(pauseUnstaking == false, "unstaking is paused");
         require(_safEthAmount > 0, "amount too low");
         require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
