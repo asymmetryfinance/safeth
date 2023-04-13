@@ -261,14 +261,14 @@ describe("SafEth", function () {
       derivatives.push(derivative2);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
-      await resetToBlock(15430855); // Deposit contract not full here
+      // await resetToBlock(15430855); // Deposit contract not full here
       const factory = await ethers.getContractFactory("Reth");
       const rEthDerivative = await upgrades.deployProxy(factory, [
         adminAccount.address,
       ]);
       await rEthDerivative.deployed();
 
-      const ethDepositAmount = "200";
+      const ethDepositAmount = "6000";
       const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
 
       const tx1 = await rEthDerivative.deposit({ value: weiDepositAmount });
