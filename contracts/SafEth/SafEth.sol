@@ -15,7 +15,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     SafEthStorage
 {
     event ChangeMinAmount(uint256 indexed minAmount);
@@ -50,7 +50,7 @@ contract SafEth is
         string memory _tokenSymbol
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
-        __Ownable_init();
+        Ownable2StepUpgradeable.__Ownable2Step_init();
         minAmount = 5 * 10 ** 17; // initializing with .5 ETH as minimum
         maxAmount = 200 * 10 ** 18; // initializing with 200 ETH as maximum
     }
