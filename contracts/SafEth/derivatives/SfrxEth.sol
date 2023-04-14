@@ -128,7 +128,7 @@ contract SfrxEth is
 
         // There is no chainlink price fees for frxEth
         // We making the assumption that frxEth is always priced 1-1 with eth
-        // revert oracle price suggests otherwise
+        // revert if the curve oracle price suggests otherwise
         // Theory is its very hard for attacker to manipulate price away from 1-1 for any long period of time
         // and if its depegged attack probably cant maniulate it back to 1-1
 
