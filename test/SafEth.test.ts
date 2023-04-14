@@ -155,21 +155,6 @@ describe("SafEth", function () {
     });
   });
   describe("Owner functions", function () {
-    it("Should two step transfer", async function () {
-      const accounts = await ethers.getSigners();
-      safEthProxy.transferOwnership(accounts[1].address);
-      await safEthProxy.setPauseStaking(true);
-      expect(await safEthProxy.pauseStaking()).eq(true);
-
-      const newOwnerSigner = safEthProxy.connect(accounts[1]);
-      await expect(newOwnerSigner.setPauseStaking(false)).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
-
-      await newOwnerSigner.acceptOwnership();
-      await newOwnerSigner.setPauseStaking(false);
-      expect(await safEthProxy.pauseStaking()).eq(false);
-    });
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEthProxy.setPauseStaking(true);
@@ -245,6 +230,21 @@ describe("SafEth", function () {
       await expect(nonOwnerSigner.setMinAmount(900000000)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
+    });
+    it("Should two step transfer", async function () {
+      const accounts = await ethers.getSigners();
+      safEthProxy.transferOwnership(accounts[1].address);
+      await safEthProxy.setPauseStaking(true);
+      expect(await safEthProxy.pauseStaking()).eq(true);
+
+      const newOwnerSigner = safEthProxy.connect(accounts[1]);
+      await expect(newOwnerSigner.setPauseStaking(false)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+
+      await newOwnerSigner.acceptOwnership();
+      await newOwnerSigner.setPauseStaking(false);
+      expect(await safEthProxy.pauseStaking()).eq(false);
     });
   });
 
