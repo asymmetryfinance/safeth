@@ -13,6 +13,12 @@ import "../interfaces/IDerivative.sol";
         Constant values CAN be modified on upgrade
 */
 contract SafEthStorage {
+
+    struct DerivativeSettings {
+        uint256 weight;
+        bool enabled;
+    }
+
     bool public pauseStaking; // true if staking is paused
     bool public pauseUnstaking; // true if unstaking is pause
     uint256 public derivativeCount; // amount of derivatives added to contract
@@ -20,7 +26,7 @@ contract SafEthStorage {
     uint256 public minAmount; // minimum amount to stake
     uint256 public maxAmount; // maximum amount to stake
     mapping(uint256 => IDerivative) public derivatives; // derivatives in the system
-    mapping(uint256 => uint256) public weights; // weights for each derivative
+    mapping(uint256 => DerivativeSettings) public settings; // weights & enabled status for each derivative
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
