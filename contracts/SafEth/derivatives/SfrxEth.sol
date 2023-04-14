@@ -122,23 +122,21 @@ contract SfrxEth is
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
-            10 ** 18
-        );
-
         // There is no chainlink price fees for frxEth
         // We making the assumption that frxEth is always priced 1-1 with eth
         // revert if the curve oracle price suggests otherwise
         // Theory is its very hard for attacker to manipulate price away from 1-1 for any long period of time
         // and if its depegged attack probably cant maniulate it back to 1-1
-
         uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
             .price_oracle();
         uint256 priceDifference;
         if (oraclePrice > 10 ** 18) priceDifference = oraclePrice - 10 ** 18;
         else priceDifference = 10 ** 18 - oraclePrice;
-        require(priceDifference < 10 ** 15); // outside of 0.1% we assume depegged
+        require(priceDifference < 10 ** 15, 'frxEth possibly depegged'); // outside of 0.1% we assume depegged
 
+        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
+            10 ** 18
+        );
         return frxEthAmount;
     }
 
