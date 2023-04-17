@@ -41,6 +41,8 @@ contract SafEth is
         uint256 index
     );
     event Rebalanced();
+    event DerivativeDisabled(uint256 indexed index);
+    event DerivativeEnabled(uint256 indexed index);
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -77,23 +79,12 @@ contract SafEth is
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
 
-        uint256 underlyingValue = 0;
-
-        // Getting underlying value in terms of ETH for each derivative
-        for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue +=
-                (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
-                10 ** 18;
-
-        uint256 totalSupply = totalSupply();
-        uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0 || underlyingValue == 0)
-            preDepositPrice = 10 ** 18; // initializes with a price of 1
-        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
+        uint256 preDepositPrice = approxPrice();
 
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
         for (uint i = 0; i < derivativeCount; i++) {
-            uint256 weight = weights[i];
+            if (!settings[i].enabled) continue;
+            uint256 weight = settings[i].weight;
             IDerivative derivative = derivatives[i];
             if (weight == 0) continue;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
@@ -132,6 +123,7 @@ contract SafEth is
         uint256 ethAmountBefore = address(this).balance;
 
         for (uint256 i = 0; i < derivativeCount; i++) {
+            if (!settings[i].enabled) continue;
             // withdraw a percentage of each asset based on the amount of safETH
             uint256 derivativeAmount = (derivatives[i].balance() *
                 _safEthAmount) / safEthTotalSupply;
@@ -166,14 +158,18 @@ contract SafEth is
     */
     function rebalanceToWeights() external onlyOwner {
         for (uint i = 0; i < derivativeCount; i++) {
-            if (derivatives[i].balance() > 0)
+            if (settings[i].enabled && derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
         }
         uint256 ethAmountToRebalance = address(this).balance;
 
         for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
-            uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
+            if (
+                settings[i].weight == 0 ||
+                ethAmountToRebalance == 0 ||
+                !settings[i].enabled
+            ) continue;
+            uint256 ethAmount = (ethAmountToRebalance * settings[i].weight) /
                 totalWeight;
             // Price will change due to slippage
             derivatives[i].deposit{value: ethAmount}();
@@ -193,12 +189,39 @@ contract SafEth is
         uint256 _derivativeIndex,
         uint256 _weight
     ) external onlyOwner {
-        weights[_derivativeIndex] = _weight;
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
-        totalWeight = localTotalWeight;
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(settings[_derivativeIndex].enabled, "derivative not enabled");
+        settings[_derivativeIndex].weight = _weight;
+        setTotalWeight();
         emit WeightChange(_derivativeIndex, _weight);
+    }
+
+    function disableDerivative(uint256 _derivativeIndex) external onlyOwner {
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(settings[_derivativeIndex].enabled, "derivative not enabled");
+        settings[_derivativeIndex].enabled = false;
+        setTotalWeight();
+        emit DerivativeDisabled(_derivativeIndex);
+    }
+
+    function enableDerivative(uint256 _derivativeIndex) external onlyOwner {
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            !settings[_derivativeIndex].enabled,
+            "derivative already enabled"
+        );
+        settings[_derivativeIndex].enabled = true;
+        setTotalWeight();
+        emit DerivativeEnabled(_derivativeIndex);
     }
 
     /**
@@ -223,13 +246,19 @@ contract SafEth is
         }
 
         derivatives[derivativeCount] = IDerivative(_contractAddress);
-        weights[derivativeCount] = _weight;
+        settings[derivativeCount].weight = _weight;
+        settings[derivativeCount].enabled = true;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         derivativeCount++;
+        setTotalWeight();
+    }
 
+    function setTotalWeight() private {
         uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
+        for (uint256 i = 0; i < derivativeCount; i++) {
+            if (!settings[i].enabled || settings[i].weight == 0) continue;
+            localTotalWeight += settings[i].weight;
+        }
         totalWeight = localTotalWeight;
     }
 
@@ -242,6 +271,10 @@ contract SafEth is
         uint _derivativeIndex,
         uint _slippage
     ) external onlyOwner {
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
         derivatives[_derivativeIndex].setMaxSlippage(_slippage);
         emit SetMaxSlippage(_derivativeIndex, _slippage);
     }
@@ -287,12 +320,16 @@ contract SafEth is
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
      */
     function approxPrice() public view returns (uint256) {
+        uint256 totalSupply = totalSupply();
         uint256 underlyingValue = 0;
-        for (uint i = 0; i < derivativeCount; i++)
+        for (uint256 i = 0; i < derivativeCount; i++) {
+            if (!settings[i].enabled) continue;
             underlyingValue +=
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
                 10 ** 18;
-        return (10 ** 18 * underlyingValue) / totalSupply();
+        }
+        if (totalSupply == 0 || underlyingValue == 0) return 10 ** 18;
+        return (10 ** 18 * underlyingValue) / totalSupply;
     }
 
     receive() external payable {
