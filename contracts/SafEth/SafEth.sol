@@ -33,7 +33,11 @@ contract SafEth is
         uint256 indexed totalStakeValue,
         uint256 price
     );
-    event Unstaked(address indexed recipient, uint256 indexed ethOut, uint256 indexed safEthIn);
+    event Unstaked(
+        address indexed recipient,
+        uint256 indexed ethOut,
+        uint256 indexed safEthIn
+    );
     event WeightChange(uint256 indexed index, uint256 indexed weight);
     event DerivativeAdded(
         address indexed contractAddress,
@@ -85,8 +89,8 @@ contract SafEth is
         for (uint256 i = 0; i < derivativeCount; i++) {
             if (!settings[i].enabled) continue;
             uint256 weight = settings[i].weight;
-            IDerivative derivative = derivatives[i];
             if (weight == 0) continue;
+            IDerivative derivative = derivatives[i];
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
             if (ethAmount > 0) {
