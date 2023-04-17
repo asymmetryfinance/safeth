@@ -322,7 +322,7 @@ contract SafEth is
     function approxPrice() public view returns (uint256) {
         uint256 totalSupply = totalSupply();
         uint256 underlyingValue = 0;
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (!settings[i].enabled) continue;
             underlyingValue +=
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
