@@ -104,6 +104,87 @@ describe("SafEth", function () {
       await safEthProxy.stake({ value: depositAmount });
     });
   });
+
+  describe("Enable / Disable", function () {
+    it("Should fail to enable / disable a non-existent derivative", async function () {
+      await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
+        "derivative index out of bounds"
+      );
+      await expect(safEthProxy.enableDerivative(999)).to.be.revertedWith(
+        "derivative index out of bounds"
+      );
+    });
+    it("Should fail to enable / disable an already enabled / disabled derivative", async function () {
+      await expect(safEthProxy.enableDerivative(0)).to.be.revertedWith(
+        "derivative already enabled"
+      );
+      const tx = await safEthProxy.disableDerivative(0);
+      await tx.wait();
+      await expect(safEthProxy.disableDerivative(0)).to.be.revertedWith(
+        "derivative not enabled"
+      );
+      // re enable derivative so other tests behave as expected
+      const tx2 = await safEthProxy.enableDerivative(0);
+      await tx2.wait();
+    });
+
+    it("Should lower price for everyone when a derivative is disabled and raise price when enabled", async () => {
+      const depositAmount = ethers.utils.parseEther("1");
+      const tx1 = await safEthProxy.stake({ value: depositAmount });
+      await tx1.wait();
+      const priceBefore = await safEthProxy.approxPrice();
+      await safEthProxy.disableDerivative(0);
+      const priceAfter = await safEthProxy.approxPrice();
+
+      await safEthProxy.enableDerivative(0);
+
+      const priceFinal = await safEthProxy.approxPrice();
+
+      expect(priceBefore).gt(priceAfter);
+      expect(priceFinal).gt(priceAfter);
+
+      // check within 1 percent because price will have gone up due to blocks passing
+      expect(within1Percent(priceFinal, priceBefore)).eq(true);
+    });
+
+    it("Should allow disabling of a broken derivative so the others still work", async () => {
+      const factory = await ethers.getContractFactory("BrokenDerivative");
+      const brokenDerivative = await upgrades.deployProxy(factory, [
+        safEthProxy.address,
+      ]);
+      const broken = await brokenDerivative.deployed();
+
+      const depositAmount = ethers.utils.parseEther("1");
+
+      // staking works before adding the bad derivative
+      const tx1 = await safEthProxy.stake({ value: depositAmount });
+      await tx1.wait();
+
+      await safEthProxy.addDerivative(broken.address, 100);
+
+      // staking is broken after deploying broken derivative
+      await expect(
+        safEthProxy.stake({ value: depositAmount })
+      ).to.be.revertedWith("Broken Derivative");
+
+      // unstaking is broken after deploying broken derivative
+      await expect(
+        safEthProxy.unstake(await safEthProxy.balanceOf(adminAccount.address))
+      ).to.be.revertedWith("Broken Derivative");
+
+      const tx2 = await safEthProxy.disableDerivative(
+        (await safEthProxy.derivativeCount()).sub(1)
+      );
+      await tx2.wait();
+
+      // stake and unstake both work after disabling the problematic derivative
+      await safEthProxy.stake({ value: depositAmount });
+      await safEthProxy.unstake(
+        await safEthProxy.balanceOf(adminAccount.address)
+      );
+    });
+  });
+
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
@@ -115,6 +196,7 @@ describe("SafEth", function () {
       const initialWeight = BigNumber.from("1000000000000000000");
 
       for (let i = 0; i < derivativeCount; i++) {
+        if (!(await safEthProxy.settings(i)).enabled) continue;
         const tx2 = await safEthProxy.adjustWeight(i, initialWeight);
         await tx2.wait();
       }
