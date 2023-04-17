@@ -295,7 +295,7 @@ contract SafEth is
     */
     function setMinAmount(uint256 _minAmount) external onlyOwner {
         minAmount = _minAmount;
-        emit ChangeMinAmount(minAmount);
+        emit ChangeMinAmount(_minAmount);
     }
 
     /**
@@ -304,7 +304,7 @@ contract SafEth is
     */
     function setMaxAmount(uint256 _maxAmount) external onlyOwner {
         maxAmount = _maxAmount;
-        emit ChangeMaxAmount(maxAmount);
+        emit ChangeMaxAmount(_maxAmount);
     }
 
     /**
@@ -313,7 +313,7 @@ contract SafEth is
     */
     function setPauseStaking(bool _pause) external onlyOwner {
         pauseStaking = _pause;
-        emit StakingPaused(pauseStaking);
+        emit StakingPaused(_pause);
     }
 
     /**
@@ -322,7 +322,7 @@ contract SafEth is
     */
     function setPauseUnstaking(bool _pause) external onlyOwner {
         pauseUnstaking = _pause;
-        emit UnstakingPaused(pauseUnstaking);
+        emit UnstakingPaused(_pause);
     }
 
     /**
