@@ -154,6 +154,25 @@ describe("SafEth", function () {
       ).to.be.revertedWith("mint amount less than minOut");
     });
   });
+
+  describe("Sfrx", function () {
+    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
+      // a block where frxEth prices are abnormally depegged from eth by ~0.2%
+      await resetToBlock(15946736);
+
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await sfrxEthDerivative.deployed();
+
+      await expect(sfrxEthDerivative.ethPerDerivative()).to.be.revertedWith(
+        "frxEth possibly depegged"
+      );
+
+      await resetToBlock(initialHardhatBlock);
+    });
+  });
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
