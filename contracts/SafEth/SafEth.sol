@@ -79,21 +79,7 @@ contract SafEth is
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
 
-        uint256 underlyingValue = 0;
-
-        // Getting underlying value in terms of ETH for each derivative
-        for (uint i = 0; i < derivativeCount; i++) {
-            if (!settings[i].enabled) continue;
-            underlyingValue +=
-                (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
-                10 ** 18;
-        }
-
-        uint256 totalSupply = totalSupply();
-        uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0 || underlyingValue == 0)
-            preDepositPrice = 10 ** 18; // initializes with a price of 1
-        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
+        uint256 preDepositPrice = approxPrice();
 
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
         for (uint i = 0; i < derivativeCount; i++) {
@@ -209,27 +195,23 @@ contract SafEth is
         );
         require(settings[_derivativeIndex].enabled, "derivative not enabled");
         settings[_derivativeIndex].weight = _weight;
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += settings[i].weight;
-        totalWeight = localTotalWeight;
+        setTotalWeight();
         emit WeightChange(_derivativeIndex, _weight);
     }
 
-    function disabledDerivative(uint256 _derivativeIndex) external onlyOwner {
+    function disableDerivative(uint256 _derivativeIndex) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
         require(settings[_derivativeIndex].enabled, "derivative not enabled");
         settings[_derivativeIndex].enabled = false;
-        settings[_derivativeIndex].weight = 0;
+        setTotalWeight();
         emit DerivativeDisabled(_derivativeIndex);
     }
 
     function enableDerivative(
-        uint256 _derivativeIndex,
-        uint256 _weight
+        uint256 _derivativeIndex
     ) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,
@@ -240,7 +222,7 @@ contract SafEth is
             "derivative already enabled"
         );
         settings[_derivativeIndex].enabled = true;
-        settings[_derivativeIndex].weight = _weight;
+        setTotalWeight();
         emit DerivativeEnabled(_derivativeIndex);
     }
 
@@ -270,10 +252,15 @@ contract SafEth is
         settings[derivativeCount].enabled = true;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         derivativeCount++;
+        setTotalWeight();
+    }
 
+    function setTotalWeight() private {
         uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
+        for (uint256 i = 0; i < derivativeCount; i++) {
+            if(!settings[i].enabled || settings[i].weight == 0) continue;
             localTotalWeight += settings[i].weight;
+        }
         totalWeight = localTotalWeight;
     }
 
@@ -335,6 +322,7 @@ contract SafEth is
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
      */
     function approxPrice() public view returns (uint256) {
+        uint256 totalSupply = totalSupply();
         uint256 underlyingValue = 0;
         for (uint i = 0; i < derivativeCount; i++) {
             if (!settings[i].enabled) continue;
@@ -342,7 +330,8 @@ contract SafEth is
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
                 10 ** 18;
         }
-        return (10 ** 18 * underlyingValue) / totalSupply();
+        if (totalSupply == 0 || underlyingValue == 0) return 10 ** 18;
+        return (10 ** 18 * underlyingValue) / totalSupply;
     }
 
     receive() external payable {

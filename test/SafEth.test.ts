@@ -131,13 +131,11 @@ describe("SafEth", function () {
   });
   describe("Re-entrancy", function () {
     it("Should revert if re-entering unstake", async function () {
-      console.log("about to send eth");
       const tx0 = await adminAccount.sendTransaction({
         to: safEthReentrancyTest.address,
         value: ethers.utils.parseEther("10.0"),
       });
       await tx0.wait();
-      console.log("about to unstake");
       safEthReentrancyTest.testUnstake();
 
       await expect(safEthReentrancyTest.testUnstake()).to.be.revertedWith(
@@ -173,6 +171,49 @@ describe("SafEth", function () {
       await resetToBlock(initialHardhatBlock);
     });
   });
+  describe("Enable / Disable", function () {
+    it("Should fail to enable / disable a non-existent derivative", async function () {
+      await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
+        "derivative index out of bounds"
+      );
+      await expect(safEthProxy.enableDerivative(999)).to.be.revertedWith(
+        "derivative index out of bounds"
+      );
+    });
+    it("Should fail to enable / disable an already enabled / disabled derivative", async function () {
+      await expect(safEthProxy.enableDerivative(0)).to.be.revertedWith(
+        "derivative already enabled"
+      );
+      const tx = await safEthProxy.disableDerivative(0);
+      await tx.wait();
+      await expect(safEthProxy.disableDerivative(0)).to.be.revertedWith(
+        "derivative not enabled"
+      );
+      // re enable derivative so other tests behave as expected
+      const tx2 = await safEthProxy.enableDerivative(0);
+      await tx2.wait();
+    });
+
+    it("Should lower price for everyone when a derivative is disabled and raise price when added", async () => {
+      const depositAmount = ethers.utils.parseEther("1");
+      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      await tx1.wait();
+      const priceBefore = await safEthProxy.approxPrice();
+      await safEthProxy.disableDerivative(0);
+      const priceAfter = await safEthProxy.approxPrice();
+
+      await safEthProxy.enableDerivative(0);
+
+      const priceFinal = await safEthProxy.approxPrice();
+
+      expect(priceBefore).gt(priceAfter);
+      expect(priceFinal).gt(priceAfter);
+
+      // check within 1 percent because price will have gone up due to blocks passing
+      expect(within1Percent(priceFinal, priceBefore)).eq(true);
+    });
+  });
+
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
@@ -201,6 +242,7 @@ describe("SafEth", function () {
       // dont stay paused
       await snapshot.restore();
     });
+
     it("Should fail with adding non erc 165 compliant derivative", async function () {
       await expect(
         safEthProxy.addDerivative(WSTETH_ADDRESS, "1000000000000000000")
@@ -250,13 +292,13 @@ describe("SafEth", function () {
         "Ownable: caller is not the owner"
       );
     });
-    it("Should only allow owner to call min/max functions", async function () {
+    it("Should revert if enableDerivative or disableDerivative is called by non-owner", async function () {
       const accounts = await ethers.getSigners();
       const nonOwnerSigner = safEthProxy.connect(accounts[2]);
-      await expect(nonOwnerSigner.setMinAmount(100000000)).to.be.revertedWith(
+      await expect(nonOwnerSigner.enableDerivative(0)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
-      await expect(nonOwnerSigner.setMinAmount(900000000)).to.be.revertedWith(
+      await expect(nonOwnerSigner.disableDerivative(0)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
     });
