@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -120,7 +120,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Convert rewards into derivative
      */
-    function sellAllReth2() private returns (uint) {
+    function sellAllReth2() private returns (uint256) {
         uint256 rEth2Balance = IERC20(RETH2).balanceOf(address(this));
 
         if (rEth2Balance == 0) return 0;
@@ -147,7 +147,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
         @dev - how much weth we expect to get for a given seth2 input amount
         @param _amount - amount of sETH2 to sell for wETH
      */
-    function sellSeth2ForWeth(uint256 _amount) private returns (uint) {
+    function sellSeth2ForWeth(uint256 _amount) private returns (uint256) {
         IERC20(SETH2).approve(
             UNISWAP_ROUTER,
             IERC20(SETH2).balanceOf(address(this))
@@ -176,7 +176,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
      */
     function estimatedSellSeth2Output(
         uint256 _amount
-    ) private view returns (uint) {
+    ) private view returns (uint256) {
         return (_amount * 10 ** 18) / poolPrice(SETH2_WETH_POOL);
     }
 
@@ -185,7 +185,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
      */
     function estimatedSellReth2Output(
         uint256 _amount
-    ) private view returns (uint) {
+    ) private view returns (uint256) {
         return (_amount * 10 ** 18) / poolPrice(RETH2_SETH2_POOL);
     }
 
@@ -195,7 +195,7 @@ contract StakeWise is IDerivative, Initializable, OwnableUpgradeable {
     function poolPrice(address _poolAddress) private view returns (uint256) {
         IUniswapV3Pool pool = IUniswapV3Pool(_poolAddress);
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
-        return (sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18)) >> (96 * 2);
+        return (sqrtPriceX96 * (uint256(sqrtPriceX96)) * (1e18)) >> (96 * 2);
     }
 
     receive() external payable {}

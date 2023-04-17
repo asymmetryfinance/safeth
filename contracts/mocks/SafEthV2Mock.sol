@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../SafEth/SafEth.sol";
 import "./SafEthV2MockStorage.sol";

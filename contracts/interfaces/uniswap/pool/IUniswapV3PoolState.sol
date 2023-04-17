@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 /// @title Pool state that can change
 /// @notice These methods compose the pool's state, and can change with any frequency including multiple times

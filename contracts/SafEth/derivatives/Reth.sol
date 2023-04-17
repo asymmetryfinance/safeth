@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
@@ -168,7 +167,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             );
 
         if (!poolCanDeposit(msg.value)) {
-            uint rethPerEth = (10 ** 36) / poolPrice();
+            uint256 rethPerEth = (10 ** 36) / poolPrice();
 
             uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
                 ((10 ** 18 - maxSlippage))) / 10 ** 18);
@@ -238,7 +237,7 @@ contract Reth is IDerivative, Initializable, OwnableUpgradeable {
             factory.getPool(rocketTokenRETHAddress, W_ETH_ADDRESS, 500)
         );
         (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
-        return (sqrtPriceX96 * (uint(sqrtPriceX96)) * (1e18)) >> (96 * 2);
+        return (sqrtPriceX96 * (uint256(sqrtPriceX96)) * (1e18)) >> (96 * 2);
     }
 
     receive() external payable {}

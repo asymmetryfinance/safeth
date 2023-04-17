@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IWETH.sol";
@@ -23,13 +23,13 @@ contract SafEth is
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 slippage);
-    event Staked(address indexed recipient, uint ethIn, uint totalStakeValue);
-    event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
-    event WeightChange(uint indexed index, uint weight);
+    event Staked(address indexed recipient, uint256 ethIn, uint256 totalStakeValue);
+    event Unstaked(address indexed recipient, uint256 ethOut, uint256 safEthIn);
+    event WeightChange(uint256 indexed index, uint256 weight);
     event DerivativeAdded(
         address indexed contractAddress,
-        uint weight,
-        uint index
+        uint256 weight,
+        uint256 index
     );
     event Rebalanced();
 
@@ -68,20 +68,20 @@ contract SafEth is
         uint256 underlyingValue = 0;
 
         // Getting underlying value in terms of ETH for each derivative
-        for (uint i = 0; i < derivativeCount; i++)
+        for (uint256 i = 0; i < derivativeCount; i++)
             underlyingValue +=
                 (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
                     derivatives[i].balance()) /
                 10 ** 18;
 
-        uint256 totalSupply = totalSupply();
+        uint256 safEthTotalSupply = totalSupply();
         uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0)
+        if (safEthTotalSupply == 0)
             preDepositPrice = 10 ** 18; // initializes with a price of 1
-        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
+        else preDepositPrice = (10 ** 18 * underlyingValue) / safEthTotalSupply;
 
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             uint256 weight = weights[i];
             IDerivative derivative = derivatives[i];
             if (weight == 0) continue;
@@ -89,7 +89,7 @@ contract SafEth is
 
             // This is slightly less than ethAmount because slippage
             uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
+            uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
                 depositAmount
             ) * depositAmount) / 10 ** 18;
             totalStakeValueEth += derivativeReceivedEthValue;
@@ -139,14 +139,14 @@ contract SafEth is
     */
     function rebalanceToWeights() external onlyOwner {
         uint256 ethAmountBefore = address(this).balance;
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
         }
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
 
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
             uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
                 totalWeight;
@@ -202,8 +202,8 @@ contract SafEth is
         @param _slippage - new slippage amount in wei
     */
     function setMaxSlippage(
-        uint _derivativeIndex,
-        uint _slippage
+        uint256 _derivativeIndex,
+        uint256 _slippage
     ) external onlyOwner {
         derivatives[_derivativeIndex].setMaxSlippage(_slippage);
         emit SetMaxSlippage(_derivativeIndex, _slippage);
@@ -251,7 +251,7 @@ contract SafEth is
      */
     function approxPrice() external view returns (uint256) {
         uint256 underlyingValue = 0;
-        for (uint i = 0; i < derivativeCount; i++)
+        for (uint256 i = 0; i < derivativeCount; i++)
             underlyingValue +=
                 (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
                     derivatives[i].balance()) /
