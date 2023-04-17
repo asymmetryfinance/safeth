@@ -65,16 +65,14 @@ contract WstEth is
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        uint256 stEthBalBefore = IERC20(STETH_TOKEN).balanceOf(address(this));
-        IWStETH(WST_ETH).unwrap(_amount);
-        uint256 stEthBalAfter = IERC20(STETH_TOKEN).balanceOf(address(this));
-        uint256 stEthUnwrapped = stEthBalAfter - stEthBalBefore;
+        uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
+        require(stEthAmount > 0, "No stETH to unwrap");
 
-        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthUnwrapped);
-        uint256 minOut = (stEthUnwrapped * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
+        uint256 minOut = (stEthAmount * (10 ** 18 - maxSlippage)) / 10 ** 18;
 
         uint256 ethBalanceBefore = address(this).balance;
-        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthUnwrapped, minOut);
+        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
