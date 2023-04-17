@@ -173,10 +173,7 @@ contract SafEth is
         require(ethAmountToRebalance > 0, "no eth to rebalance");
 
         for (uint256 i = 0; i < count; i++) {
-            if (
-                settings[i].weight == 0 ||
-                !settings[i].enabled
-            ) continue;
+            if (settings[i].weight == 0 || !settings[i].enabled) continue;
             uint256 ethAmount = (ethAmountToRebalance * settings[i].weight) /
                 totalWeight;
             // Price will change due to slippage
