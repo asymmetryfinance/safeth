@@ -84,9 +84,9 @@ contract SafEth is
         require(msg.value <= maxAmount, "amount too high");
 
         uint256 preDepositPrice = approxPrice();
-
+        uint256 count = derivativeCount;
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < count; i++) {
             if (!settings[i].enabled) continue;
             uint256 weight = settings[i].weight;
             if (weight == 0) continue;
@@ -125,8 +125,9 @@ contract SafEth is
 
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
+        uint256 count = derivativeCount;
 
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < count; i++) {
             if (!settings[i].enabled) continue;
             // withdraw a percentage of each asset based on the amount of safETH
             uint256 derivativeAmount = (derivatives[i].balance() *
@@ -161,16 +162,19 @@ contract SafEth is
         @dev - Probably not going to be used often, if at all
     */
     function rebalanceToWeights() external onlyOwner {
-        for (uint256 i = 0; i < derivativeCount; i++) {
-            if (settings[i].enabled && derivatives[i].balance() > 0)
-                derivatives[i].withdraw(derivatives[i].balance());
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
+            uint256 balance = derivatives[i].balance();
+            if (settings[i].enabled && balance > 0)
+                derivatives[i].withdraw(balance);
         }
         uint256 ethAmountToRebalance = address(this).balance;
+        require(ethAmountToRebalance > 0, "no eth to rebalance");
 
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < count; i++) {
             if (
                 settings[i].weight == 0 ||
-                ethAmountToRebalance == 0 ||
                 !settings[i].enabled
             ) continue;
             uint256 ethAmount = (ethAmountToRebalance * settings[i].weight) /
@@ -269,7 +273,9 @@ contract SafEth is
 
     function setTotalWeight() private {
         uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
             if (!settings[i].enabled || settings[i].weight == 0) continue;
             localTotalWeight += settings[i].weight;
         }
@@ -336,7 +342,9 @@ contract SafEth is
     function approxPrice() public view returns (uint256) {
         uint256 safEthTotalSupply = totalSupply();
         uint256 underlyingValue = 0;
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
             if (!settings[i].enabled) continue;
             underlyingValue +=
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
