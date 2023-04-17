@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -53,8 +53,8 @@ contract SafEth is
         string memory _tokenName,
         string memory _tokenSymbol
     ) external initializer {
-        ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
-        Ownable2StepUpgradeable.__Ownable2Step_init();
+        __ERC20_init(_tokenName, _tokenSymbol);
+        __Ownable2Step_init();
         minAmount = 5 * 10 ** 17; // initializing with .5 ETH as minimum
         maxAmount = 200 * 10 ** 18; // initializing with 200 ETH as maximum
         __ReentrancyGuard_init();
@@ -82,7 +82,7 @@ contract SafEth is
 
         uint256 safEthTotalSupply = totalSupply();
         uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0 || underlyingValue == 0)
+        if (safEthTotalSupply == 0 || underlyingValue == 0)
             preDepositPrice = 10 ** 18; // initializes with a price of 1
         else preDepositPrice = (10 ** 18 * underlyingValue) / safEthTotalSupply;
 

@@ -51,7 +51,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     */
     function initialize(address _owner) external initializer {
         _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
     }
 
