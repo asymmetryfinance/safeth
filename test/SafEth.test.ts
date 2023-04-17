@@ -194,7 +194,7 @@ describe("SafEth", function () {
       await tx2.wait();
     });
 
-    it("Should lower price for everyone when a derivative is disabled and raise price when added", async () => {
+    it("Should lower price for everyone when a derivative is disabled and raise price when enabled", async () => {
       const depositAmount = ethers.utils.parseEther("1");
       const tx1 = await safEthProxy.stake(0, { value: depositAmount });
       await tx1.wait();
@@ -212,6 +212,47 @@ describe("SafEth", function () {
       // check within 1 percent because price will have gone up due to blocks passing
       expect(within1Percent(priceFinal, priceBefore)).eq(true);
     });
+
+    it("Should allow disabling of a broken derivative so the others still work", async () => {
+      const factory = await ethers.getContractFactory("BrokenDerivative");
+      const brokenDerivative = await upgrades.deployProxy(factory, [
+        safEthProxy.address,
+      ]);
+      const broken = await brokenDerivative.deployed();
+
+      const depositAmount = ethers.utils.parseEther("1");
+
+      // staking works before adding the bad derivative
+      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      await tx1.wait();
+
+      await safEthProxy.addDerivative(broken.address, 100);
+
+      // staking is broken after deploying broken derivative
+      await expect(
+        safEthProxy.stake(0, { value: depositAmount })
+      ).to.be.revertedWith("Broken Derivative");
+
+      // unstaking is broken after deploying broken derivative
+      await expect(
+        safEthProxy.unstake(
+          await safEthProxy.balanceOf(adminAccount.address),
+          0
+        )
+      ).to.be.revertedWith("Broken Derivative");
+
+      const tx2 = await safEthProxy.disableDerivative(
+        (await safEthProxy.derivativeCount()).sub(1)
+      );
+      await tx2.wait();
+
+      // stake and unstake both work after disabling the problematic derivative
+      await safEthProxy.stake(0, { value: depositAmount });
+      await safEthProxy.unstake(
+        await safEthProxy.balanceOf(adminAccount.address),
+        0
+      );
+    });
   });
 
   describe("Owner functions", function () {
@@ -225,6 +266,7 @@ describe("SafEth", function () {
       const initialWeight = BigNumber.from("1000000000000000000");
 
       for (let i = 0; i < derivativeCount; i++) {
+        if (!(await safEthProxy.settings(i)).enabled) continue;
         const tx2 = await safEthProxy.adjustWeight(i, initialWeight);
         await tx2.wait();
       }
