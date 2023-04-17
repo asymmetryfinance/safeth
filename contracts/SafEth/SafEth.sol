@@ -210,9 +210,7 @@ contract SafEth is
         emit DerivativeDisabled(_derivativeIndex);
     }
 
-    function enableDerivative(
-        uint256 _derivativeIndex
-    ) external onlyOwner {
+    function enableDerivative(uint256 _derivativeIndex) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
@@ -258,7 +256,7 @@ contract SafEth is
     function setTotalWeight() private {
         uint256 localTotalWeight = 0;
         for (uint256 i = 0; i < derivativeCount; i++) {
-            if(!settings[i].enabled || settings[i].weight == 0) continue;
+            if (!settings[i].enabled || settings[i].weight == 0) continue;
             localTotalWeight += settings[i].weight;
         }
         totalWeight = localTotalWeight;
