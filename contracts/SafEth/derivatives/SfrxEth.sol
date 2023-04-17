@@ -41,6 +41,7 @@ contract SfrxEth is
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%

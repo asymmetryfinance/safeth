@@ -178,7 +178,7 @@ contract SafEth is
     }
 
     /**
-        @notice - Adds new derivative to the index fund
+        @notice - Changes Derivative weight based on derivative index
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
         @dev - Weights are approximate as it will slowly change as people stake
@@ -199,6 +199,10 @@ contract SafEth is
         emit WeightChange(_derivativeIndex, _weight);
     }
 
+    /**
+        @notice - Disables Derivative based on derivative index
+        @param _derivativeIndex - index of the derivative you want to disable
+    */
     function disableDerivative(uint256 _derivativeIndex) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,
@@ -210,6 +214,10 @@ contract SafEth is
         emit DerivativeDisabled(_derivativeIndex);
     }
 
+    /**
+        @notice - Enables Derivative based on derivative index
+        @param _derivativeIndex - index of the derivative you want to enable
+    */
     function enableDerivative(uint256 _derivativeIndex) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,

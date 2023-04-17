@@ -2,18 +2,13 @@
 pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/rocketpool/RocketSwapRouterInterface.sol";
-import "../../interfaces/rocketpool/RocketDAOProtocolSettingsDepositInterface.sol";
 import "../../interfaces/IWETH.sol";
-import "../../interfaces/uniswap/ISwapRouter.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../../interfaces/uniswap/IUniswapV3Factory.sol";
-import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
@@ -51,6 +46,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 10 ** 16); // 1%
