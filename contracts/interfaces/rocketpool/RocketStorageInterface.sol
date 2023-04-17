@@ -15,7 +15,7 @@ interface RocketStorageInterface {
     // Getters
     function getAddress(bytes32 _key) external view returns (address);
 
-    function getUint(bytes32 _key) external view returns (uint);
+    function getUint(bytes32 _key) external view returns (uint256);
 
     function getString(bytes32 _key) external view returns (string memory);
 
@@ -30,7 +30,7 @@ interface RocketStorageInterface {
     // Setters
     function setAddress(bytes32 _key, address _value) external;
 
-    function setUint(bytes32 _key, uint _value) external;
+    function setUint(bytes32 _key, uint256 _value) external;
 
     function setString(bytes32 _key, string calldata _value) external;
 

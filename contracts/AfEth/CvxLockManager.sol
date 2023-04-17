@@ -141,7 +141,7 @@ contract CvxLockManager {
         cvxPositions[positionId].cvxAmount = 0;
     }
 
-    function getCurrentEpoch() public view returns (uint) {
+    function getCurrentEpoch() public view returns (uint256) {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 }

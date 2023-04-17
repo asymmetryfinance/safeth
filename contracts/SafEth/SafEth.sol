@@ -82,7 +82,7 @@ contract SafEth is
         uint256 preDepositPrice = approxPrice();
 
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (!settings[i].enabled) continue;
             uint256 weight = settings[i].weight;
             IDerivative derivative = derivatives[i];
@@ -92,7 +92,7 @@ contract SafEth is
             if (ethAmount > 0) {
                 // This is slightly less than ethAmount because slippage
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
-                uint derivativeReceivedEthValue = (derivative
+                uint256 derivativeReceivedEthValue = (derivative
                     .ethPerDerivative() * depositAmount) / 10 ** 18;
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
@@ -157,13 +157,13 @@ contract SafEth is
         @dev - Probably not going to be used often, if at all
     */
     function rebalanceToWeights() external onlyOwner {
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (settings[i].enabled && derivatives[i].balance() > 0)
                 derivatives[i].withdraw(derivatives[i].balance());
         }
         uint256 ethAmountToRebalance = address(this).balance;
 
-        for (uint i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < derivativeCount; i++) {
             if (
                 settings[i].weight == 0 ||
                 ethAmountToRebalance == 0 ||
@@ -268,8 +268,8 @@ contract SafEth is
         @param _slippage - new slippage amount in wei
     */
     function setMaxSlippage(
-        uint _derivativeIndex,
-        uint _slippage
+        uint256 _derivativeIndex,
+        uint256 _slippage
     ) external onlyOwner {
         require(
             _derivativeIndex < derivativeCount,

@@ -7,8 +7,8 @@ interface ISwapRouter {
         address tokenOut;
         uint24 fee;
         address recipient;
-        uint amountIn;
-        uint amountOutMinimum;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
         uint160 sqrtPriceLimitX96;
     }
 
@@ -17,5 +17,5 @@ interface ISwapRouter {
     /// @return amountOut The amount of the received token
     function exactInputSingle(
         ExactInputSingleParams calldata params
-    ) external payable returns (uint amountOut);
+    ) external payable returns (uint256 amountOut);
 }
