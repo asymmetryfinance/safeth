@@ -176,7 +176,7 @@ contract SafEth is
     }
 
     /**
-        @notice - Adds new derivative to the index fund
+        @notice - Adjusts weight for derivative at specific index
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
         @dev - Weights are approximate as it will slowly change as people stake
@@ -187,6 +187,8 @@ contract SafEth is
         uint256 _derivativeIndex,
         uint256 _weight
     ) external onlyOwner {
+        require(_derivativeIndex < derivativeCount, "Index is out of range");
+
         weights[_derivativeIndex] = _weight;
         uint256 localTotalWeight = 0;
         for (uint256 i = 0; i < derivativeCount; i++)
