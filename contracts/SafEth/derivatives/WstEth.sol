@@ -44,7 +44,7 @@ contract WstEth is
         require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -70,7 +70,7 @@ contract WstEth is
         require(stEthAmount > 0, "No stETH to unwrap");
 
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
-        uint256 minOut = (stEthAmount * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (stEthAmount * (1e18 - maxSlippage)) / 1e18;
 
         uint256 ethBalanceBefore = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
@@ -99,12 +99,12 @@ contract WstEth is
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
         (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
             .latestRoundData();
         if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
         uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) /
-            10 ** 18;
+            1e18;
         return ethPerWstEth;
     }
 

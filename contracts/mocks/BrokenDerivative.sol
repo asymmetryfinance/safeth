@@ -40,7 +40,7 @@ contract BrokenDerivative is
     function initialize(address _owner) external initializer {
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -78,14 +78,14 @@ contract BrokenDerivative is
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        return 10 ** 18;
+        return 1e18;
     }
 
     /**
         @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
-        return 10 ** 18;
+        return 1e18;
     }
 
     receive() external payable {}

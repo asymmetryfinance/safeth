@@ -26,19 +26,19 @@ contract SafEth is
     event ChangeMaxAmount(uint256 indexed maxAmount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
-    event SetMaxSlippage(uint256 indexed index, uint256 slippage);
+    event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
     event Staked(
         address indexed recipient,
-        uint256 ethIn,
-        uint256 totalStakeValue,
+        uint256 indexed ethIn,
+        uint256 indexed totalStakeValue,
         uint256 price
     );
-    event Unstaked(address indexed recipient, uint256 ethOut, uint256 safEthIn);
-    event WeightChange(uint256 indexed index, uint256 weight);
+    event Unstaked(address indexed recipient, uint256 indexed ethOut, uint256 indexed safEthIn);
+    event WeightChange(uint256 indexed index, uint256 indexed weight);
     event DerivativeAdded(
         address indexed contractAddress,
-        uint256 weight,
-        uint256 index
+        uint256 indexed weight,
+        uint256 indexed index
     );
     event Rebalanced();
     event DerivativeDisabled(uint256 indexed index);
@@ -62,8 +62,8 @@ contract SafEth is
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
         Ownable2StepUpgradeable.__Ownable2Step_init();
-        minAmount = 5 * 10 ** 17; // initializing with .5 ETH as minimum
-        maxAmount = 200 * 10 ** 18; // initializing with 200 ETH as maximum
+        minAmount = 5 * 1e17; // initializing with .5 ETH as minimum
+        maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
         __ReentrancyGuard_init();
     }
 
@@ -93,12 +93,12 @@ contract SafEth is
                 // This is slightly less than ethAmount because slippage
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
                 uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative() * depositAmount) / 10 ** 18;
+                    .ethPerDerivative() * depositAmount) / 1e18;
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
         }
         // mintAmount represents a percentage of the total assets in the system
-        uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        uint256 mintAmount = (totalStakeValueEth * 1e18) / preDepositPrice;
         require(mintAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintAmount);
@@ -257,7 +257,9 @@ contract SafEth is
         settings[derivativeCount].weight = _weight;
         settings[derivativeCount].enabled = true;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
-        derivativeCount++;
+        unchecked {
+            ++derivativeCount;
+        }
         setTotalWeight();
     }
 
@@ -334,10 +336,10 @@ contract SafEth is
             if (!settings[i].enabled) continue;
             underlyingValue +=
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
-                10 ** 18;
+                1e18;
         }
-        if (safEthTotalSupply == 0 || underlyingValue == 0) return 10 ** 18;
-        return (10 ** 18 * underlyingValue) / safEthTotalSupply;
+        if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
+        return (1e18 * underlyingValue) / safEthTotalSupply;
     }
 
     receive() external payable {

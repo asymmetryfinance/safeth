@@ -121,7 +121,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     function stake() external payable {
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
-        uint256 ethAmountForCvx = (msg.value * ratio) / 10 ** 18;
+        uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
         uint256 id = positionId;
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
@@ -186,11 +186,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             ((block.timestamp - 1597471200) / 31556926) + 1
         ];
         uint256 cvxTotalSupplyAsCrv = (crvPerCvx() *
-            IERC20(CVX).totalSupply()) / 10 ** 18;
+            IERC20(CVX).totalSupply()) / 1e18;
         uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv /
             crvEmissionsThisYear;
         uint256 ratioPercentage = supplyEmissionRatio * apy;
-        return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
+        return (ratioPercentage) / (1e18 + (ratioPercentage / 1e18));
     }
 
     function crvPerCvx() public view returns (uint256) {
@@ -201,7 +201,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
         return
-            (uint256(chainLinkCvxEthPrice) * 10 ** 18) /
+            (uint256(chainLinkCvxEthPrice) * 1e18) /
             uint256(chainLinkCrvEthPrice);
     }
 
@@ -293,9 +293,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
         if (cvxFxsBalance > 0) {
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                .get_dy(1, 0, 1e18);
+            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
 
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
             ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
@@ -312,10 +312,10 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
                 1,
                 0,
-                10 ** 18
+                1e18
             );
-            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+            uint256 minOut = (((oraclePrice * fxsBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
 
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
@@ -332,9 +332,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
         if (cvxCrvBalance > 0) {
             uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                .get_dy(1, 0, 1e18);
+            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
             ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
@@ -350,10 +350,10 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
                 1,
                 0,
-                10 ** 18
+                1e18
             );
-            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+            uint256 minOut = (((oraclePrice * crvBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
 
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
             ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(

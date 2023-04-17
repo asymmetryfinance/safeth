@@ -49,7 +49,7 @@ contract StakeWise is
         require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -110,7 +110,7 @@ contract StakeWise is
         @dev - TODO: This should return the rate being used for IStakewiseStaker(staker).stake().
      */
     function ethPerDerivative() public view returns (uint256) {
-        uint256 wethOutput = estimatedSellSeth2Output(10 ** 18); // we can assume weth is always 1-1 with eth
+        uint256 wethOutput = estimatedSellSeth2Output(1e18); // we can assume weth is always 1-1 with eth
         return wethOutput;
     }
 
@@ -134,7 +134,7 @@ contract StakeWise is
         if (rEth2Balance == 0) return 0;
 
         uint256 minOut = (estimatedSellReth2Output(rEth2Balance) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+            (1e18 - maxSlippage)) / 1e18;
 
         IERC20(RETH2).approve(UNISWAP_ROUTER, rEth2Balance);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -162,7 +162,7 @@ contract StakeWise is
         );
 
         uint256 minOut = (estimatedSellSeth2Output(_amount) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+            (1e18 - maxSlippage)) / 1e18;
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
@@ -185,7 +185,7 @@ contract StakeWise is
     function estimatedSellSeth2Output(
         uint256 _amount
     ) private view returns (uint256) {
-        return (_amount * 10 ** 18) / poolPrice(SETH2_WETH_POOL);
+        return (_amount * 1e18) / poolPrice(SETH2_WETH_POOL);
     }
 
     /**
@@ -194,7 +194,7 @@ contract StakeWise is
     function estimatedSellReth2Output(
         uint256 _amount
     ) private view returns (uint256) {
-        return (_amount * 10 ** 18) / poolPrice(RETH2_SETH2_POOL);
+        return (_amount * 1e18) / poolPrice(RETH2_SETH2_POOL);
     }
 
     /**

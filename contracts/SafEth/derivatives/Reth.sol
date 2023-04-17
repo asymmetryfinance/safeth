@@ -49,7 +49,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -116,10 +116,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
                 address(this)
             );
             uint256 ethPerReth = ethPerDerivative();
-            uint256 minOut = ((((ethPerReth * _amount) / 10 ** 18) *
-                ((10 ** 18 - maxSlippage))) / 10 ** 18);
-            uint256 idealOut = ((((ethPerReth * _amount) / 10 ** 18) *
-                ((10 ** 18))) / 10 ** 18);
+            uint256 minOut = ((((ethPerReth * _amount) / 1e18) *
+                ((1e18 - maxSlippage))) / 1e18);
+            uint256 idealOut = ((((ethPerReth * _amount) / 1e18) * ((1e18))) /
+                1e18);
             IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
             // swaps from reth into weth using 100% balancer pool
@@ -146,11 +146,11 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 rethPerEth = (10 ** 36) / ethPerDerivative();
-        uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
-            ((10 ** 18 - maxSlippage))) / 10 ** 18);
-        uint256 idealOut = ((((rethPerEth * msg.value) / 10 ** 18) *
-            ((10 ** 18))) / 10 ** 18);
+        uint256 rethPerEth = (1e36) / ethPerDerivative();
+        uint256 minOut = ((((rethPerEth * msg.value) / 1e18) *
+            ((1e18 - maxSlippage))) / 1e18);
+        uint256 idealOut = ((((rethPerEth * msg.value) / 1e18) * ((1e18))) /
+            1e18);
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );

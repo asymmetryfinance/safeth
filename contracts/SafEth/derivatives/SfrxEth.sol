@@ -44,7 +44,7 @@ contract SfrxEth is
         require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -84,8 +84,8 @@ contract SfrxEth is
             frxEthReceived
         );
 
-        uint256 minOut = (((ethPerDerivative() * _amount) / 10 ** 18) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (((ethPerDerivative() * _amount) / 1e18) *
+            (1e18 - maxSlippage)) / 1e18;
 
         uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
@@ -131,13 +131,11 @@ contract SfrxEth is
         uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
             .price_oracle();
         uint256 priceDifference;
-        if (oraclePrice > 10 ** 18) priceDifference = oraclePrice - 10 ** 18;
-        else priceDifference = 10 ** 18 - oraclePrice;
-        require(priceDifference < 10 ** 15, "frxEth possibly depegged"); // outside of 0.1% we assume depegged
+        if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
+        else priceDifference = 1e18 - oraclePrice;
+        require(priceDifference < 1e15, "frxEth possibly depegged"); // outside of 0.1% we assume depegged
 
-        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
-            10 ** 18
-        );
+        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return frxEthAmount;
     }
 
