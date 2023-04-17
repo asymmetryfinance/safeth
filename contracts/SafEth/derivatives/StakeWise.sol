@@ -55,7 +55,7 @@ contract StakeWise is
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "StakeWise";
     }
 
@@ -118,7 +118,7 @@ contract StakeWise is
         @notice - Total derivative balance
         @dev - This is more like virtualBalance because its estimating total sEth2 holding based on rEth price2
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         // seth2Balance + estimated seth2 value of reth holdings
         return
             IERC20(SETH2).balanceOf(address(this)) +

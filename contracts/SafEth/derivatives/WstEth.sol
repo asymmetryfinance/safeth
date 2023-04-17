@@ -50,7 +50,7 @@ contract WstEth is
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "Lido";
     }
 
@@ -111,7 +111,7 @@ contract WstEth is
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(WST_ETH).balanceOf(address(this));
     }
 

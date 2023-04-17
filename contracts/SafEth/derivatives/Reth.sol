@@ -55,7 +55,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "RocketPool";
     }
 
@@ -180,7 +180,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(rethAddress()).balanceOf(address(this));
     }
 
