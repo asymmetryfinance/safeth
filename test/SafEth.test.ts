@@ -250,6 +250,16 @@ describe("SafEth", function () {
         "Ownable: caller is not the owner"
       );
     });
+    it("Should only allow owner to call min/max functions", async function () {
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      await expect(nonOwnerSigner.setMinAmount(100000000)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+      await expect(nonOwnerSigner.setMinAmount(900000000)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
   });
 
   describe("Derivatives", async () => {

@@ -13,7 +13,6 @@ import "../interfaces/IDerivative.sol";
         Constant values CAN be modified on upgrade
 */
 contract SafEthStorage {
-
     struct DerivativeSettings {
         uint256 weight;
         bool enabled;
