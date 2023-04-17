@@ -17,11 +17,11 @@ contract WstEth is
     Initializable,
     OwnableUpgradeable
 {
-    address public constant WST_ETH =
+    address private constant WST_ETH =
         0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant LIDO_CRV_POOL =
+    address private constant LIDO_CRV_POOL =
         0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address public constant STETH_TOKEN =
+    address private constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     AggregatorV3Interface constant chainLinkStEthEthFeed =

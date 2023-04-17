@@ -15,13 +15,13 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
 contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
-    address public constant ROCKET_STORAGE_ADDRESS =
+    address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-    address public constant W_ETH_ADDRESS =
+    address private constant W_ETH_ADDRESS =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant UNISWAP_ROUTER =
+    address private constant UNISWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    address public constant UNI_V3_FACTORY =
+    address private constant UNI_V3_FACTORY =
         0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
     /// Swap router is not available in rocket storage contract so we hardcode it
