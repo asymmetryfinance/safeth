@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IWETH.sol";
@@ -320,7 +320,7 @@ contract SafEth is
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
      */
     function approxPrice() public view returns (uint256) {
-        uint256 totalSupply = totalSupply();
+        uint256 safEthTotalSupply = totalSupply();
         uint256 underlyingValue = 0;
         for (uint256 i = 0; i < derivativeCount; i++) {
             if (!settings[i].enabled) continue;
@@ -328,8 +328,8 @@ contract SafEth is
                 (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
                 10 ** 18;
         }
-        if (totalSupply == 0 || underlyingValue == 0) return 10 ** 18;
-        return (10 ** 18 * underlyingValue) / totalSupply;
+        if (safEthTotalSupply == 0 || underlyingValue == 0) return 10 ** 18;
+        return (10 ** 18 * underlyingValue) / safEthTotalSupply;
     }
 
     receive() external payable {

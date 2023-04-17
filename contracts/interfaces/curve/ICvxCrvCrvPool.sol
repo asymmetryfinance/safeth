@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 /// https://etherscan.io/address/0x9D0464996170c6B9e75eED71c68B99dDEDf279e8
 interface ICvxCrvCrvPool {
