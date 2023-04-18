@@ -171,6 +171,93 @@ describe("SafEth", function () {
       await resetToBlock(initialHardhatBlock);
     });
   });
+
+  // an apr given 2 block times and 2 amounts
+  const getApr = (
+    time0: BigNumber,
+    time1: BigNumber,
+    amount0: BigNumber,
+    amount1: BigNumber
+  ) => {
+    const timeDiff = time1.sub(time0);
+    const amountDiff = amount1.sub(amount0);
+    // normalized in terms of wei for math because ethers BigNumber doesnt have decimals
+    const amountPerYear = ethers.utils.parseEther(
+      amountDiff.mul(31536000).div(timeDiff).toString()
+    );
+    return ethers.utils.formatEther(amountPerYear.div(amount0));
+  };
+
+  // find the first event that was at lease lengthOfTime ago
+  // return the oldest event if none are older than lengthOfTime
+  const getEventForApr = async (events: any, lengthOfTime: any) => {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const block = await events[i].getBlock();
+      const blockTime = block.timestamp;
+      const currentTime = await time.latest();
+      if (currentTime - blockTime >= lengthOfTime) {
+        return events[i];
+      }
+    }
+    return events[0];
+  };
+
+  describe.only("Apr", function () {
+    it.only("Should calculate apr", async function () {
+      await safEthProxy.stake(0, {
+        value: ethers.utils.parseEther("1"),
+      });
+
+      // 6 hours
+      await time.increase(60 * 60 * 6);
+
+      // THIS is the event it should return from getEventForApr() for 7 days back
+      await safEthProxy.stake(0, {
+        value: ethers.utils.parseEther("2"),
+      });
+
+      // 2 days
+      await time.increase(60 * 60 * 24 * 2);
+
+      await safEthProxy.stake(0, {
+        value: ethers.utils.parseEther("2"),
+      });
+
+      // 3 days
+      await time.increase(60 * 60 * 24 * 3);
+
+      await safEthProxy.stake(0, {
+        value: ethers.utils.parseEther("3"),
+      });
+
+      // 3 days
+      await time.increase(60 * 60 * 24 * 3);
+
+      // get the events
+      const events = await safEthProxy.queryFilter("Staked", 0, "latest");
+
+      // first event at least 7 days old
+      // if no events > 7 days old it returns the oldest event
+      const eventForApr = await getEventForApr(events, 60 * 60 * 24 * 7);
+
+      const eventPrice = eventForApr?.args?.price;
+      const eventTime = (
+        await ethers.provider.getBlock(eventForApr?.blockNumber as number)
+      ).timestamp;
+
+      const currentPrice = await safEthProxy.approxPrice();
+      const currentTime = (await ethers.provider.getBlock("latest")).timestamp;
+
+      const apr = getApr(
+        BigNumber.from(eventTime),
+        BigNumber.from(currentTime),
+        BigNumber.from(eventPrice),
+        BigNumber.from(currentPrice)
+      );
+
+      expect(apr).eq("0.008294910060180215");
+    });
+  });
   describe("Enable / Disable", function () {
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
