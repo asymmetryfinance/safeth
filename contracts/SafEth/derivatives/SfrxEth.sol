@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "../../interfaces/frax/IsFrxEth.sol";
@@ -18,13 +18,13 @@ contract SfrxEth is
     Initializable,
     OwnableUpgradeable
 {
-    address public constant SFRX_ETH_ADDRESS =
+    address private constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
-    address public constant FRX_ETH_ADDRESS =
+    address private constant FRX_ETH_ADDRESS =
         0x5E8422345238F34275888049021821E8E08CAa1f;
-    address public constant FRX_ETH_CRV_POOL_ADDRESS =
+    address private constant FRX_ETH_CRV_POOL_ADDRESS =
         0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
-    address public constant FRX_ETH_MINTER_ADDRESS =
+    address private constant FRX_ETH_MINTER_ADDRESS =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
@@ -41,9 +41,10 @@ contract SfrxEth is
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -83,8 +84,8 @@ contract SfrxEth is
             frxEthReceived
         );
 
-        uint256 minOut = (((ethPerDerivative() * _amount) / 10 ** 18) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (((ethPerDerivative() * _amount) / 1e18) *
+            (1e18 - maxSlippage)) / 1e18;
 
         uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
@@ -130,13 +131,11 @@ contract SfrxEth is
         uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
             .price_oracle();
         uint256 priceDifference;
-        if (oraclePrice > 10 ** 18) priceDifference = oraclePrice - 10 ** 18;
-        else priceDifference = 10 ** 18 - oraclePrice;
-        require(priceDifference < 10 ** 15, "frxEth possibly depegged"); // outside of 0.1% we assume depegged
+        if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
+        else priceDifference = 1e18 - oraclePrice;
+        require(priceDifference < 1e15, "frxEth possibly depegged"); // outside of 0.1% we assume depegged
 
-        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
-            10 ** 18
-        );
+        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return frxEthAmount;
     }
 

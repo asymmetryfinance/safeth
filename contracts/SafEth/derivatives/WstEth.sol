@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -17,11 +17,11 @@ contract WstEth is
     Initializable,
     OwnableUpgradeable
 {
-    address public constant WST_ETH =
+    address private constant WST_ETH =
         0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant LIDO_CRV_POOL =
+    address private constant LIDO_CRV_POOL =
         0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address public constant STETH_TOKEN =
+    address private constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     AggregatorV3Interface constant chainLinkStEthEthFeed =
@@ -41,15 +41,16 @@ contract WstEth is
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "Lido";
     }
 
@@ -69,7 +70,7 @@ contract WstEth is
         require(stEthAmount > 0, "No stETH to unwrap");
 
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
-        uint256 minOut = (stEthAmount * (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (stEthAmount * (1e18 - maxSlippage)) / 1e18;
 
         uint256 ethBalanceBefore = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
@@ -98,19 +99,19 @@ contract WstEth is
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(10 ** 18);
+        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
         (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
             .latestRoundData();
         if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
         uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) /
-            10 ** 18;
+            1e18;
         return ethPerWstEth;
     }
 
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(WST_ETH).balanceOf(address(this));
     }
 

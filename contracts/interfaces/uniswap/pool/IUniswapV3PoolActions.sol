@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 /// @title Permissionless pool actions
 /// @notice Contains pool methods that can be called by anyone

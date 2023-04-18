@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/convex/ILockedCvx.sol";
@@ -141,7 +141,7 @@ contract CvxLockManager {
         cvxPositions[positionId].cvxAmount = 0;
     }
 
-    function getCurrentEpoch() public view returns (uint) {
+    function getCurrentEpoch() public view returns (uint256) {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 }

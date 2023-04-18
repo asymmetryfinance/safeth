@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -34,15 +34,16 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) public initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "AnkrEth";
     }
 
@@ -66,8 +67,8 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 virtualPrice = IAnkrEthEthPool(ANKR_ETH_POOL)
             .get_virtual_price();
 
-        uint256 minOut = (((virtualPrice * _amount) / 10 ** 18) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (((virtualPrice * _amount) / 1e18) *
+            (1e18 - maxSlippage)) / 1e18;
 
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
         // solhint-disable-next-line
@@ -96,13 +97,13 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(10 ** 18);
+        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
     }
 
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
     }
 

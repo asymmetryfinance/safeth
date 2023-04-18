@@ -1,32 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/rocketpool/RocketSwapRouterInterface.sol";
-import "../../interfaces/rocketpool/RocketDAOProtocolSettingsDepositInterface.sol";
 import "../../interfaces/IWETH.sol";
-import "../../interfaces/uniswap/ISwapRouter.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../../interfaces/uniswap/IUniswapV3Factory.sol";
-import "../../interfaces/uniswap/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
 contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
-    address public constant ROCKET_STORAGE_ADDRESS =
+    address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
-    address public constant W_ETH_ADDRESS =
+    address private constant W_ETH_ADDRESS =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant UNISWAP_ROUTER =
+    address private constant UNISWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    address public constant UNI_V3_FACTORY =
+    address private constant UNI_V3_FACTORY =
         0x1F98431c8aD98523631AE4a59f267346ea31F984;
 
     /// Swap router is not available in rocket storage contract so we hardcode it
@@ -51,15 +46,16 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which handles stake/unstake
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "RocketPool";
     }
 
@@ -120,10 +116,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
                 address(this)
             );
             uint256 ethPerReth = ethPerDerivative();
-            uint256 minOut = ((((ethPerReth * _amount) / 10 ** 18) *
-                ((10 ** 18 - maxSlippage))) / 10 ** 18);
-            uint256 idealOut = ((((ethPerReth * _amount) / 10 ** 18) *
-                ((10 ** 18))) / 10 ** 18);
+            uint256 minOut = ((((ethPerReth * _amount) / 1e18) *
+                ((1e18 - maxSlippage))) / 1e18);
+            uint256 idealOut = ((((ethPerReth * _amount) / 1e18) * 1e18) /
+                1e18);
             IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
             // swaps from reth into weth using 100% balancer pool
@@ -150,11 +146,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint rethPerEth = (10 ** 36) / ethPerDerivative();
-        uint256 minOut = ((((rethPerEth * msg.value) / 10 ** 18) *
-            ((10 ** 18 - maxSlippage))) / 10 ** 18);
-        uint256 idealOut = ((((rethPerEth * msg.value) / 10 ** 18) *
-            ((10 ** 18))) / 10 ** 18);
+        uint256 rethPerEth = (1e36) / ethPerDerivative();
+        uint256 minOut = ((((rethPerEth * msg.value) / 1e18) *
+            ((1e18 - maxSlippage))) / 1e18);
+        uint256 idealOut = ((((rethPerEth * msg.value) / 1e18) * 1e18) / 1e18);
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -184,7 +179,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(rethAddress()).balanceOf(address(this));
     }
 

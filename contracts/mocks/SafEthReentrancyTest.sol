@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 /// Test re-entrancy on SafEth
 import "hardhat/console.sol";
