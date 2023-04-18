@@ -33,7 +33,7 @@ contract InvalidErc165Derivative is
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _owner - owner of the contract which handles stake/unstake
+        @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
         _registerInterface(type(IERC20).interfaceId);
