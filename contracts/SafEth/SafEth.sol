@@ -63,6 +63,7 @@ contract SafEth is
         Ownable2StepUpgradeable.__Ownable2Step_init();
         minAmount = 5 * 1e17; // initializing with .5 ETH as minimum
         maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
+        pauseStaking = true; // pause staking on initialize for adding derivatives
         __ReentrancyGuard_init();
     }
 
@@ -77,6 +78,7 @@ contract SafEth is
         require(pauseStaking == false, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
+        require(totalWeight > 0, "total weight is zero");
 
         uint256 preDepositPrice = approxPrice();
         uint256 count = derivativeCount;
