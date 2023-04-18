@@ -81,6 +81,8 @@ contract SafEth is
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
+        @param _minOut - minimum amount of safETH to mint
+        @return mintedAmount - amount of safETH minted
     */
     function stake(
         uint256 _minOut
@@ -109,12 +111,11 @@ contract SafEth is
             }
         }
         // mintAmount represents a percentage of the total assets in the system
-        uint256 mintAmount = (totalStakeValueEth * 1e18) / preDepositPrice;
-        require(mintAmount > _minOut, "mint amount less than minOut");
+        mintedAmount = (totalStakeValueEth * 1e18) / preDepositPrice;
+        require(mintedAmount > _minOut, "mint amount less than minOut");
 
-        _mint(msg.sender, mintAmount);
+        _mint(msg.sender, mintedAmount);
         emit Staked(msg.sender, msg.value, totalStakeValueEth, approxPrice());
-        return (mintAmount);
     }
 
     /**
