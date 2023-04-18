@@ -17,8 +17,14 @@ contract SafEth is
     SafEthStorage,
     ReentrancyGuardUpgradeable
 {
-    event ChangeMinAmount(uint256 indexed minAmount);
-    event ChangeMaxAmount(uint256 indexed maxAmount);
+    event ChangeMinAmount(
+        uint256 indexed oldMinAmount,
+        uint256 indexed newMinAmount
+    );
+    event ChangeMaxAmount(
+        uint256 indexed oldMaxAmount,
+        uint256 indexed newMaxAmount
+    );
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
@@ -33,7 +39,11 @@ contract SafEth is
         uint256 indexed ethOut,
         uint256 indexed safEthIn
     );
-    event WeightChange(uint256 indexed index, uint256 indexed weight);
+    event WeightChange(
+        uint256 indexed index,
+        uint256 indexed weight,
+        uint256 indexed totalWeight
+    );
     event DerivativeAdded(
         address indexed contractAddress,
         uint256 indexed weight,
@@ -198,7 +208,7 @@ contract SafEth is
         require(settings[_derivativeIndex].enabled, "derivative not enabled");
         settings[_derivativeIndex].weight = _weight;
         setTotalWeight();
-        emit WeightChange(_derivativeIndex, _weight);
+        emit WeightChange(_derivativeIndex, _weight, totalWeight);
     }
 
     /**
@@ -298,8 +308,8 @@ contract SafEth is
         @param _minAmount - amount to set as minimum stake value
     */
     function setMinAmount(uint256 _minAmount) external onlyOwner {
+        emit ChangeMinAmount(minAmount, _minAmount);
         minAmount = _minAmount;
-        emit ChangeMinAmount(_minAmount);
     }
 
     /**
@@ -307,8 +317,8 @@ contract SafEth is
         @param _maxAmount - amount to set as maximum stake value
     */
     function setMaxAmount(uint256 _maxAmount) external onlyOwner {
+        emit ChangeMaxAmount(maxAmount, _maxAmount);
         maxAmount = _maxAmount;
-        emit ChangeMaxAmount(_maxAmount);
     }
 
     /**
@@ -316,6 +326,7 @@ contract SafEth is
         @param _pause - true disables staking / false enables staking
     */
     function setPauseStaking(bool _pause) external onlyOwner {
+        require(pauseStaking != _pause, "already set");
         pauseStaking = _pause;
         emit StakingPaused(_pause);
     }
@@ -325,6 +336,7 @@ contract SafEth is
         @param _pause - true disables unstaking / false enables unstaking
     */
     function setPauseUnstaking(bool _pause) external onlyOwner {
+        require(pauseUnstaking != _pause, "already set");
         pauseUnstaking = _pause;
         emit UnstakingPaused(_pause);
     }
