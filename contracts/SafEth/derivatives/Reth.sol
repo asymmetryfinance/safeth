@@ -118,7 +118,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             uint256 ethPerReth = ethPerDerivative();
             uint256 minOut = ((((ethPerReth * _amount) / 1e18) *
                 ((1e18 - maxSlippage))) / 1e18);
-            uint256 idealOut = ((((ethPerReth * _amount) / 1e18) * ((1e18))) /
+            uint256 idealOut = ((((ethPerReth * _amount) / 1e18) * 1e18) /
                 1e18);
             IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
@@ -149,8 +149,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 rethPerEth = (1e36) / ethPerDerivative();
         uint256 minOut = ((((rethPerEth * msg.value) / 1e18) *
             ((1e18 - maxSlippage))) / 1e18);
-        uint256 idealOut = ((((rethPerEth * msg.value) / 1e18) * ((1e18))) /
-            1e18);
+        uint256 idealOut = ((((rethPerEth * msg.value) / 1e18) * 1e18) / 1e18);
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );

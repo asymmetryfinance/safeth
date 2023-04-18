@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "../SafEth/SafEth.sol";
 import "./SafEthV2MockStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
     function newFunction() public {
