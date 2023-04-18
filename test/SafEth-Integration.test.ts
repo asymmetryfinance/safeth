@@ -71,7 +71,7 @@ describe("SafEth Integration Test", function () {
     }
 
     const derivativeCount = await strategy.derivativeCount();
-
+    await strategy.setPauseStaking(false);
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
 
