@@ -110,7 +110,7 @@ contract SafEth is
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
         }
-        // mintAmount represents a percentage of the total assets in the system
+        // mintedAmount represents a percentage of the total assets in the system
         mintedAmount = (totalStakeValueEth * 1e18) / preDepositPrice;
         require(mintedAmount > _minOut, "mint amount less than minOut");
 
