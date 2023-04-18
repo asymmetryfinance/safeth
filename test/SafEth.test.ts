@@ -176,16 +176,19 @@ describe("SafEth", function () {
   const getApr = (
     time0: BigNumber,
     time1: BigNumber,
-    amount0: BigNumber,
-    amount1: BigNumber
+    price0: BigNumber,
+    price1: BigNumber
   ) => {
     const timeDiff = time1.sub(time0);
-    const amountDiff = amount1.sub(amount0);
+    const priceDiff = price1.sub(price0);
     // normalized in terms of wei for math because ethers BigNumber doesnt have decimals
-    const amountPerYear = ethers.utils.parseEther(
-      amountDiff.mul(31536000).div(timeDiff).toString()
+    const priceDiffPerYear = ethers.utils.parseEther(
+      priceDiff
+        .mul(60 * 60 * 24 * 365)
+        .div(timeDiff)
+        .toString()
     );
-    return ethers.utils.formatEther(amountPerYear.div(amount0));
+    return ethers.utils.formatEther(priceDiffPerYear.div(price0));
   };
 
   // find the first event that was at lease lengthOfTime ago
