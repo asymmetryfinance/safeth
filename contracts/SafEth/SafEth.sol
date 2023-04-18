@@ -85,7 +85,7 @@ contract SafEth is
     function stake(
         uint256 _minOut
     ) external payable nonReentrant returns (uint256 mintedAmount) {
-        require(pauseStaking == false, "staking is paused");
+        require(!pauseStaking, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
@@ -126,7 +126,7 @@ contract SafEth is
         uint256 _safEthAmount,
         uint256 _minOut
     ) external nonReentrant {
-        require(pauseUnstaking == false, "unstaking is paused");
+        require(!pauseUnstaking, "unstaking is paused");
         require(_safEthAmount > 0, "amount too low");
         require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
 
