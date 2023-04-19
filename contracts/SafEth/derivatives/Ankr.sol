@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
-/// @dev This derivative's liquidity is too low to pass the automated tests and we wont be enabling this derivative in the initial release.
+
 contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ANKR_ETH_ADDRESS =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
@@ -64,12 +64,12 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         );
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, ankrEthBalance);
 
-        uint256 virtualPrice = IAnkrEthEthPool(ANKR_ETH_POOL)
-            .get_virtual_price();
 
-        uint256 minOut = (((virtualPrice * _amount) / 1e18) *
+        uint256 price = ethPerDerivative();
+
+        uint256 idealOut = (price * _amount) / 1e18;
+        uint256 minOut = (idealOut *
             (1e18 - maxSlippage)) / 1e18;
-
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(

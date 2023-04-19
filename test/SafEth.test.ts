@@ -428,10 +428,7 @@ describe("SafEth", function () {
       expect(ethBalancePost).eq(0);
     });
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const ethDepositAmount = "30";
-
-      const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
-
+      const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
@@ -441,8 +438,9 @@ describe("SafEth", function () {
         const derivativePerEth = BigNumber.from(
           "1000000000000000000000000000000000000"
         ).div(ethPerDerivative);
-        const derivativeBalanceEstimate =
-          BigNumber.from(ethDepositAmount).mul(derivativePerEth);
+        const derivativeBalanceEstimate = BigNumber.from(weiDepositAmount)
+          .mul(derivativePerEth)
+          .div("1000000000000000000");
         const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();

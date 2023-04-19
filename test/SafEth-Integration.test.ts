@@ -180,6 +180,9 @@ describe("SafEth Integration Test", function () {
         totalSlippagePerAccount[i]
       );
       const staked = totalStakedPerAccount[i];
+
+      console.log('staked', staked);
+      console.log('stakedMinusSlippage', stakedMinusSlippage);
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });
