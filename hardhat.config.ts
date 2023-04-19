@@ -68,9 +68,8 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: process.env.MAINNET_URL || "",
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
   paths: {
