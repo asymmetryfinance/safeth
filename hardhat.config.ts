@@ -96,11 +96,12 @@ const config: HardhatUserConfig = {
     runOnCompile: true,
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "USD",
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
+    customChains: [],
   },
   mocha: {
     timeout: 130000,

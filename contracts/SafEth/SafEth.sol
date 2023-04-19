@@ -122,6 +122,7 @@ contract SafEth is
         @notice - Unstake your safETH into ETH
         @dev - unstakes a percentage of safEth based on its total value
         @param _safEthAmount - amount of safETH to unstake into ETH
+        @param _minOut - minimum amount of ETH to unstake
     */
     function unstake(
         uint256 _safEthAmount,
