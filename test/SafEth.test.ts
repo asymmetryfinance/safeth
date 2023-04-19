@@ -369,6 +369,7 @@ describe("SafEth", function () {
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
+      const factory3 = await ethers.getContractFactory("Ankr");
 
       const derivative0 = await upgrades.deployProxy(factory0, [
         adminAccount.address,
@@ -387,6 +388,12 @@ describe("SafEth", function () {
       ]);
       await derivative2.deployed();
       derivatives.push(derivative2);
+
+      const derivative3 = await upgrades.deployProxy(factory3, [
+        adminAccount.address,
+      ]);
+      await derivative3.deployed();
+      derivatives.push(derivative3);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
@@ -421,7 +428,7 @@ describe("SafEth", function () {
       expect(ethBalancePost).eq(0);
     });
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const ethDepositAmount = "200";
+      const ethDepositAmount = "30";
 
       const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
 
