@@ -679,9 +679,20 @@ describe("SafEth", function () {
       await tx3.wait();
 
       const ethBalances = await estimatedDerivativeValues();
-      // TODO make this test work for any number of derivatives
-      expect(within1Percent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
-      expect(within1Percent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
+
+      const derivative0Balance = ethBalances[0];
+      const balanceSum = ethBalances.reduce(
+        (acc, val) => acc.add(val),
+        BigNumber.from(0)
+      );
+      let remainingBalanceSum = BigNumber.from(0);
+
+      for (let i = 1; i < ethBalances.length; i++) {
+        remainingBalanceSum = remainingBalanceSum.add(ethBalances[i]);
+      }
+
+      expect(within1Percent(derivative0Balance, remainingBalanceSum)).eq(true);
+      expect(within1Percent(balanceSum, initialDeposit)).eq(true);
     });
 
     it("Should stake with a weight set to 0", async () => {
@@ -704,11 +715,18 @@ describe("SafEth", function () {
 
       const ethBalances = await estimatedDerivativeValues();
 
-      // TODO make this test work for any number of derivatives
-      expect(ethBalances[0]).eq(BigNumber.from(0));
-      expect(
-        within1Percent(initialDeposit, ethBalances[1].add(ethBalances[1]))
-      ).eq(true);
+      const balanceSum = ethBalances.reduce(
+        (acc, val) => acc.add(val),
+        BigNumber.from(0)
+      );
+      let remainingBalanceSum = BigNumber.from(0);
+
+      for (let i = 1; i < ethBalances.length; i++) {
+        remainingBalanceSum = remainingBalanceSum.add(ethBalances[i]);
+      }
+
+      expect(within1Percent(balanceSum, initialDeposit)).eq(true);
+      expect(within1Percent(remainingBalanceSum, initialDeposit)).eq(true);
     });
 
     it("Should stake, set a weight to 0, rebalance, & unstake", async () => {
