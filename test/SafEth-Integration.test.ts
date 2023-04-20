@@ -51,7 +51,7 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth"];
+    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr"];
     const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
@@ -72,6 +72,13 @@ describe("SafEth Integration Test", function () {
 
     const derivativeCount = await strategy.derivativeCount();
     await strategy.setPauseStaking(false);
+
+    // ankr slippage tolerance needs to be set high for the integration test
+    // withdraws are affecting the pool but price is oraclePrice that doesnt change
+    // so with enough tests slippage becomes high because there is no arb happening
+    const t = await strategy.setMaxSlippage(3, "30000000000000000"); // 3% slippage
+    await t.wait();
+
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
 
@@ -180,6 +187,7 @@ describe("SafEth Integration Test", function () {
         totalSlippagePerAccount[i]
       );
       const staked = totalStakedPerAccount[i];
+
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });

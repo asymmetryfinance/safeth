@@ -369,6 +369,7 @@ describe("SafEth", function () {
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
+      const factory3 = await ethers.getContractFactory("Ankr");
 
       const derivative0 = await upgrades.deployProxy(factory0, [
         adminAccount.address,
@@ -387,6 +388,12 @@ describe("SafEth", function () {
       ]);
       await derivative2.deployed();
       derivatives.push(derivative2);
+
+      const derivative3 = await upgrades.deployProxy(factory3, [
+        adminAccount.address,
+      ]);
+      await derivative3.deployed();
+      derivatives.push(derivative3);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
@@ -421,10 +428,7 @@ describe("SafEth", function () {
       expect(ethBalancePost).eq(0);
     });
     it("Should test deposit & withdraw on each derivative contract", async () => {
-      const ethDepositAmount = "200";
-
-      const weiDepositAmount = ethers.utils.parseEther(ethDepositAmount);
-
+      const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
@@ -434,8 +438,9 @@ describe("SafEth", function () {
         const derivativePerEth = BigNumber.from(
           "1000000000000000000000000000000000000"
         ).div(ethPerDerivative);
-        const derivativeBalanceEstimate =
-          BigNumber.from(ethDepositAmount).mul(derivativePerEth);
+        const derivativeBalanceEstimate = BigNumber.from(weiDepositAmount)
+          .mul(derivativePerEth)
+          .div("1000000000000000000");
         const tx1 = await derivatives[i].deposit({ value: weiDepositAmount });
         await tx1.wait();
         const postStakeBalance = await derivatives[i].balance();
@@ -673,9 +678,20 @@ describe("SafEth", function () {
       await tx3.wait();
 
       const ethBalances = await estimatedDerivativeValues();
-      // TODO make this test work for any number of derivatives
-      expect(within1Percent(ethBalances[0], ethBalances[1].mul(2))).eq(true);
-      expect(within1Percent(ethBalances[0], ethBalances[2].mul(2))).eq(true);
+
+      const derivative0Balance = ethBalances[0];
+      const balanceSum = ethBalances.reduce(
+        (acc, val) => acc.add(val),
+        BigNumber.from(0)
+      );
+      let remainingBalanceSum = BigNumber.from(0);
+
+      for (let i = 1; i < ethBalances.length; i++) {
+        remainingBalanceSum = remainingBalanceSum.add(ethBalances[i]);
+      }
+
+      expect(within1Percent(derivative0Balance, remainingBalanceSum)).eq(true);
+      expect(within1Percent(balanceSum, initialDeposit)).eq(true);
     });
 
     it("Should stake with a weight set to 0", async () => {
@@ -698,11 +714,18 @@ describe("SafEth", function () {
 
       const ethBalances = await estimatedDerivativeValues();
 
-      // TODO make this test work for any number of derivatives
-      expect(ethBalances[0]).eq(BigNumber.from(0));
-      expect(
-        within1Percent(initialDeposit, ethBalances[1].add(ethBalances[1]))
-      ).eq(true);
+      const balanceSum = ethBalances.reduce(
+        (acc, val) => acc.add(val),
+        BigNumber.from(0)
+      );
+      let remainingBalanceSum = BigNumber.from(0);
+
+      for (let i = 1; i < ethBalances.length; i++) {
+        remainingBalanceSum = remainingBalanceSum.add(ethBalances[i]);
+      }
+
+      expect(within1Percent(balanceSum, initialDeposit)).eq(true);
+      expect(within1Percent(remainingBalanceSum, initialDeposit)).eq(true);
     });
 
     it("Should stake, set a weight to 0, rebalance, & unstake", async () => {
