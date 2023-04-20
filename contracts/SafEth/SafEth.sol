@@ -96,10 +96,10 @@ contract SafEth is
         uint256 count = derivativeCount;
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
         for (uint256 i = 0; i < count; i++) {
-            if (!settings[i].enabled) continue;
-            uint256 weight = settings[i].weight;
+            if (!derivatives[i].enabled) continue;
+            uint256 weight = derivatives[i].weight;
             if (weight == 0) continue;
-            IDerivative derivative = derivatives[i];
+            IDerivative derivative = derivatives[i].derivative;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
             if (ethAmount > 0) {
@@ -137,14 +137,14 @@ contract SafEth is
         uint256 count = derivativeCount;
 
         for (uint256 i = 0; i < count; i++) {
-            if (!settings[i].enabled) continue;
+            if (!derivatives[i].enabled) continue;
             // withdraw a percentage of each asset based on the amount of safETH
-            uint256 derivativeAmount = (derivatives[i].balance() *
+            uint256 derivativeAmount = (derivatives[i].derivative.balance() *
                 _safEthAmount) / safEthTotalSupply;
             if (derivativeAmount == 0) continue; // if derivative empty ignore
             // Add check for a zero Ether received
             uint256 ethBefore = address(this).balance;
-            derivatives[i].withdraw(derivativeAmount);
+            derivatives[i].derivative.withdraw(derivativeAmount);
             require(
                 address(this).balance - ethBefore != 0,
                 "Receive zero Ether"
@@ -174,19 +174,19 @@ contract SafEth is
         uint256 count = derivativeCount;
 
         for (uint256 i = 0; i < count; i++) {
-            uint256 balance = derivatives[i].balance();
-            if (settings[i].enabled && balance > 0)
-                derivatives[i].withdraw(balance);
+            uint256 balance = derivatives[i].derivative.balance();
+            if (derivatives[i].enabled && balance > 0)
+                derivatives[i].derivative.withdraw(balance);
         }
         uint256 ethAmountToRebalance = address(this).balance;
         require(ethAmountToRebalance > 0, "no eth to rebalance");
 
         for (uint256 i = 0; i < count; i++) {
-            if (settings[i].weight == 0 || !settings[i].enabled) continue;
-            uint256 ethAmount = (ethAmountToRebalance * settings[i].weight) /
+            if (derivatives[i].weight == 0 || !derivatives[i].enabled) continue;
+            uint256 ethAmount = (ethAmountToRebalance * derivatives[i].weight) /
                 totalWeight;
             // Price will change due to slippage
-            derivatives[i].deposit{value: ethAmount}();
+            derivatives[i].derivative.deposit{value: ethAmount}();
         }
         emit Rebalanced();
     }
@@ -207,8 +207,8 @@ contract SafEth is
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
-        require(settings[_derivativeIndex].enabled, "derivative not enabled");
-        settings[_derivativeIndex].weight = _weight;
+        require(derivatives[_derivativeIndex].enabled, "derivative not enabled");
+        derivatives[_derivativeIndex].weight = _weight;
         setTotalWeight();
         emit WeightChange(_derivativeIndex, _weight, totalWeight);
     }
@@ -222,8 +222,8 @@ contract SafEth is
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
-        require(settings[_derivativeIndex].enabled, "derivative not enabled");
-        settings[_derivativeIndex].enabled = false;
+        require(derivatives[_derivativeIndex].enabled, "derivative not enabled");
+        derivatives[_derivativeIndex].enabled = false;
         setTotalWeight();
         emit DerivativeDisabled(_derivativeIndex);
     }
@@ -238,10 +238,10 @@ contract SafEth is
             "derivative index out of bounds"
         );
         require(
-            !settings[_derivativeIndex].enabled,
+            !derivatives[_derivativeIndex].enabled,
             "derivative already enabled"
         );
-        settings[_derivativeIndex].enabled = true;
+        derivatives[_derivativeIndex].enabled = true;
         setTotalWeight();
         emit DerivativeEnabled(_derivativeIndex);
     }
@@ -267,9 +267,9 @@ contract SafEth is
             revert("invalid contract");
         }
 
-        derivatives[derivativeCount] = IDerivative(_contractAddress);
-        settings[derivativeCount].weight = _weight;
-        settings[derivativeCount].enabled = true;
+        derivatives[derivativeCount].derivative = IDerivative(_contractAddress);
+        derivatives[derivativeCount].weight = _weight;
+        derivatives[derivativeCount].enabled = true;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         unchecked {
             ++derivativeCount;
@@ -282,8 +282,8 @@ contract SafEth is
         uint256 count = derivativeCount;
 
         for (uint256 i = 0; i < count; i++) {
-            if (!settings[i].enabled || settings[i].weight == 0) continue;
-            localTotalWeight += settings[i].weight;
+            if (!derivatives[i].enabled || derivatives[i].weight == 0) continue;
+            localTotalWeight += derivatives[i].weight;
         }
         totalWeight = localTotalWeight;
     }
@@ -301,7 +301,7 @@ contract SafEth is
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
-        derivatives[_derivativeIndex].setMaxSlippage(_slippage);
+        derivatives[_derivativeIndex].derivative.setMaxSlippage(_slippage);
         emit SetMaxSlippage(_derivativeIndex, _slippage);
     }
 
@@ -353,9 +353,10 @@ contract SafEth is
         uint256 count = derivativeCount;
 
         for (uint256 i = 0; i < count; i++) {
-            if (!settings[i].enabled) continue;
+            if (!derivatives[i].enabled) continue;
+            IDerivative derivative = derivatives[i].derivative;
             underlyingValue +=
-                (derivatives[i].ethPerDerivative() * derivatives[i].balance()) /
+                (derivative.ethPerDerivative() * derivative.balance()) /
                 1e18;
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
@@ -369,7 +370,7 @@ contract SafEth is
         // Loop through the registered derivatives
         uint256 count = derivativeCount;
         for (uint256 i; i < count; ++i) {
-            acceptSender = (address(derivatives[i]) == msg.sender);
+            acceptSender = (address(derivatives[i].derivative) == msg.sender);
             if (acceptSender) {
                 break;
             }

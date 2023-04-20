@@ -15,7 +15,7 @@ contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
         uint256 index,
         uint256 amount
     ) public onlyOwner {
-        derivatives[index].withdraw(amount);
+        derivatives[index].derivative.withdraw(amount);
     }
 
     // Show we can upgrade to withdraw erc20 tokens that were accidentally sent to this contract
