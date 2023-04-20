@@ -207,7 +207,10 @@ contract SafEth is
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
-        require(derivatives[_derivativeIndex].enabled, "derivative not enabled");
+        require(
+            derivatives[_derivativeIndex].enabled,
+            "derivative not enabled"
+        );
         derivatives[_derivativeIndex].weight = _weight;
         setTotalWeight();
         emit WeightChange(_derivativeIndex, _weight, totalWeight);
@@ -222,7 +225,10 @@ contract SafEth is
             _derivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
-        require(derivatives[_derivativeIndex].enabled, "derivative not enabled");
+        require(
+            derivatives[_derivativeIndex].enabled,
+            "derivative not enabled"
+        );
         derivatives[_derivativeIndex].enabled = false;
         setTotalWeight();
         emit DerivativeDisabled(_derivativeIndex);
