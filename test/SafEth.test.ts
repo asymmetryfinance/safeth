@@ -266,7 +266,7 @@ describe("SafEth", function () {
       const initialWeight = BigNumber.from("1000000000000000000");
 
       for (let i = 0; i < derivativeCount; i++) {
-        if (!(await safEthProxy.settings(i)).enabled) continue;
+        if (!(await safEthProxy.derivatives(i)).enabled) continue;
         const tx2 = await safEthProxy.adjustWeight(i, initialWeight);
         await tx2.wait();
       }
@@ -541,7 +541,8 @@ describe("SafEth", function () {
     it("Should be able to upgrade both the strategy contract and its derivatives and still function correctly", async () => {
       const strategy2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
 
-      const derivativeAddressToUpgrade = await strategy2.derivatives(1);
+      const derivativeAddressToUpgrade = (await strategy2.derivatives(1))
+        .derivative;
 
       const upgradedDerivative = await upgrade(
         derivativeAddressToUpgrade,
@@ -585,7 +586,7 @@ describe("SafEth", function () {
       const derivativeCount = await safEth2.derivativeCount();
 
       for (let i = 0; i < derivativeCount; i++) {
-        const derivativeAddress = await safEth2.derivatives(i);
+        const derivativeAddress = (await safEth2.derivatives(i)).derivative;
 
         const derivative = new ethers.Contract(
           derivativeAddress,
@@ -776,7 +777,7 @@ describe("SafEth", function () {
 
     const ethBalances: BigNumber[] = [];
     for (let i = 0; i < derivativeCount; i++) {
-      const derivativeAddress = await safEthProxy.derivatives(i);
+      const derivativeAddress = (await safEthProxy.derivatives(i)).derivative;
       const derivative = new ethers.Contract(
         derivativeAddress,
         derivativeAbi,
