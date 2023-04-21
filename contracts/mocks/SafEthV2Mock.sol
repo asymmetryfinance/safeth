@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../SafEth/SafEth.sol";
 import "./SafEthV2MockStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
     function newFunction() public {
@@ -14,7 +15,7 @@ contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
         uint256 index,
         uint256 amount
     ) public onlyOwner {
-        derivatives[index].withdraw(amount);
+        derivatives[index].derivative.withdraw(amount);
     }
 
     // Show we can upgrade to withdraw erc20 tokens that were accidentally sent to this contract

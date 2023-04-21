@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -193,7 +193,7 @@ contract CvxLockManager is OwnableUpgradeable {
         cvxPositions[positionId].cvxAmount = 0;
     }
 
-    function getCurrentEpoch() public view returns (uint) {
+    function getCurrentEpoch() public view returns (uint256) {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 
@@ -210,7 +210,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 totalRewards = 0;
 
 
-        // get rewars up through previous epoch
+        // get rewards up through previous epoch
         for(uint256 i=startingEpoch;i<currentEpoch-1;i++) {
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, address(this));
             console.log('balance at epoch', i, balanceAtEpoch);

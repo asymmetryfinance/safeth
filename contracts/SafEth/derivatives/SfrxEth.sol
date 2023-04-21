@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "../../interfaces/frax/IsFrxEth.sol";
@@ -7,17 +7,24 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IFrxEthEthPool.sol";
 import "../../interfaces/frax/IFrxETHMinter.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
-    address public constant SFRX_ETH_ADDRESS =
+
+contract SfrxEth is
+    ERC165Storage,
+    IDerivative,
+    Initializable,
+    OwnableUpgradeable
+{
+    address private constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
-    address public constant FRX_ETH_ADDRESS =
+    address private constant FRX_ETH_ADDRESS =
         0x5E8422345238F34275888049021821E8E08CAa1f;
-    address public constant FRX_ETH_CRV_POOL_ADDRESS =
+    address private constant FRX_ETH_CRV_POOL_ADDRESS =
         0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
-    address public constant FRX_ETH_MINTER_ADDRESS =
+    address private constant FRX_ETH_MINTER_ADDRESS =
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
@@ -31,11 +38,13 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _owner - owner of the contract which handles stake/unstake
+        @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
+        require(_owner != address(0), "invalid address");
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
@@ -58,32 +67,37 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        uint256 frxEthBalanceBefore = IERC20(FRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
         IsFrxEth(SFRX_ETH_ADDRESS).redeem(
             _amount,
             address(this),
             address(this)
         );
-        uint256 frxEthBalance = IERC20(FRX_ETH_ADDRESS).balanceOf(
+        uint256 frxEthBalanceAfter = IERC20(FRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
+        uint256 frxEthReceived = frxEthBalanceAfter - frxEthBalanceBefore;
         IsFrxEth(FRX_ETH_ADDRESS).approve(
             FRX_ETH_CRV_POOL_ADDRESS,
-            frxEthBalance
+            frxEthReceived
         );
 
-        uint256 minOut = (((ethPerDerivative(_amount) * _amount) / 10 ** 18) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
+        uint256 minOut = (((ethPerDerivative() * _amount) / 1e18) *
+            (1e18 - maxSlippage)) / 1e18;
 
+        uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
             1,
             0,
-            frxEthBalance,
+            frxEthReceived,
             minOut
         );
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
-        );
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -108,12 +122,21 @@ contract SfrxEth is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        uint256 frxAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(
-            10 ** 18
-        );
-        return ((10 ** 18 * frxAmount) /
-            IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).price_oracle());
+    function ethPerDerivative() public view returns (uint256) {
+        // There is no chainlink price fees for frxEth
+        // We making the assumption that frxEth is always priced 1-1 with eth
+        // revert if the curve oracle price suggests otherwise
+        // Theory is its very hard for attacker to manipulate price away from 1-1 for any long period of time
+        // and if its depegged attack probably cant maniulate it back to 1-1
+        uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
+            .price_oracle();
+        uint256 priceDifference;
+        if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
+        else priceDifference = 1e18 - oraclePrice;
+        require(priceDifference < 1e15, "frxEth possibly depegged"); // outside of 0.1% we assume depegged
+
+        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
+        return frxEthAmount;
     }
 
     /**

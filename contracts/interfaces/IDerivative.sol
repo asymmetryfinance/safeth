@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 interface IDerivative {
     /// Returns human readable identifier string
@@ -12,7 +12,7 @@ interface IDerivative {
     function withdraw(uint256 amount) external;
 
     /// Estimated price per derivative when depositing amount
-    function ethPerDerivative(uint256 amount) external view returns (uint256);
+    function ethPerDerivative() external view returns (uint256);
 
     /// underlying derivative balance held by this contract
     function balance() external view returns (uint256);

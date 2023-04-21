@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../interfaces/IDerivative.sol";
 
@@ -13,12 +13,23 @@ import "../interfaces/IDerivative.sol";
         Constant values CAN be modified on upgrade
 */
 contract SafEthStorage {
+    struct Derivatives {
+        IDerivative derivative;
+        uint256 weight;
+        bool enabled;
+    }
+
     bool public pauseStaking; // true if staking is paused
     bool public pauseUnstaking; // true if unstaking is pause
     uint256 public derivativeCount; // amount of derivatives added to contract
     uint256 public totalWeight; // total weight of all derivatives (used to calculate percentage of derivative)
     uint256 public minAmount; // minimum amount to stake
     uint256 public maxAmount; // maximum amount to stake
-    mapping(uint256 => IDerivative) public derivatives; // derivatives in the system
-    mapping(uint256 => uint256) public weights; // weights for each derivative
+    mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
 }

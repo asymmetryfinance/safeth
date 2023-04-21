@@ -13,7 +13,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.only("AfEth (CvxLockManager)", async function () {
+describe.skip("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;

@@ -3,7 +3,7 @@ import hre, { upgrades, ethers } from "hardhat";
 async function main() {
   const SafEthDeployment = await ethers.getContractFactory("SafEth");
   const safEth = await upgrades.deployProxy(SafEthDeployment, [
-    "Asymmetry Finance ETH",
+    "Simple Asymmetry Finance ETH",
     "safETH",
   ]);
 
@@ -49,6 +49,7 @@ async function main() {
     name: "WstEth",
     address: wst.address,
   });
+  await safEth.setPauseStaking(false);
 }
 
 main()

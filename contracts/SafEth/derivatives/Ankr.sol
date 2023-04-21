@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -7,11 +7,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ankr/AnkrStaker.sol";
 import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/IAnkrEthEthPool.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
-/// @dev This derivative's liquidity is too low to pass the automated tests and we wont be enabling this derivative in the initial release.
-contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
+
+contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ANKR_ETH_ADDRESS =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
     address public constant ANKR_STAKER_ADDRESS =
@@ -30,17 +31,19 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _owner - owner of the contract which handles stake/unstake
+        @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) public initializer {
+        require(_owner != address(0), "invalid address");
+        _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-        maxSlippage = (1 * 10 ** 16); // 1%
+        maxSlippage = (1 * 1e16); // 1%
     }
 
     /**
         @notice - Return derivative name
     */
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return "AnkrEth";
     }
 
@@ -56,18 +59,11 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 _amount) public onlyOwner {
-        uint256 ankrEthBalance = IERC20(ANKR_ETH_ADDRESS).balanceOf(
-            address(this)
-        );
-        IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, ankrEthBalance);
-
-        uint256 virtualPrice = IAnkrEthEthPool(ANKR_ETH_POOL)
-            .get_virtual_price();
-
-        uint256 minOut = (((virtualPrice * _amount) / 10 ** 18) *
-            (10 ** 18 - maxSlippage)) / 10 ** 18;
-
-        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, ankrEthBalance, minOut);
+        IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
+        uint256 price = ethPerDerivative();
+        uint256 idealOut = (price * _amount) / 1e18;
+        uint256 minOut = (idealOut * (1e18 - maxSlippage)) / 1e18;
+        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, minOut);
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
@@ -93,14 +89,14 @@ contract Ankr is IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(uint256 _amount) public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(10 ** 18);
+    function ethPerDerivative() public view returns (uint256) {
+        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
     }
 
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() external view returns (uint256) {
         return IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
     }
 

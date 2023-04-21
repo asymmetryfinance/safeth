@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -106,7 +106,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     function stake() external payable {
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
-        uint256 ethAmountForCvx = (msg.value * ratio) / 10 ** 18;
+        uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
         uint256 id = positionId;
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
@@ -175,11 +175,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             ((block.timestamp - 1597471200) / 31556926) + 1
         ];
         uint256 cvxTotalSupplyAsCrv = (crvPerCvx() *
-            IERC20(CVX).totalSupply()) / 10 ** 18;
+            IERC20(CVX).totalSupply()) / 1e18;
         uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv /
             crvEmissionsThisYear;
         uint256 ratioPercentage = supplyEmissionRatio * apy;
-        return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
+        return (ratioPercentage) / (1e18 + (ratioPercentage / 1e18));
     }
 
     function crvPerCvx() public view returns (uint256) {
@@ -190,7 +190,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
         return
-            (uint256(chainLinkCvxEthPrice) * 10 ** 18) /
+            (uint256(chainLinkCvxEthPrice) * 1e18) /
             uint256(chainLinkCrvEthPrice);
     }
 
@@ -263,6 +263,97 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     function updateCrvPool(address _crvPool) public onlyOwner {
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
+    }
+
+    function claimRewards(uint256 _maxSlippage) public onlyOwner {
+        address[] memory emptyArray;
+        IClaimZap(cvxClaimZap).claimRewards(
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            0,
+            0,
+            0,
+            0,
+            8
+        );
+        // cvxFxs -> fxs
+        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
+        if (cvxFxsBalance > 0) {
+            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 1e18);
+            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
+
+            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxFxsBalance,
+                minOut
+            );
+        }
+
+        // fxs -> eth
+        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+        if (fxsBalance > 0) {
+            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                1e18
+            );
+            uint256 minOut = (((oraclePrice * fxsBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
+
+            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+
+            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+
+            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                fxsBalance,
+                minOut
+            );
+        }
+        // cvxCrv -> crv
+        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
+        if (cvxCrvBalance > 0) {
+            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 1e18);
+            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
+            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxCrvBalance,
+                minOut
+            );
+        }
+
+        // crv -> eth
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        if (crvBalance > 0) {
+            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                1e18
+            );
+            uint256 minOut = (((oraclePrice * crvBalance) / 1e18) *
+                (1e18 - _maxSlippage)) / 1e18;
+
+            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                crvBalance,
+                minOut
+            );
+        }
+
+        return;
     }
 
     receive() external payable {}

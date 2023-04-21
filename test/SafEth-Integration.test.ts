@@ -51,7 +51,7 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth"];
+    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr"];
     const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
@@ -71,6 +71,13 @@ describe("SafEth Integration Test", function () {
     }
 
     const derivativeCount = await strategy.derivativeCount();
+    await strategy.setPauseStaking(false);
+
+    // ankr slippage tolerance needs to be set high for the integration test
+    // withdraws are affecting the pool but price is oraclePrice that doesnt change
+    // so with enough tests slippage becomes high because there is no arb happening
+    const t = await strategy.setMaxSlippage(3, "30000000000000000"); // 3% slippage
+    await t.wait();
 
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
@@ -155,7 +162,7 @@ describe("SafEth Integration Test", function () {
       const withdrawAmount = await strategy.balanceOf(userAccounts[i].address);
       if (withdrawAmount.eq(0)) continue;
       const userStrategySigner = strategy.connect(userAccounts[i]);
-      const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
+      const unstakeResult = await userStrategySigner.unstake(withdrawAmount, 0);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
       networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
@@ -180,6 +187,7 @@ describe("SafEth Integration Test", function () {
         totalSlippagePerAccount[i]
       );
       const staked = totalStakedPerAccount[i];
+
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });

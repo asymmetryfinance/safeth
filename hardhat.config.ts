@@ -22,7 +22,7 @@ dotenv.config();
  */
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.13",
+    version: "0.8.19",
     settings: {
       optimizer: {
         enabled: true,
@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
       },
       forking: {
         url: process.env.MAINNET_URL || "",
-        blockNumber: 16871866,
+        blockNumber: 17070569,
         enabled: true, // Set to false to disable forked mainnet mode
       },
     },
@@ -68,9 +68,8 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: process.env.MAINNET_URL || "",
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
   paths: {
@@ -97,11 +96,12 @@ const config: HardhatUserConfig = {
     runOnCompile: true,
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "USD",
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
+    customChains: [],
   },
   mocha: {
     timeout: 130000,
