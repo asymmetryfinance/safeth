@@ -13,7 +13,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.skip("AfEth (CvxLockManager)", async function () {
+describe.only("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -331,6 +331,7 @@ describe.skip("AfEth (CvxLockManager)", async function () {
     const depositAmount = ethers.utils.parseEther("5");
 
     // open position (1)
+
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
