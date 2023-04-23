@@ -126,6 +126,7 @@ contract CvxLockManager is OwnableUpgradeable {
         claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = balanceAfterClaim - balanceBeforeClaim;
+        console.log('amountClaimed', amountClaimed, currentEpoch);
         rewardsClaimed[currentEpoch] += amountClaimed;
     }
 
@@ -154,14 +155,6 @@ contract CvxLockManager is OwnableUpgradeable {
 
         cvxPositions[positionId].unlockEpoch = unlockEpoch;
         unlockSchedule[unlockEpoch] += cvxPositions[positionId].cvxAmount;
-
-
-        uint256 rewards = getPositionRewards(positionId);
-
-        // mayeb only call this we need to have enough to transfer to the user? otherwise skip it to save gas?
-        // also should we claim rewards in relock maybe() so users usualy dont have to spend the extra gas
-        claimRewards();
-        console.log('rewards is', rewards);
     }
 
     // Try to withdraw cvx from a closed position
@@ -191,6 +184,14 @@ contract CvxLockManager is OwnableUpgradeable {
             "Couldnt transfer"
         );
         cvxPositions[positionId].cvxAmount = 0;
+
+
+        // TODO only claim this if we dont have enough balance to cover whats owed
+        console.log('claiming rewards');
+        claimRewards();
+        console.log('rewards claimed');
+        uint256 rewardsOwed = getPositionRewards(positionId);
+        console.log('rewardsOwed is', rewardsOwed);
     }
 
     function getCurrentEpoch() public view returns (uint256) {
@@ -200,18 +201,18 @@ contract CvxLockManager is OwnableUpgradeable {
     // uitility function to calculate owed rewards for a position as if its being closed now
     // maybe doesnt need to be its own function but easier to think about like this for now
     function getPositionRewards(uint256 positionId) public view returns (uint256) {
-        console.log('getPositionRewards 0');
         uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
+        uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-        console.log('getPositionRewards 1');
+        require(unlockEpoch != 0 && currentEpoch >= unlockEpoch, "Position still locked");
         console.log('startingEpoch', startingEpoch);
         console.log('currentEpoch', currentEpoch);
         uint256 totalRewards = 0;
 
 
-        // get rewards up through previous epoch
-        for(uint256 i=startingEpoch;i<currentEpoch-1;i++) {
+        // add up total rewards for a position up until unlock epoch -1
+        for(uint256 i=startingEpoch;i<unlockEpoch;i++) {
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, address(this));
             console.log('balance at epoch', i, balanceAtEpoch);
             if(balanceAtEpoch == 0) continue;
@@ -219,10 +220,11 @@ contract CvxLockManager is OwnableUpgradeable {
             uint256 positionLockRatio = (positionAmount * 10 ** 18) / balanceAtEpoch;
             console.log('positionLockRatio', positionLockRatio);
 
-            console.log('rewardsClaimed[i]', rewardsClaimed[i]);
+            console.log('rewardsClaimed[i]', rewardsClaimed[i], i);
             totalRewards += positionLockRatio * rewardsClaimed[i];
             console.log('totalRewards', totalRewards);
         }
+        console.log('returning rewards', totalRewards);
         return totalRewards;
     }
 
