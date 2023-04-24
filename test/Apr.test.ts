@@ -10,9 +10,9 @@ describe.only("Apr Example", async () => {
     // get all past stake events
     const events = await getAllStakeEvents();
 
-    // get the first event at least 7 days old
-    // if no events > 7 days old it returns the oldest event
-    const event = await getEventForApr(events, 60 * 60 * 24 * 7);
+    // get the first event at least 3 weeks old
+    // if no events > 3 weeks old it returns the oldest event
+    const event = await getEventForApr(events, 60 * 60 * 24 * 3 * 7);
 
     // calculate apr between event and now
     const apr = await getAprFromEvent(event);
