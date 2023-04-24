@@ -265,7 +265,7 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     // TODO implement
-    function claimCrvRewards() private {}
+    function claimCrvRewards(uint256 _maxSlippage) private {}
 
     // claim vlCvx rewards and convert to eth
     function claimvlCvxRewards(uint256 _maxSlippage) private {
