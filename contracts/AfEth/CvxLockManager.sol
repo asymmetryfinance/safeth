@@ -123,13 +123,12 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     // claim vlCvx locker rewards and crv pool rewards
-    // convert to eth
-
-    // TODO claim crv pool rewards
+    // convert to eth and set claimed amounts for each epoch so we can what users are owed during withdraw
     function claimRewards() private {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
+        claimCrvRewards();
         claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
