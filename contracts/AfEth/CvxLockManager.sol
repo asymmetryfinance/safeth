@@ -2,17 +2,54 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/convex/ILockedCvx.sol";
+import "./interfaces/convex/IClaimZap.sol";
+import "../interfaces/curve/ICvxFxsFxsPool.sol";
+import "../interfaces/curve/IFxsEthPool.sol";
+import "../interfaces/curve/ICvxCrvCrvPool.sol";
+import "../interfaces/curve/ICrvEthPool.sol";
 
-contract CvxLockManager {
+import "hardhat/console.sol";
+
+contract CvxLockManager is OwnableUpgradeable {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+
+    address public constant FXS_ETH_CRV_POOL_ADDRESS =
+        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
+    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
+        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
+    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
+        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
+    address public constant CRV_ETH_CRV_POOL_ADDRESS =
+        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
+    address public constant CVX_ETH_CRV_POOL_ADDRESS =
+        0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
+
+    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+
+    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
 
     // last epoch in which relock was called
     uint256 public lastRelockEpoch;
 
     // cvx amount we cant relock because users have closed the positions and can now withdraw
     uint256 public cvxToLeaveUnlocked;
+
+    // how much total rewards was claimed by the lock manager on each epoch
+    mapping(uint256 => uint256) public rewardsClaimed;
+
+    // what is the last epoch for which rewards have been fully claimed
+    uint256 lastEpochFullyClaimed;
+
+    // rewards that were claimed but not in a completed epoch
+    // they are included with the next call to claimRewards()
+    uint256 leftoverRewards;
+
 
     struct CvxPosition {
         address owner;
@@ -33,6 +70,7 @@ contract CvxLockManager {
         address owner
     ) internal {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        if(lastEpochFullyClaimed == 0) lastEpochFullyClaimed = currentEpoch - 1;
 
         cvxPositions[positionId].cvxAmount = cvxAmount;
         cvxPositions[positionId].open = true;
@@ -81,8 +119,46 @@ contract CvxLockManager {
 
         IERC20(CVX).approve(vlCVX, cvxAmountToRelock);
         ILockedCvx(vlCVX).lock(address(this), cvxAmountToRelock, 0);
-
         lastRelockEpoch = currentEpoch;
+    }
+
+    // claim vlCvx locker rewards and crv pool rewards
+    // convert to eth
+
+    // TODO claim crv pool rewards
+    function claimRewards() private {
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+
+        uint256 balanceBeforeClaim = address(this).balance;
+        claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
+        uint256 balanceAfterClaim = address(this).balance;
+        uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
+
+        // special case if claimRewards is called a second time in same epoch
+        if(lastEpochFullyClaimed == currentEpoch - 1) {
+            leftoverRewards += amountClaimed;
+            return;
+        }
+
+        (uint256 _unused1, uint256 firstUnclaimedEpochStartingTime) = ILockedCvx(vlCVX).epochs((lastEpochFullyClaimed + 1));
+        (uint256 _unused2, uint256 currentEpochStartingTime) = ILockedCvx(vlCVX).epochs(currentEpoch);
+
+        // % of claimed rewards that go to the current (incomplete) epoch
+        uint256 currentEpochRewardRatio = ((block.timestamp - currentEpochStartingTime) * 10 ** 18) / (block.timestamp - firstUnclaimedEpochStartingTime);
+
+        // how much of the claimed rewards go to the current (incomplete) epoch
+        uint256 currentEpochReward = (currentEpochRewardRatio * amountClaimed) / 10 ** 18;
+
+        uint256 completedEpochsRewardsOwed = (amountClaimed - currentEpochReward);
+        uint256 unclaimedCompletedEpochCount = (currentEpoch - 1) - (lastEpochFullyClaimed+1);
+        uint256 rewardsPerCompletedEpoch = completedEpochsRewardsOwed / unclaimedCompletedEpochCount;
+
+        for(uint256 i=lastEpochFullyClaimed+1;i<currentEpoch;i++) {
+            rewardsClaimed[i] = rewardsPerCompletedEpoch;
+        }
+
+        lastEpochFullyClaimed = currentEpoch - 1;
+        leftoverRewards = currentEpochReward;
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
@@ -138,10 +214,132 @@ contract CvxLockManager {
             ),
             "Couldnt transfer"
         );
+
+        claimRewards();
+        uint256 rewardsOwed = getPositionRewards(positionId);
+        console.log('rewardsOwed', rewardsOwed);
+        // TODO send rewards to position owner
         cvxPositions[positionId].cvxAmount = 0;
     }
 
     function getCurrentEpoch() public view returns (uint256) {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
+    }
+
+    // uitility function to calculate owed rewards for a position as if its being closed now
+    // maybe doesnt need to be its own function but easier to think about like this for now
+    function getPositionRewards(uint256 positionId) public view returns (uint256) {
+        uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
+        uint256 positionAmount = cvxPositions[positionId].cvxAmount;
+        uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        require(unlockEpoch != 0 && currentEpoch >= unlockEpoch, "Position still locked");
+        uint256 totalRewards = 0;
+
+        // add up total rewards for a position up until unlock epoch -1
+        for(uint256 i=startingEpoch;i<unlockEpoch;i++) {
+            uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(i, address(this));
+            if(balanceAtEpoch == 0) continue;
+            uint256 positionLockRatio = (positionAmount * 10 ** 18) / balanceAtEpoch;
+            totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
+        }
+        return totalRewards;
+    }
+
+    // TODO implement
+    function claimCrvRewards() private {
+
+    }
+
+    // claim vlCvx rewards and convert to eth
+    function claimvlCvxRewards(uint256 _maxSlippage) private {
+        address[] memory emptyArray;
+        IClaimZap(cvxClaimZap).claimRewards(
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            emptyArray,
+            0,
+            0,
+            0,
+            0,
+            8
+        );
+        // cvxFxs -> fxs
+        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
+        if (cvxFxsBalance > 0) {
+            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+
+            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxFxsBalance,
+                minOut
+            );
+        }
+
+        // fxs -> eth
+        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+        if (fxsBalance > 0) {
+            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+
+            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+
+            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+
+            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                fxsBalance,
+                minOut
+            );
+        }
+        // cvxCrv -> crv
+        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
+        if (cvxCrvBalance > 0) {
+            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
+                .get_dy(1, 0, 10 ** 18);
+            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
+                1,
+                0,
+                cvxCrvBalance,
+                minOut
+            );
+        }
+
+        // crv -> eth
+        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        if (crvBalance > 0) {
+            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
+                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+
+            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                crvBalance,
+                minOut
+            );
+        }
+
+        return;
     }
 }

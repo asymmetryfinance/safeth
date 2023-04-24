@@ -37,22 +37,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
-    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
-    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
-    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
 
-    address public constant FXS_ETH_CRV_POOL_ADDRESS =
-        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
-    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
-        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
-    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
-        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
-    address public constant CRV_ETH_CRV_POOL_ADDRESS =
-        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-    address public constant CVX_ETH_CRV_POOL_ADDRESS =
-        0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
@@ -125,11 +110,12 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
         uint256 id = positionId;
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
+
         lockCvx(cvxAmount, id, msg.sender);
 
-        uint256 safEthAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
-            0
-        ); // TODO: add min amount
+        uint256 safEthAmount = ISafEth(safEth).stake{
+            value: ethAmountForSafEth
+        }(0);
         uint256 mintAmount = safEthAmount / 2; // TODO: dust will be left over from rounding
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
@@ -152,6 +138,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
+        console.log('inside unstake');
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
@@ -167,6 +154,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             // transfer ETH to user minus fee for unlock
             // fee schedule:
         } else {
+            console.log('about to request unlock');
             requestUnlockCvx(id, msg.sender);
         }
 
