@@ -1,6 +1,6 @@
 import { WebhookClient } from "discord.js";
 import { BigNumber } from "ethers";
-import hre, { upgrades, ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 async function main() {
   const webhookClient = new WebhookClient({
