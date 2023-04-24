@@ -330,6 +330,11 @@ describe.only("AfEth (CvxLockManager)", async function () {
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
 
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const initialStakeEpoch = (await vlCvxContract.epochCount()).sub(1);
+    console.log('initialStakeEpoch', initialStakeEpoch);
     // open position (0)
 
     tx = await cvxStrategy.stake({ value: depositAmount });
@@ -344,10 +349,8 @@ describe.only("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position (0)
-    console.log('about to unstake0');
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
-    console.log('unstaked0');
 
     const leaveUnlocked0 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance0 = await cvx.balanceOf(cvxStrategy.address);
@@ -364,9 +367,6 @@ describe.only("AfEth (CvxLockManager)", async function () {
     await tx.wait();
     const leaveUnlocked1 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance1 = await cvx.balanceOf(cvxStrategy.address);
-
-    console.log('leaveUnlocked1', leaveUnlocked1);
-    console.log('cvxBalance1', cvxBalance1);
 
     // relocking after 8 weeks wont have anything to hold unlocked yet
     expect(leaveUnlocked1).eq(cvxBalance1).eq(0);
