@@ -22,6 +22,9 @@ async function main() {
   let wstEthPrice = await wstEth.ethPerDerivative();
   let rethPrice = await reth.ethPerDerivative();
   let sfrxEthPrice = await sfrxEth.ethPerDerivative();
+
+  console.log("Monitoring SafEth price...");
+
   while (true) {
     const newSafEthPrice = await safEth.approxPrice();
     const newWstEthPrice = await wstEth.ethPerDerivative();
@@ -64,7 +67,6 @@ async function main() {
       webhookClient.send("newSfrxEthPrice: " + newSfrxEthPrice.toString());
       webhookClient.send("oldSfrxEthPrice: " + sfrxEthPrice.toString());
     }
-    console.log("ping");
     safEthPrice = newSafEthPrice;
     wstEthPrice = newWstEthPrice;
     rethPrice = newRethPrice;
