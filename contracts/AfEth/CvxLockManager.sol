@@ -226,7 +226,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
         uint256 rewardsOwed = getPositionRewards(positionId);
 
-        if(address(this).balance < rewardsOwed) claimRewards();
+        if (address(this).balance < rewardsOwed) claimRewards();
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: rewardsOwed}("");
