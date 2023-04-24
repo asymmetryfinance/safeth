@@ -127,9 +127,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
         lockCvx(cvxAmount, id, msg.sender);
 
-        uint256 safEthAmount = ISafEth(safEth).stake{
-            value: ethAmountForSafEth
-        }(0); // TODO: add min amount
+        uint256 safEthAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
+            0
+        ); // TODO: add min amount
         uint256 mintAmount = safEthAmount / 2; // TODO: dust will be left over from rounding
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
