@@ -333,10 +333,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
 
-    const initialStakeEpoch = (await vlCvxContract.epochCount()).sub(1);
-    console.log('initialStakeEpoch', initialStakeEpoch);
     // open position (0)
-
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
@@ -427,6 +424,8 @@ describe("AfEth (CvxLockManager)", async function () {
     // withdraw the first position
     tx = await cvxStrategy.withdrawCvx(0);
     await tx.wait();
+
+    // TODO finish this test and add more tests around rewards
     return;
 
     const leaveUnlocked44 = await cvxStrategy.cvxToLeaveUnlocked();
