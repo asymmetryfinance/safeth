@@ -55,9 +55,7 @@ describe("SafEth", function () {
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await resetToBlock(Number(process.env.BLOCK_NUMBER));
   });
 
   describe("Large Amounts", function () {
