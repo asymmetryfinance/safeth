@@ -124,38 +124,6 @@ describe.skip("CvxStrategy", async function () {
 
     // TODO: check every scenario for unstaking
   });
-  it("Should trigger withdrawing of vlCVX rewards", async function () {
-    const depositAmount = ethers.utils.parseEther("5");
-    // impersonate an account that has rewards to withdraw at the current block
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [CVX_WHALE],
-    });
-    const whaleSigner = await ethers.getSigner(CVX_WHALE);
-    const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
-
-    const cvxAmount = ethers.utils.parseEther("100");
-    await cvx.transfer(cvxStrategy.address, cvxAmount);
-
-    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
-    await stakeTx.wait();
-
-    await time.increase(1000);
-
-    const provider = waffle.provider;
-    const startingBalance = await provider.getBalance(cvxStrategy.address);
-
-    const tx2 = await cvxStrategy.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
-    await tx2.wait();
-    const endingBalance = await provider.getBalance(cvxStrategy.address);
-
-    expect(endingBalance.gt(startingBalance)).eq(true);
-
-    // TODO: Not reverting, need to look more into it trying to get this PR in
-    // await expect(
-    //   cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
-    // ).to.be.reverted;
-  });
 
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent

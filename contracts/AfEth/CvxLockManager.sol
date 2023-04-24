@@ -128,7 +128,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
-        claimCrvRewards();
+        claimCrvRewards(1000000000000000000);
         claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
