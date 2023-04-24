@@ -64,7 +64,7 @@ async function main() {
       webhookClient.send("newSfrxEthPrice: " + newSfrxEthPrice.toString());
       webhookClient.send("oldSfrxEthPrice: " + sfrxEthPrice.toString());
     }
-
+    console.log("ping");
     safEthPrice = newSafEthPrice;
     wstEthPrice = newWstEthPrice;
     rethPrice = newRethPrice;
