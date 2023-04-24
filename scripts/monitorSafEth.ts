@@ -62,7 +62,7 @@ async function main() {
       console.error("SfrxEth price decreased");
       webhookClient.send("SfrxEth price decreased");
       webhookClient.send("newSfrxEthPrice: " + newSfrxEthPrice.toString());
-      webhookClient.send("oldSfrxEthPrice: " + sfrxEthPrice.toString();
+      webhookClient.send("oldSfrxEthPrice: " + sfrxEthPrice.toString());
     }
 
     safEthPrice = newSafEthPrice;
