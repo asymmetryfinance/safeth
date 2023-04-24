@@ -17,12 +17,11 @@ import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.skip("CvxStrategy", async function () {
+describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-  let initialHardhatBlock: number;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
@@ -42,9 +41,17 @@ describe.skip("CvxStrategy", async function () {
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: process.env.BLOCK_NUMBER,
+          },
+        },
+      ],
+    });
     const accounts = await ethers.getSigners();
     const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,

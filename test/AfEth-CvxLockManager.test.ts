@@ -13,7 +13,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.skip("AfEth (CvxLockManager)", async function () {
+describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -35,6 +35,7 @@ describe.skip("AfEth (CvxLockManager)", async function () {
 
     await afEth.setMinter(cvxStrategy.address);
   };
+  
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
