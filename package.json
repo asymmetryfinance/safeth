@@ -8,6 +8,7 @@
     "console": "yarn hardhat console",
     "coverage": "yarn hardhat coverage",
     "deploy": "yarn hardhat run scripts/deploy.ts",
+    "monitor:safEth": "yarn hardhat run scripts/monitorSafEth.ts",
     "lint": "yarn lint:ts && yarn lint:solidity && yarn lint:prettier",
     "lint:ts": "yarn eslint '**/*.{js,ts}'",
     "lint:solidity": "yarn solhint **/*.sol",
@@ -82,6 +83,7 @@
     "@openzeppelin/contracts": "^4.8.0",
     "@openzeppelin/contracts-upgradeable": "^4.8.1",
     "@openzeppelin/hardhat-upgrades": "^1.17.0",
-    "axios": "^0.27.2"
+    "axios": "^0.27.2",
+    "discord.js": "^14.9.0"
   }
 }
