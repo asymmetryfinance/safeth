@@ -157,7 +157,7 @@ contract CvxLockManager is OwnableUpgradeable {
             10 ** 18;
 
         uint256 completedEpochsRewardsOwed = (amountClaimed -
-            currentEpochReward);
+            currentEpochReward) + leftoverRewards;
         uint256 unclaimedCompletedEpochCount = (currentEpoch - 1) -
             (lastEpochFullyClaimed + 1);
         uint256 rewardsPerCompletedEpoch = completedEpochsRewardsOwed /
