@@ -30,7 +30,7 @@ async function main() {
     const newWstEthPrice = await wstEth.ethPerDerivative();
     const newRethPrice = await reth.ethPerDerivative();
     const newSfrxEthPrice = await sfrxEth.ethPerDerivative();
-    webhookClient.send("Webhook test");
+
     if (BigNumber.from(newSafEthPrice).lt(safEthPrice)) {
       console.log("newSafEthPrice", newSafEthPrice.toString());
       console.log("oldSafEthPrice", safEthPrice.toString());
