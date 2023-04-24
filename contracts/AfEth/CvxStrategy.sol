@@ -138,7 +138,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
-        console.log('inside unstake');
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
@@ -154,7 +153,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             // transfer ETH to user minus fee for unlock
             // fee schedule:
         } else {
-            console.log('about to request unlock');
             requestUnlockCvx(id, msg.sender);
         }
 
