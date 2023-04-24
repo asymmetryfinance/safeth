@@ -47,7 +47,7 @@ describe("CvxStrategy", async function () {
         {
           forking: {
             jsonRpcUrl: process.env.MAINNET_URL,
-            blockNumber: process.env.BLOCK_NUMBER,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
           },
         },
       ],
@@ -87,7 +87,7 @@ describe("CvxStrategy", async function () {
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
   });
-  it.skip("Should stake", async function () {
+  it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -98,8 +98,8 @@ describe("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1753573896811820076";
+    const cvxBalance = "508354031579118550620";
+    const crvPoolBalance = "1747636431031518475";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 
@@ -158,10 +158,9 @@ describe("CvxStrategy", async function () {
 
     expect(endingBalance.gt(startingBalance)).eq(true);
 
-    // TODO: Not reverting, need to look more into it trying to get this PR in
-    // await expect(
-    //   cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
-    // ).to.be.reverted;
+    await expect(
+      cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
+    ).to.be.reverted;
   });
 
   it("Should return correct asym ratio values", async function () {

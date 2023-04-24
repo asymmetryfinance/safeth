@@ -35,7 +35,6 @@ describe("AfEth (CvxLockManager)", async function () {
 
     await afEth.setMinter(cvxStrategy.address);
   };
-  
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
