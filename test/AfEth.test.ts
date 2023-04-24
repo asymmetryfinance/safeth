@@ -146,7 +146,7 @@ describe.skip("CvxStrategy", async function () {
     const provider = waffle.provider;
     const startingBalance = await provider.getBalance(cvxStrategy.address);
 
-    const tx2 = await cvxStrategy.claimRewards(); //  1% slippage tolerance when claiming
+    const tx2 = await cvxStrategy.claimRewards();
     await tx2.wait();
     const endingBalance = await provider.getBalance(cvxStrategy.address);
 
