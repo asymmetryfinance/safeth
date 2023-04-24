@@ -226,8 +226,10 @@ contract CvxLockManager is OwnableUpgradeable {
 
         claimRewards();
         uint256 rewardsOwed = getPositionRewards(positionId);
-        console.log("rewardsOwed", rewardsOwed);
-        // TODO send rewards to position owner
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: rewardsOwed}("");
+        require(sent, "Failed to send Ether");
+
         cvxPositions[positionId].cvxAmount = 0;
     }
 
@@ -235,11 +237,9 @@ contract CvxLockManager is OwnableUpgradeable {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 
-    // uitility function to calculate owed rewards for a position as if its being closed now
-    // maybe doesnt need to be its own function but easier to think about like this for now
     function getPositionRewards(
         uint256 positionId
-    ) public view returns (uint256) {
+    ) private view returns (uint256) {
         uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
         uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
