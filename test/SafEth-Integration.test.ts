@@ -1,5 +1,5 @@
 import { SafEth } from "../typechain-types";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
 import {
   getAdminAccount,
@@ -31,6 +31,17 @@ describe("SafEth Integration Test", function () {
     startingBalances = await getUserBalances();
     networkFeesPerAccount = startingBalances.map(() => BigNumber.from(0));
     totalStakedPerAccount = startingBalances.map(() => BigNumber.from(0));
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
   });
 
   it("Should deploy the strategy contract", async function () {

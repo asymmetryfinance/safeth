@@ -17,12 +17,11 @@ import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.skip("CvxStrategy", async function () {
+describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-  let initialHardhatBlock: number;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
@@ -42,9 +41,17 @@ describe.skip("CvxStrategy", async function () {
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
     const accounts = await ethers.getSigners();
     const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,
@@ -80,7 +87,7 @@ describe.skip("CvxStrategy", async function () {
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
   });
-  it.skip("Should stake", async function () {
+  it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -91,8 +98,8 @@ describe.skip("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1753573896811820076";
+    const cvxBalance = "508354031579118550620";
+    const crvPoolBalance = "1747636431031518475";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 

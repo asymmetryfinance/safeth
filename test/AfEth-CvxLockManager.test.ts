@@ -446,7 +446,7 @@ describe("AfEth (CvxLockManager)", async function () {
 
     // withdrawing will put cvxToLeaveUnlocked back to 0
     expect(leaveUnlocked6).eq(cvxBalance6).eq(0);
-    expect(userCvxBalance).eq("945366510947598686191");
+    expect(userCvxBalance).eq("1013695380270086180407");
   });
 
   it("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
