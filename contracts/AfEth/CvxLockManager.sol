@@ -124,7 +124,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
     // claim vlCvx locker rewards and crv pool rewards
     // convert to eth and set claimed amounts for each epoch so we can what users are owed during withdraw
-    function claimRewards() private {
+    function claimRewards() public {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
@@ -224,8 +224,10 @@ contract CvxLockManager is OwnableUpgradeable {
             "Couldnt transfer"
         );
 
-        claimRewards();
         uint256 rewardsOwed = getPositionRewards(positionId);
+
+        if(address(this).balance < rewardsOwed) claimRewards();
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: rewardsOwed}("");
         require(sent, "Failed to send Ether");
