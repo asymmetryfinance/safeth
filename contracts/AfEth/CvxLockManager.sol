@@ -9,8 +9,12 @@ import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
+import "../interfaces/ISnapshotDelegationRegistry.sol";
 
 contract CvxLockManager is OwnableUpgradeable {
+
+    address public constant SNAPSHOT_DELEGATE_REGISTRY = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
 
@@ -42,11 +46,11 @@ contract CvxLockManager is OwnableUpgradeable {
     mapping(uint256 => uint256) public rewardsClaimed;
 
     // what is the last epoch for which rewards have been fully claimed
-    uint256 lastEpochFullyClaimed;
+    uint256 public lastEpochFullyClaimed;
 
     // rewards that were claimed but not in a completed epoch
     // they are included with the next call to claimRewards()
-    uint256 leftoverRewards;
+    uint256 public leftoverRewards;
 
     struct CvxPosition {
         address owner;
@@ -63,6 +67,23 @@ contract CvxLockManager is OwnableUpgradeable {
 
     uint256 maxSlippage;
 
+    function initializeLockManager() internal {
+        // Assumes AfEth contract owns the vote locked convex
+        // This will need to be done elseware if other contracts own or wrap the vote locked convex
+        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
+        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
+            vlCvxVoteDelegationId,
+            owner()
+        );
+
+        lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+
+        maxSlippage = 10 ** 16; // 1%
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        if (lastEpochFullyClaimed == 0)
+            lastEpochFullyClaimed = currentEpoch - 1;
+    }
+
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
         maxSlippage = _maxSlippage;
     }
@@ -73,8 +94,6 @@ contract CvxLockManager is OwnableUpgradeable {
         address owner
     ) internal {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-        if (lastEpochFullyClaimed == 0)
-            lastEpochFullyClaimed = currentEpoch - 1;
 
         cvxPositions[positionId].cvxAmount = cvxAmount;
         cvxPositions[positionId].open = true;

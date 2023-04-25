@@ -12,7 +12,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.only("AfEth (CvxLockManager Rewards)", async function () {
+describe("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -102,10 +102,37 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     const ethReceived = balanceAfter.sub(balanceBefore).add(networkFee);
     expect(ethReceived.gt(0));
   });
+  it("Should increase strategy contract eth balance when claimRewards() is called", async function () {
+    // TODO
+  });
   it("Should cost less gas to call withdrawCvxAndRewards() if claimRewards() was already called in the same epoch", async function () {
     // TODO
   });
-  it("Should increase strategy contract eth balance when claimRewards() is called", async function () {
+  it("Should decrease strategy contract eth balance from previous claimRewards() calls when withdrawCvxAndRewards() is called", async function () {
+    // TODO
+  });
+  it("Should update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called for the first time in an epoch", async function () {
+    // TODO
+  });
+  it("Should not update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called more than once in the same epoch", async function () {
+    // TODO
+  });
+  it("Should set leftoverRewards higher when calling claimRewards() later in an epoch (for the first call in that epoch)", async function () {
+    // TODO
+  });
+  it("Should increase leftoverRewards if claimRewards is called more than once in the same epoch", async function () {
+    // TODO
+  });
+  it("Should award roughly same reward amount for 2 users that staked the same amount at the same time", async function () {
+    // TODO
+  });
+  it("Should award roughly twice as much if a user stakes twice as much as another user at the same time", async function () {
+    // TODO
+  });
+  it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
+    // TODO
+  });
+  it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
     // TODO
   });
 });

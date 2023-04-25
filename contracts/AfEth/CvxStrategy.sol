@@ -37,9 +37,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    address public constant SNAPSHOT_DELEGATE_REGISTRY =
-        0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
-
     address afEth;
     address crvPool;
     address safEth;
@@ -92,17 +89,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         crvEmissionsPerYear[9] = 68703820;
         crvEmissionsPerYear[10] = 57772796;
 
-        // Assumes AfEth contract owns the vote locked convex
-        // This will need to be done elseware if other contracts own or wrap the vote locked convex
-        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
-        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
-            vlCvxVoteDelegationId,
-            owner()
-        );
-
-        lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-
-        maxSlippage = 10 ** 16; // 1%
+        initializeLockManager();
     }
 
     function stake() external payable {
