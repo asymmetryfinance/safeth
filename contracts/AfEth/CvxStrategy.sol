@@ -16,7 +16,6 @@ import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
 import "./interfaces/ISafEth.sol";
 import "./interfaces/IAfEth.sol";
-import "hardhat/console.sol";
 import "./CvxLockManager.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {

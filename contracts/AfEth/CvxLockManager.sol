@@ -10,8 +10,6 @@ import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 
-import "hardhat/console.sol";
-
 contract CvxLockManager is OwnableUpgradeable {
     address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
@@ -256,22 +254,15 @@ contract CvxLockManager is OwnableUpgradeable {
         );
         uint256 totalRewards = 0;
 
-        console.log('getPositionRewards', positionId, startingEpoch, unlockEpoch);
-        console.log('positionAmount', positionAmount);
-        console.log('currentEpoch', currentEpoch);
         // add up total rewards for a position up until unlock epoch -1
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
-            console.log('i', i);
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
                 i,
                 address(this)
             );
-            console.log('balanceAtEpoch', balanceAtEpoch);
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
-            console.log('positionLockRatio', positionLockRatio);
-            console.log('rewardsClaimed[i]', rewardsClaimed[i]);
             totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
         }
         return totalRewards;
