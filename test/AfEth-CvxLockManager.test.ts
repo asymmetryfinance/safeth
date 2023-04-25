@@ -276,7 +276,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it.skip("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+  it("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -425,27 +425,25 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.withdrawCvx(0);
     await tx.wait();
 
-    // TODO finish this test and add more tests around rewards
+    const leaveUnlocked44 = await cvxStrategy.cvxToLeaveUnlocked();
+    const cvxBalance44 = await cvx.balanceOf(cvxStrategy.address);
+    const userCvxBalance44 = await cvx.balanceOf(accounts[0].address);
 
-    // const leaveUnlocked44 = await cvxStrategy.cvxToLeaveUnlocked();
-    // const cvxBalance44 = await cvx.balanceOf(cvxStrategy.address);
-    // const userCvxBalance44 = await cvx.balanceOf(accounts[0].address);
+    // withdrawing first position gives user first position amount & leaves some in contract
+    expect(leaveUnlocked44).eq(cvxBalance44).eq(position2.cvxAmount);
+    expect(userCvxBalance44).eq(position1.cvxAmount);
 
-    // // withdrawing first position gives user first position amount & leaves some in contract
-    // expect(leaveUnlocked44).eq(cvxBalance44).eq(position2.cvxAmount);
-    // expect(userCvxBalance44).eq(position1.cvxAmount);
+    // withdraw the second position
+    tx = await cvxStrategy.withdrawCvx(1);
+    await tx.wait();
 
-    // // withdraw the second position
-    // tx = await cvxStrategy.withdrawCvx(1);
-    // await tx.wait();
+    const leaveUnlocked6 = await cvxStrategy.cvxToLeaveUnlocked();
+    const cvxBalance6 = await cvx.balanceOf(cvxStrategy.address);
+    const userCvxBalance = await cvx.balanceOf(accounts[0].address);
 
-    // const leaveUnlocked6 = await cvxStrategy.cvxToLeaveUnlocked();
-    // const cvxBalance6 = await cvx.balanceOf(cvxStrategy.address);
-    // const userCvxBalance = await cvx.balanceOf(accounts[0].address);
-
-    // // withdrawing will put cvxToLeaveUnlocked back to 0
-    // expect(leaveUnlocked6).eq(cvxBalance6).eq(0);
-    // expect(userCvxBalance).eq("1013695380270086180407");
+    // withdrawing will put cvxToLeaveUnlocked back to 0
+    expect(leaveUnlocked6).eq(cvxBalance6).eq(0);
+    expect(userCvxBalance).eq("1013695380270086180407");
   });
 
   it("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {

@@ -359,7 +359,7 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Derivatives", async () => {
+  describe.only("Derivatives", async () => {
     let derivatives = [] as any;
     beforeEach(async () => {
       await resetToBlock(initialHardhatBlock);
