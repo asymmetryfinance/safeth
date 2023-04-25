@@ -85,7 +85,7 @@ contract SfrxEth is
         );
 
         uint256 minOut = (((ethPerDerivative() * _amount) / 1e18) *
-            (1e18 - maxSlippage)) / 1e18;
+            (1e18 - maxSlippage)) / 1e36;
 
         uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
