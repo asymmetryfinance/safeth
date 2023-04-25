@@ -163,7 +163,29 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     expect(networkFeeCheap).lt(networkFeeExpensive);
   });
   it("Should decrease strategy contract eth balance from previous claimRewards() calls when withdrawCvxAndRewards() is called", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    // close position
+    tx = await cvxStrategy.unstake(false, 0);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const balanceBefore = await ethers.provider.getBalance(cvxStrategy.address);
+    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    const balanceAfter = await ethers.provider.getBalance(cvxStrategy.address);
+    await tx.wait();
+    expect(balanceAfter).lt(balanceBefore);
   });
   it("Should update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called for the first time in an epoch", async function () {
     // TODO
