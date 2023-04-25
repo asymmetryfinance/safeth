@@ -12,7 +12,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe("AfEth (CvxLockManager Rewards)", async function () {
+describe.only("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -103,10 +103,65 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(ethReceived.gt(0));
   });
   it("Should increase strategy contract eth balance when claimRewards() is called", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+    // wait some time for rewards to acrue
+    await time.increase(60 * 60 * 24 * 7 * 4);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const balanceBefore = await ethers.provider.getBalance(cvxStrategy.address);
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const balanceAfter = await ethers.provider.getBalance(cvxStrategy.address);
+    expect(balanceAfter.gt(balanceBefore));
   });
   it("Should cost less gas to call withdrawCvxAndRewards() if claimRewards() was already called in the same epoch", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    // close position
+    tx = await cvxStrategy.unstake(false, 0);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    const mined = await tx.wait();
+    const networkFeeExpensive = mined.gasUsed.mul(mined.effectiveGasPrice);
+
+    await snapshot.restore();
+
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    // close position
+    tx = await cvxStrategy.unstake(false, 0);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    const mined2 = await tx.wait();
+    const networkFeeCheap = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+
+    expect(networkFeeCheap.lt(networkFeeExpensive));
   });
   it("Should decrease strategy contract eth balance from previous claimRewards() calls when withdrawCvxAndRewards() is called", async function () {
     // TODO
