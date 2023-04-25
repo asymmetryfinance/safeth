@@ -63,6 +63,12 @@ contract CvxLockManager is OwnableUpgradeable {
     // epoch at which amount should be unlocked
     mapping(uint256 => uint256) public unlockSchedule;
 
+    uint256 maxSlippage;
+
+    function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
+        maxSlippage = _maxSlippage;
+    }
+
     function lockCvx(
         uint256 cvxAmount,
         uint256 positionId,
@@ -128,8 +134,8 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
-        claimCrvRewards(1000000000000000000);
-        claimvlCvxRewards(1000000000000000000); // 100% slippage tolerance for testing. this slippage tolerance doesnt seem to be working anyway
+        claimCrvRewards();
+        claimvlCvxRewards();
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
@@ -223,10 +229,8 @@ contract CvxLockManager is OwnableUpgradeable {
             ),
             "Couldnt transfer"
         );
-
+        claimRewards();
         uint256 rewardsOwed = getPositionRewards(positionId);
-
-        if (address(this).balance < rewardsOwed) claimRewards();
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: rewardsOwed}("");
@@ -252,25 +256,32 @@ contract CvxLockManager is OwnableUpgradeable {
         );
         uint256 totalRewards = 0;
 
+        console.log('getPositionRewards', positionId, startingEpoch, unlockEpoch);
+        console.log('positionAmount', positionAmount);
+        console.log('currentEpoch', currentEpoch);
         // add up total rewards for a position up until unlock epoch -1
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
+            console.log('i', i);
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
                 i,
                 address(this)
             );
+            console.log('balanceAtEpoch', balanceAtEpoch);
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
+            console.log('positionLockRatio', positionLockRatio);
+            console.log('rewardsClaimed[i]', rewardsClaimed[i]);
             totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
         }
         return totalRewards;
     }
 
     // TODO implement
-    function claimCrvRewards(uint256 _maxSlippage) private {}
+    function claimCrvRewards() private {}
 
     // claim vlCvx rewards and convert to eth
-    function claimvlCvxRewards(uint256 _maxSlippage) private {
+    function claimvlCvxRewards() private {
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,
@@ -289,7 +300,7 @@ contract CvxLockManager is OwnableUpgradeable {
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
 
             IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
             ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
@@ -309,7 +320,7 @@ contract CvxLockManager is OwnableUpgradeable {
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
 
             IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
@@ -328,7 +339,7 @@ contract CvxLockManager is OwnableUpgradeable {
             uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
             IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
             ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
@@ -347,7 +358,7 @@ contract CvxLockManager is OwnableUpgradeable {
                 10 ** 18
             );
             uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
 
             IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
             ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(

@@ -102,6 +102,8 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         );
 
         lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+
+        maxSlippage = 10 ** 16; // 1%
     }
 
     function stake() external payable {
