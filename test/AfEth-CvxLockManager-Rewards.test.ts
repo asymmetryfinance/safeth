@@ -100,7 +100,7 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
     const balanceAfter = await ethers.provider.getBalance(accounts[0].address);
     const ethReceived = balanceAfter.sub(balanceBefore).add(networkFee);
-    expect(ethReceived.gt(0));
+    expect(ethReceived).gt(0);
   });
   it("Should increase strategy contract eth balance when claimRewards() is called", async function () {
     let tx;
@@ -119,7 +119,7 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
     const balanceAfter = await ethers.provider.getBalance(cvxStrategy.address);
-    expect(balanceAfter.gt(balanceBefore));
+    expect(balanceAfter).gt(balanceBefore);
   });
   it("Should cost less gas to call withdrawCvxAndRewards() if claimRewards() was already called in the same epoch", async function () {
     let tx;
@@ -160,8 +160,7 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.withdrawCvxAndRewards(0);
     const mined2 = await tx.wait();
     const networkFeeCheap = mined2.gasUsed.mul(mined2.effectiveGasPrice);
-
-    expect(networkFeeCheap.lt(networkFeeExpensive));
+    expect(networkFeeCheap).lt(networkFeeExpensive);
   });
   it("Should decrease strategy contract eth balance from previous claimRewards() calls when withdrawCvxAndRewards() is called", async function () {
     // TODO
