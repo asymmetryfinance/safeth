@@ -202,7 +202,7 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     // Try to withdraw cvx from a closed position
-    function withdrawCvx(uint256 positionId) public {
+    function withdrawCvxAndRewards(uint256 positionId) public {
         require(
             cvxPositions[positionId].startingEpoch > 0,
             "Invalid positionId"
@@ -227,12 +227,7 @@ contract CvxLockManager is OwnableUpgradeable {
             ),
             "Couldnt transfer"
         );
-        claimRewards();
-        uint256 rewardsOwed = getPositionRewards(positionId);
-
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: rewardsOwed}("");
-        require(sent, "Failed to send Ether");
+        withdrawRewards(positionId);
 
         cvxPositions[positionId].cvxAmount = 0;
     }
@@ -241,13 +236,15 @@ contract CvxLockManager is OwnableUpgradeable {
         return ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 
-    function getPositionRewards(
-        uint256 positionId
-    ) private view returns (uint256) {
+    function withdrawRewards(uint256 positionId) private {
+        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+
+        // only claim rewards if needed
+        if (lastEpochFullyClaimed < currentEpoch - 1) claimRewards();
+
         uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
         uint256 positionAmount = cvxPositions[positionId].cvxAmount;
         uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         require(
             unlockEpoch != 0 && currentEpoch >= unlockEpoch,
             "Position still locked"
@@ -265,7 +262,9 @@ contract CvxLockManager is OwnableUpgradeable {
                 balanceAtEpoch;
             totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
         }
-        return totalRewards;
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: totalRewards}("");
+        require(sent, "Failed to send Ether");
     }
 
     // TODO implement

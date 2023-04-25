@@ -77,7 +77,7 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     await snapshot.restore();
   });
 
-  it("Should withdraw owed rewards when withdrawCvx() is called", async function () {
+  it("Should withdraw owed rewards when withdrawCvxAndRewards() is called", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -95,11 +95,17 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     const balanceBefore = await ethers.provider.getBalance(accounts[0].address);
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(0);
     const mined = await tx.wait();
     const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
     const balanceAfter = await ethers.provider.getBalance(accounts[0].address);
     const ethReceived = balanceAfter.sub(balanceBefore).add(networkFee);
     expect(ethReceived.gt(0));
+  });
+  it("Should cost less gas to call withdrawCvxAndRewards() if claimRewards() was already called in the same epoch", async function () {
+    // TODO
+  });
+  it("Should increase strategy contract eth balance when claimRewards() is called", async function () {
+    // TODO
   });
 });
