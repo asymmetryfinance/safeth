@@ -84,7 +84,9 @@ describe("AfEth (CvxLockManager)", async function () {
     const tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith("Not closed");
+    await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
+      "Not closed"
+    );
   });
 
   it("Should fail to withdraw cvx from a position that has closed but not yet unlocked", async function () {
