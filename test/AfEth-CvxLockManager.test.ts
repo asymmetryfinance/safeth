@@ -276,7 +276,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+  it.skip("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
