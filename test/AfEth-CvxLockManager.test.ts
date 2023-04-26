@@ -12,6 +12,7 @@ import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
+import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
 
 describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
@@ -221,14 +222,7 @@ describe("AfEth (CvxLockManager)", async function () {
 
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
-  const getCurrentEpoch = async () => {
-    const accounts = await ethers.getSigners();
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    const currentBlock = await ethers.provider.getBlock("latest");
-    const currentBlockTime = currentBlock.timestamp;
-    return vlCvxContract.findEpochId(currentBlockTime);
-  };
-  // TODO look into this test
+
   it("Should fail to withdraw 1 minute before unlock epoch and succeed after unlock epoch has started", async function () {
     let tx;
     const accounts = await ethers.getSigners();
@@ -236,10 +230,8 @@ describe("AfEth (CvxLockManager)", async function () {
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
 
-    // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
 
-    // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
 

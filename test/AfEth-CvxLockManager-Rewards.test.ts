@@ -11,6 +11,7 @@ import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
+import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
 
 describe("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
@@ -187,14 +188,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     await tx.wait();
     expect(balanceAfter).lt(balanceBefore);
   });
-
-  const getCurrentEpoch = async () => {
-    const accounts = await ethers.getSigners();
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    const currentBlock = await ethers.provider.getBlock("latest");
-    const currentBlockTime = currentBlock.timestamp;
-    return vlCvxContract.findEpochId(currentBlockTime);
-  };
 
   it("Should update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called for the first time in an epoch and a full epoch has passed since staking", async function () {
     let tx;
