@@ -235,7 +235,52 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(rewardsClaimedAfter).gt(rewardsClaimedBefore);
   });
   it("Should not update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called more than once in the same epoch", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+    const currentEpochData = await vlCvxContract.epochs(
+      await getCurrentEpoch()
+    );
+    const currentEpochStartTime = currentEpochData.date;
+
+    const epochDuration = 60 * 60 * 24 * 7;
+    const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
+      epochDuration
+    );
+
+    await time.increaseTo(nextEpochStartTime);
+
+    await time.increase(epochDuration);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    const rewardsClaimedBefore = await cvxStrategy.rewardsClaimed(
+      (await getCurrentEpoch()) - 1
+    );
+    const lastEpochFullyClaimedBefore =
+      await cvxStrategy.lastEpochFullyClaimed();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const lastEpochFullyClaimedAfter =
+      await cvxStrategy.lastEpochFullyClaimed();
+
+    const rewardsClaimedAfter = await cvxStrategy.rewardsClaimed(
+      (await getCurrentEpoch()) - 1
+    );
+    expect(lastEpochFullyClaimedAfter).eq(lastEpochFullyClaimedBefore);
+    expect(rewardsClaimedAfter).eq(rewardsClaimedBefore);
   });
   it("Should set leftoverRewards higher when calling claimRewards() later in an epoch (for the first call in that epoch)", async function () {
     // TODO
