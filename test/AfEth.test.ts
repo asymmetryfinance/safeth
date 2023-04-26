@@ -85,7 +85,10 @@ describe("CvxStrategy", async function () {
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
   });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
