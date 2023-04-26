@@ -22,7 +22,7 @@ dotenv.config();
  */
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    version: "0.8.13",
     settings: {
       optimizer: {
         enabled: true,
@@ -42,21 +42,16 @@ const config: HardhatUserConfig = {
     verbose: false, // If set to true, will display this config object on start and the full error object
   },
   networks: {
-    mainnet: {
-      url: process.env.MAINNET_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-    },
     hardhat: {
-      // chainId: 1, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
+      chainId: 1234, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
       allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: process.env.MNEMONIC,
       },
       forking: {
         url: process.env.MAINNET_URL || "",
-        // blockNumber: 17070569,
-        // enabled: true, // Set to false to disable forked mainnet mode
+        blockNumber: 16871866,
+        enabled: true, // Set to false to disable forked mainnet mode
       },
     },
     goerli: {
@@ -73,8 +68,9 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: process.env.MAINNET_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
   },
   paths: {
@@ -101,12 +97,11 @@ const config: HardhatUserConfig = {
     runOnCompile: true,
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
     currency: "USD",
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-    customChains: [],
   },
   mocha: {
     timeout: 130000,
