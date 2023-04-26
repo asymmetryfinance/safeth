@@ -343,7 +343,41 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const leftoverRewards0 = await cvxStrategy.leftoverRewards();
 
     // set to 1 minute after next epoch starts
-    await time.increaseTo(nextEpochStartTime.add(60));
+    await time.increaseTo(nextEpochStartTime.add(600));
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const leftoverRewards1 = await cvxStrategy.leftoverRewards();
+
+    expect(leftoverRewards0).gt(leftoverRewards1);
+  });
+  it("Should increase leftoverRewards when claimRewards() is called early in an epoch and then late in the next", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    const currentEpochData = await vlCvxContract.epochs(
+      await getCurrentEpoch()
+    );
+    const currentEpochStartTime = BigNumber.from(currentEpochData.date);
+    const nextEpochStartTime = currentEpochStartTime.add(60 * 60 * 24 * 7);
+
+    // increase time 1 hour
+    await time.increase(60 * 60);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const leftoverRewards0 = await cvxStrategy.leftoverRewards();
+
+    await time.increaseTo(nextEpochStartTime.add(60 * 60 * 24 * 6));
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
@@ -352,7 +386,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     await tx.wait();
     const leftoverRewards1 = await cvxStrategy.leftoverRewards();
 
-    expect(leftoverRewards0).lt(leftoverRewards1);
+    expect(leftoverRewards1).gt(leftoverRewards0);
   });
   it("Should award roughly same reward amount for 2 users that staked the same amount at the same time", async function () {
     // TODO

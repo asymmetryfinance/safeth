@@ -11,6 +11,8 @@ import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
 
+import "hardhat/console.sol";
+
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
@@ -81,7 +83,7 @@ contract CvxLockManager is OwnableUpgradeable {
         maxSlippage = 10 ** 16; // 1%
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         if (lastEpochFullyClaimed == 0)
-            lastEpochFullyClaimed = currentEpoch;
+            lastEpochFullyClaimed = currentEpoch - 1;
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -156,7 +158,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
         // special case if claimRewards is called a second time in same epoch
-        if (lastEpochFullyClaimed >= currentEpoch - 1) {
+        if (lastEpochFullyClaimed == currentEpoch - 1) {
             leftoverRewards += amountClaimed;
             return;
         }
