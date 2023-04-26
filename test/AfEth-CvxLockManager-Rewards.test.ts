@@ -282,10 +282,39 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(lastEpochFullyClaimedAfter).eq(lastEpochFullyClaimedBefore);
     expect(rewardsClaimedAfter).eq(rewardsClaimedBefore);
   });
-  it("Should set leftoverRewards higher when calling claimRewards() later in an epoch (for the first call in that epoch)", async function () {
-    // TODO
+  it("Should increase leftoverRewards when claimRewards is called before a full epoch has passed", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+    // wait some time for rewards to acrue but not a full epoch
+    await time.increase(60 * 60 * 24 * 3);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const leftoverRewards0 = await cvxStrategy.leftoverRewards();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    const leftoverRewards1 = await cvxStrategy.leftoverRewards();
+
+    // wait some time for rewards to acrue but not a full epoch
+    await time.increase(60 * 60 * 24 * 3);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    const leftoverRewards2 = await cvxStrategy.leftoverRewards();
+
+    expect(leftoverRewards0).lt(leftoverRewards1).lt(leftoverRewards2);
   });
-  it("Should increase leftoverRewards if claimRewards is called more than once in the same epoch", async function () {
+  it("Should decrease leftoverRewards when claimRewards() is called late in an epoch and then early in the next", async function () {
     // TODO
   });
   it("Should award roughly same reward amount for 2 users that staked the same amount at the same time", async function () {
