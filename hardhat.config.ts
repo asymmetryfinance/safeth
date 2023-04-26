@@ -42,16 +42,21 @@ const config: HardhatUserConfig = {
     verbose: false, // If set to true, will display this config object on start and the full error object
   },
   networks: {
+    mainnet: {
+      url: process.env.MAINNET_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     hardhat: {
-      chainId: 1234, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
+      // chainId: 1, // Intentionally set to an "unknown" so openzeppelin upgrades doesn't think forked local is mainnet
       allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: process.env.MNEMONIC,
       },
       forking: {
         url: process.env.MAINNET_URL || "",
-        blockNumber: 17070569,
-        enabled: true, // Set to false to disable forked mainnet mode
+        // blockNumber: 17070569,
+        // enabled: true, // Set to false to disable forked mainnet mode
       },
     },
     goerli: {
