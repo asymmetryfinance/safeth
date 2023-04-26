@@ -12,7 +12,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.only("AfEth (CvxLockManager Rewards)", async function () {
+describe("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -187,8 +187,59 @@ describe.only("AfEth (CvxLockManager Rewards)", async function () {
     await tx.wait();
     expect(balanceAfter).lt(balanceBefore);
   });
-  it("Should update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called for the first time in an epoch", async function () {
-    // TODO
+
+  const getCurrentEpoch = async () => {
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const currentBlock = await ethers.provider.getBlock("latest");
+    const currentBlockTime = currentBlock.timestamp;
+    return vlCvxContract.findEpochId(currentBlockTime);
+  };
+
+  it("Should update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called for the first time in an epoch and a full epoch has passed since staking", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+    const currentEpochData = await vlCvxContract.epochs(
+      await getCurrentEpoch()
+    );
+    const currentEpochStartTime = currentEpochData.date;
+
+    const epochDuration = 60 * 60 * 24 * 7;
+    const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
+      epochDuration
+    );
+
+    await time.increaseTo(nextEpochStartTime);
+
+    await time.increase(epochDuration);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    const rewardsClaimedBefore = await cvxStrategy.rewardsClaimed(
+      (await getCurrentEpoch()) - 1
+    );
+    const lastEpochFullyClaimedBefore =
+      await cvxStrategy.lastEpochFullyClaimed();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const lastEpochFullyClaimedAfter =
+      await cvxStrategy.lastEpochFullyClaimed();
+
+    const rewardsClaimedAfter = await cvxStrategy.rewardsClaimed(
+      (await getCurrentEpoch()) - 1
+    );
+    expect(lastEpochFullyClaimedAfter).gt(lastEpochFullyClaimedBefore);
+    expect(rewardsClaimedAfter).gt(rewardsClaimedBefore);
   });
   it("Should not update rewardsClaimed & lastEpochFullyClaimed if claimRewards() is called more than once in the same epoch", async function () {
     // TODO

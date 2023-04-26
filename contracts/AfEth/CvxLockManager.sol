@@ -81,7 +81,7 @@ contract CvxLockManager is OwnableUpgradeable {
         maxSlippage = 10 ** 16; // 1%
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         if (lastEpochFullyClaimed == 0)
-            lastEpochFullyClaimed = currentEpoch - 1;
+            lastEpochFullyClaimed = currentEpoch;
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -94,7 +94,6 @@ contract CvxLockManager is OwnableUpgradeable {
         address owner
     ) internal {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-
         cvxPositions[positionId].cvxAmount = cvxAmount;
         cvxPositions[positionId].open = true;
         cvxPositions[positionId].owner = owner;
@@ -157,7 +156,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
         // special case if claimRewards is called a second time in same epoch
-        if (lastEpochFullyClaimed == currentEpoch - 1) {
+        if (lastEpochFullyClaimed >= currentEpoch - 1) {
             leftoverRewards += amountClaimed;
             return;
         }
@@ -180,8 +179,8 @@ contract CvxLockManager is OwnableUpgradeable {
 
         uint256 completedEpochsRewardsOwed = (amountClaimed -
             currentEpochReward) + leftoverRewards;
-        uint256 unclaimedCompletedEpochCount = (currentEpoch - 1) -
-            (lastEpochFullyClaimed + 1);
+        uint256 unclaimedCompletedEpochCount = currentEpoch - lastEpochFullyClaimed - 1;
+
         uint256 rewardsPerCompletedEpoch = completedEpochsRewardsOwed /
             unclaimedCompletedEpochCount;
 

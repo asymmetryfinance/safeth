@@ -222,6 +222,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
+  // TODO look into this test
   it("Should fail to withdraw 1 minute before unlock epoch and succeed after unlock epoch has started", async function () {
     let tx;
     const accounts = await ethers.getSigners();
@@ -236,6 +237,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
 
+    // TODO look into this line it makes no sense
     const nextEpoch = (await vlCvxContract.epochCount()).sub(1);
 
     const nextEpochStartTime = BigNumber.from(
