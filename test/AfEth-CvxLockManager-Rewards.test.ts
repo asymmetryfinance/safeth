@@ -315,7 +315,44 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(leftoverRewards0).lt(leftoverRewards1).lt(leftoverRewards2);
   });
   it("Should decrease leftoverRewards when claimRewards() is called late in an epoch and then early in the next", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+    // open position
+    tx = await cvxStrategy.stake({ value: depositAmount });
+
+    const currentEpochData = await vlCvxContract.epochs(
+      await getCurrentEpoch()
+    );
+    const currentEpochStartTime = currentEpochData.date;
+
+    const epochDuration = 60 * 60 * 24 * 7;
+    const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
+      epochDuration
+    );
+
+    // set to 1 minute before next epoch starts
+    await time.increaseTo(nextEpochStartTime.sub(60));
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const leftoverRewards0 = await cvxStrategy.leftoverRewards();
+
+    // set to 1 minute after next epoch starts
+    await time.increaseTo(nextEpochStartTime.add(60));
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+    const leftoverRewards1 = await cvxStrategy.leftoverRewards();
+
+    expect(leftoverRewards0).lt(leftoverRewards1);
   });
   it("Should award roughly same reward amount for 2 users that staked the same amount at the same time", async function () {
     // TODO
