@@ -69,7 +69,10 @@ describe("AfEth (CvxLockManager)", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
 
     snapshot = await takeSnapshot();
   });
@@ -276,36 +279,30 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it.skip("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+  it("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
-    console.log(1);
+
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(2);
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
-    console.log(3);
     // wait 10 more lock durations
-
     await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
-
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvx(1);
     const mined = await tx.wait();
     const gasUsedWithoutRelock = mined.gasUsed;
-    console.log(4);
+
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(5);
-
     // close position
-    tx = await cvxStrategy.unstake(false, 1);
+    tx = await cvxStrategy.unstake(false, 2);
     await tx.wait();
 
     // wait 10 more lock durations
@@ -315,8 +312,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await cvxStrategy.relockCvx();
-
-    tx = await cvxStrategy.withdrawCvx(1);
+    tx = await cvxStrategy.withdrawCvx(2);
     const mined2 = await tx.wait();
     const gasUsedWithRelock = mined2.gasUsed;
 

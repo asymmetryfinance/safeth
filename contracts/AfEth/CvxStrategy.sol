@@ -119,7 +119,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
     }
 
-    function stake() external payable {
+    function stake() public payable {
+        require(crvPool != address(0), "Pool not initialized");
+
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
         uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
@@ -271,9 +273,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         IAfEthPool(_pool).remove_liquidity(_amount, min_amounts);
     }
 
-    function updateCrvPool(address _crvPool) public onlyOwner {
+    function updateCrvPool(address _crvPool) external payable onlyOwner {
+        require(msg.value > 0, "Must seed pool");
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
+        this.stake{value: msg.value}();
     }
 
     function claimRewards(uint256 _maxSlippage) public onlyOwner {
