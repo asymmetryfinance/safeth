@@ -70,8 +70,6 @@ contract CvxLockManager is OwnableUpgradeable {
     uint256 maxSlippage;
 
     function initializeLockManager() internal {
-        // Assumes AfEth contract owns the vote locked convex
-        // This will need to be done elseware if other contracts own or wrap the vote locked convex
         bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
         ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
             vlCvxVoteDelegationId,
