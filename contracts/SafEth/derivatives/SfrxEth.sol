@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IFrxEthEthPool.sol";
 import "../../interfaces/frax/IFrxETHMinter.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
+import "hardhat/console.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
@@ -28,6 +29,7 @@ contract SfrxEth is
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
+    uint256 public underlyingBalance;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -67,6 +69,7 @@ contract SfrxEth is
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        underlyingBalance = underlyingBalance - _amount;
         uint256 frxEthBalanceBefore = IERC20(FRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -94,6 +97,7 @@ contract SfrxEth is
             frxEthReceived,
             minOut
         );
+
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
         // solhint-disable-next-line
@@ -116,7 +120,9 @@ contract SfrxEth is
         uint256 sfrxBalancePost = IERC20(SFRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
-        return sfrxBalancePost - sfrxBalancePre;
+        uint256 updatedBalance = sfrxBalancePost - sfrxBalancePre;
+        underlyingBalance = underlyingBalance + updatedBalance;
+        return updatedBalance;
     }
 
     /**
@@ -143,7 +149,7 @@ contract SfrxEth is
         @notice - Total derivative balance
      */
     function balance() public view returns (uint256) {
-        return IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
+        return underlyingBalance;
     }
 
     receive() external payable {}

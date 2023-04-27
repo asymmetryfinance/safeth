@@ -19,6 +19,7 @@ import { WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { getUserAccounts } from "./helpers/integrationHelpers";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -392,6 +393,71 @@ describe("SafEth", function () {
       ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
+    });
+    it("Should not be able to steal funds by sending derivative tokens", async function () {
+      const strategy = await getLatestContract(safEthProxy.address, "SafEth");
+      const userAccounts = await getUserAccounts();
+
+      const userStrategySigner = strategy.connect(userAccounts[0]);
+      const userStrategySigner2 = strategy.connect(userAccounts[1]);
+      const ethAmount = "100";
+      const depositAmount = ethers.utils.parseEther(ethAmount);
+
+      const stakeResult = await userStrategySigner.stake(0, {
+        value: depositAmount,
+      });
+
+      const userSfEthBalance = await strategy.balanceOf(
+        userAccounts[0].address
+      );
+      const userSfWithdraw = userSfEthBalance.sub(1);
+
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [WSTETH_WHALE],
+      });
+      const whaleSigner = await ethers.getSigner(WSTETH_WHALE);
+      const erc20 = new ethers.Contract(
+        WSTETH_ADDRESS,
+        ERC20.abi,
+        userAccounts[0]
+      );
+
+      const derivative = derivatives[2].address;
+
+      // remove all but 1 sfToken
+      await userStrategySigner.unstake(userSfWithdraw, 0);
+
+      const erc20Whale = erc20.connect(whaleSigner);
+      const erc20Amount = ethers.utils.parseEther("10");
+
+      // transfer tokens directly to the derivative (done by attacker)
+      await erc20Whale.transfer(derivative, erc20Amount);
+
+      // NEW USER ENTERS
+      const ethAmount2 = "1.5";
+      const depositAmount2 = ethers.utils.parseEther(ethAmount2);
+
+      await userStrategySigner2.stake(0, {
+        value: depositAmount2,
+      });
+
+      await stakeResult.wait();
+
+      const userSafEthBalance2 = await strategy.balanceOf(
+        userAccounts[1].address
+      );
+      expect(userSafEthBalance2).gt(0);
+
+      // attacker has 1 sfToken
+      const attakcerSafEthBalance = await strategy.balanceOf(
+        userAccounts[0].address
+      );
+      expect(attakcerSafEthBalance).eq(1);
+
+      // total supply is gt 1.
+      const totalSupply = await strategy.totalSupply();
+      expect(totalSupply).gt(1);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
