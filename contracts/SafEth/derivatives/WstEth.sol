@@ -28,6 +28,7 @@ contract WstEth is
         AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
     uint256 public maxSlippage;
+    uint256 public underlyingBalance;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -66,6 +67,7 @@ contract WstEth is
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        underlyingBalance = underlyingBalance - _amount;
         uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
         require(stEthAmount > 0, "No stETH to unwrap");
 
@@ -92,6 +94,8 @@ contract WstEth is
         require(sent, "Failed to send Ether");
         uint256 wstEthBalancePost = IWStETH(WST_ETH).balanceOf(address(this));
         uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
+        underlyingBalance = underlyingBalance + wstEthAmount;
+
         return (wstEthAmount);
     }
 
@@ -112,7 +116,7 @@ contract WstEth is
         @notice - Total derivative balance
      */
     function balance() external view returns (uint256) {
-        return IERC20(WST_ETH).balanceOf(address(this));
+        return underlyingBalance;
     }
 
     receive() external payable {}

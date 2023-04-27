@@ -33,6 +33,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
 
     uint256 public maxSlippage;
+    uint256 public underlyingBalance;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -108,6 +109,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _amount - amount of rETH to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
         if (canWithdrawFromRocketPool(_amount)) {
             RocketTokenRETHInterface(rethAddress()).burn(_amount);
@@ -163,6 +165,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             address(this)
         );
         uint256 amountSwapped = rethBalanceAfter - rethBalanceBefore;
+        underlyingBalance = underlyingBalance + amountSwapped;
         return amountSwapped;
     }
 
@@ -179,7 +182,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Total derivative balance
      */
     function balance() external view returns (uint256) {
-        return IERC20(rethAddress()).balanceOf(address(this));
+        return underlyingBalance;
     }
 
     receive() external payable {}
