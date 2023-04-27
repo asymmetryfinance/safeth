@@ -5,8 +5,8 @@ import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
 import { wstEthAbi } from "../test/abi/WstEthAbi";
 
 const webhookClient = new WebhookClient({
-  id: "1100096574140448858",
-  token: "iA4trJu9OlcNyn3SslgUmHH0mVrd9xjozqXUDlMkhJKXHeE-uA0Nmq2Ej_j__UWtXfdA",
+  id: process.env.MONITOR_WEBHOOK_ID ?? "",
+  token: process.env.MONITOR_WEBHOOK_TOKEN ?? "",
 });
 
 const previousPriceData: Record<string, BigNumber> = {};
