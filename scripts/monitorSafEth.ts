@@ -1,5 +1,7 @@
 import { WebhookClient } from "discord.js";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
+import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
 
 async function main() {
   const webhookClient = new WebhookClient({
@@ -24,6 +26,10 @@ async function main() {
     "SfrxEth",
     "0x1eD84a676f3ba626389cB131e7c1bc32935bbA37"
   );
+  const chainLinkStEthEthFeed = await ethers.getContractAt(
+    "asdfdf",
+    "0x86392dC19c0b719886221c78AB11eb8Cf5c52812"
+  );
 
   console.log("Monitoring For Changes");
 
@@ -31,10 +37,10 @@ async function main() {
 
   const notifyChange = (message: string) => {
     console.log(message);
-    webhookClient.send(message);
+//    webhookClient.send(message);
   };
 
-  const checkForChange = async (data: Record<string, string>) => {
+  const checkForPriceDrop = async (data: Record<string, string>) => {
     console.log(
       "checkForChange",
       data,
@@ -46,7 +52,7 @@ async function main() {
       const key = keys[i];
       const value = data[key];
       const previousValue = previousData ? previousData[key] : undefined;
-      if (previousValue !== value)
+      if (BigNumber.from(previousValue).gt(value))
         notifyChange(`${key} changed from ${previousValue} to ${value}`);
     }
     previousData = { ...data };
@@ -57,14 +63,14 @@ async function main() {
     const wstEthPrice = await wstEthDerivative.ethPerDerivative();
     const rethPrice = await rethDerivative.ethPerDerivative();
     const sfrxEthPrice = await sfrxEthDerivative.ethPerDerivative();
-    const safEthTotalSupply = await safEth.totalSupply();
+    const stEthEthPrice = await chainLinkStEthEthFeed.latestRoundData();
 
-    checkForChange({
+    console.log('stEthEthPrice', stEthEthPrice.toString());
+    checkForPriceDrop({
       safEthPrice: safEthPrice.toString(),
       wstEthPrice: wstEthPrice.toString(),
       rethPrice: rethPrice.toString(),
       sfrxEthPrice: sfrxEthPrice.toString(),
-      safEthTotalSupply: safEthTotalSupply.toString(),
     });
 
     await new Promise((resolve) => setTimeout(resolve, 10000));
