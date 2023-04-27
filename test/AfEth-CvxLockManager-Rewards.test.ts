@@ -388,10 +388,10 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     expect(leftoverRewards1).gt(leftoverRewards0);
   });
-  it("Should award roughly same reward amount for 2 users that staked the same amount at the same time", async function () {
+  it("Should award roughly same reward amount for 2 users that staked the same amoun", async function () {
     // TODO
   });
-  it("Should award roughly twice as much if a user stakes twice as much as another user at the same time", async function () {
+  it("Should award roughly twice as much if a user stakes twice as much as another user", async function () {
     // TODO
   });
   it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
