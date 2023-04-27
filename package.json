@@ -8,7 +8,7 @@
     "console": "yarn hardhat console",
     "coverage": "yarn hardhat coverage",
     "deploy": "yarn hardhat run scripts/deploy.ts",
-    "monitor:safEth": "yarn hardhat run scripts/monitorSafEth.ts",
+    "monitor:safEth": "yarn hardhat run scripts/monitorSafEthHealth.ts",
     "lint": "yarn lint:ts && yarn lint:solidity && yarn lint:prettier",
     "lint:ts": "yarn eslint '**/*.{js,ts}'",
     "lint:solidity": "yarn solhint **/*.sol",
