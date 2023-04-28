@@ -440,7 +440,53 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(within1Percent(ethReceived1, ethReceived2)).eq(true);
   });
   it("Should award roughly twice as much if a user stakes twice as much as another user", async function () {
-    // TODO
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("1");
+
+    const cvxStrategyInitialize = cvxStrategy.connect(accounts[0]);
+    // open a position forever (account 0). This is required so we can unstake others because of bug in curve pool
+    tx = await cvxStrategyInitialize.stake({ value: depositAmount });
+
+    const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
+    const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
+
+    tx = await cvxStrategy1.stake({ value: depositAmount });
+    await tx.wait();
+    tx = await cvxStrategy2.stake({ value: depositAmount.mul(2) });
+    await tx.wait();
+
+    // close position (account 0)
+    tx = await cvxStrategy1.unstake(false, 1);
+    await tx.wait();
+    tx = await cvxStrategy2.unstake(false, 2);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    const balanceBefore1 = await ethers.provider.getBalance(
+      accounts[1].address
+    );
+
+    tx = await cvxStrategy1.withdrawCvxAndRewards(1);
+    const mined1 = await tx.wait();
+    const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+    const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
+    const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
+
+    const balanceBefore2 = await ethers.provider.getBalance(
+      accounts[2].address
+    );
+    tx = await cvxStrategy2.withdrawCvxAndRewards(2);
+    const mined2 = await tx.wait();
+    const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+    const balanceAfter2 = await ethers.provider.getBalance(accounts[2].address);
+    const ethReceived2 = balanceAfter2.sub(balanceBefore2).add(networkFee2);
+
+    expect(within1Percent(ethReceived1, ethReceived2.div(2))).eq(true);
   });
   it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
     // TODO
