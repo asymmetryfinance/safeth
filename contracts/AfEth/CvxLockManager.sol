@@ -144,14 +144,17 @@ contract CvxLockManager is OwnableUpgradeable {
         lastRelockEpoch = currentEpoch;
     }
 
+    function sweepRewards() private {
+        claimCrvRewards();
+        claimvlCvxRewards();
+    }
     // claim vlCvx locker rewards and crv pool rewards
     // convert to eth and set claimed amounts for each epoch so we can what users are owed during withdraw
     function claimRewards() public {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
-        claimCrvRewards();
-        claimvlCvxRewards();
+        sweepRewards();
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
         console.log('amountClaimed', amountClaimed);
@@ -238,7 +241,7 @@ contract CvxLockManager is OwnableUpgradeable {
         );
 
         // relock if havent yet for this epochCount
-        // enusres there will be enough unlocked cvx to withdraw
+        // ensures there will be enough unlocked cvx to withdraw
         relockCvx();
 
         cvxToLeaveUnlocked -= cvxPositions[positionId].cvxAmount;
