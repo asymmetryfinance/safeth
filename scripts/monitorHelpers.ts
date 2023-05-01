@@ -1,6 +1,6 @@
 import { WebhookClient } from "discord.js";
 import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
 import { wstEthAbi } from "../test/abi/WstEthAbi";
 
@@ -22,7 +22,7 @@ export const notifyOnPriceDrop = async (
       ? previousPriceData[key]
       : undefined;
     if (previousValue?.gt(value)) {
-      const message = `${key} dropped from ${previousValue} to ${value}`;
+      const message = `${key} dropped from ${previousValue} to ${value} @ block ${await hre.ethers.provider.getBlockNumber()}`;
       console.log(message);
       webhookClient.send(message);
     }
