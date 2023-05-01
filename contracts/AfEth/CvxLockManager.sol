@@ -136,7 +136,7 @@ contract CvxLockManager {
                 cvxPositions[positionId].owner,
                 cvxPositions[positionId].cvxAmount
             ),
-            "Couldnt transfer"
+            "Couldn't transfer"
         );
         cvxPositions[positionId].cvxAmount = 0;
     }

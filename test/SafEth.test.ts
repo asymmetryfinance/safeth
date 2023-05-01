@@ -90,7 +90,7 @@ describe("SafEth", function () {
       );
     });
     it("Should fail with wrong min/max", async function () {
-      let depositAmount = ethers.utils.parseEther(".2");
+      let depositAmount = ethers.utils.parseEther(".002");
       await expect(
         safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too low");
