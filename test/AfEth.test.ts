@@ -11,17 +11,24 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
-import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
+import {
+  AfEth,
+  SafEth,
+  CvxStrategy,
+  ExtraRewardsStream,
+} from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
+import { epochDuration } from "./helpers/lockManagerHelpers";
 
 describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
+  let extraRewardStream: ExtraRewardsStream;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
@@ -30,10 +37,18 @@ describe("CvxStrategy", async function () {
     afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
     await afEth.deployed();
 
+    const ExtraRewardStreamFactory = await ethers.getContractFactory(
+      "ExtraRewardsStream"
+    );
+    extraRewardStream =
+      (await ExtraRewardStreamFactory.deploy()) as ExtraRewardsStream;
+    await extraRewardStream.deployed();
+
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
     cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
       safEth.address,
       afEth.address,
+      extraRewardStream.address,
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
@@ -86,6 +101,13 @@ describe("CvxStrategy", async function () {
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+
+    // 4 lock periods. 64
+    const tx = await extraRewardStream.reset(
+      epochDuration * 64,
+      cvxStrategy.address
+    );
+    await tx.wait();
   });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
@@ -99,7 +121,7 @@ describe("CvxStrategy", async function () {
       cvxStrategy.address
     );
     const cvxBalance = "508354031579118550620";
-    const crvPoolBalance = "1747636431031518475";
+    const crvPoolBalance = "1747636431031518476";
 
     expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
 

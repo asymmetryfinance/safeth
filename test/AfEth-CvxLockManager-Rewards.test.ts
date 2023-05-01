@@ -5,7 +5,12 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import { AfEth, CvxStrategy, SafEth } from "../typechain-types";
+import {
+  AfEth,
+  CvxStrategy,
+  SafEth,
+  ExtraRewardsStream,
+} from "../typechain-types";
 import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
@@ -19,18 +24,30 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
+  let extraRewardStream: ExtraRewardsStream;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
 
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
+    const AfEthFactory = await ethers.getContractFactory("AfEth");
+    afEth = (await AfEthFactory.deploy(
+      "Asymmetry Finance ETH",
+      "afETh"
+    )) as AfEth;
     await afEth.deployed();
+
+    const ExtraRewardStreamFactory = await ethers.getContractFactory(
+      "ExtraRewardsStream"
+    );
+    extraRewardStream =
+      (await ExtraRewardStreamFactory.deploy()) as ExtraRewardsStream;
+    await extraRewardStream.deployed();
 
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
     cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
       safEth.address,
       afEth.address,
+      extraRewardStream.address,
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
@@ -72,6 +89,17 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const afEthCrvPoolAddress = await crvAddress.minter();
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
 
+    await accounts[0].sendTransaction({
+      to: extraRewardStream.address,
+      value: ethers.utils.parseEther("10.0"),
+    });
+
+    // 4 lock periods. 64
+    const tx = await extraRewardStream.reset(
+      epochDuration * 64,
+      cvxStrategy.address
+    );
+    await tx.wait();
     snapshot = await takeSnapshot();
   });
 

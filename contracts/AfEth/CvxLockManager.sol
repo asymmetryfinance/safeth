@@ -10,6 +10,7 @@ import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
+import "../mocks/IExtraStream.sol";
 
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
@@ -67,7 +68,9 @@ contract CvxLockManager is OwnableUpgradeable {
 
     uint256 maxSlippage;
 
-    function initializeLockManager() internal {
+    address public rewardsStream;
+
+    function initializeLockManager(address _rewardsStream) internal {
         bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
         ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
             vlCvxVoteDelegationId,
@@ -78,8 +81,8 @@ contract CvxLockManager is OwnableUpgradeable {
 
         maxSlippage = 10 ** 16; // 1%
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
-        if (lastEpochFullyClaimed == 0)
-            lastEpochFullyClaimed = currentEpoch - 1;
+        lastEpochFullyClaimed = currentEpoch - 1;
+        rewardsStream = _rewardsStream;
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -145,6 +148,11 @@ contract CvxLockManager is OwnableUpgradeable {
     function sweepRewards() private {
         claimCrvRewards();
         claimvlCvxRewards();
+        claimExtraRewards();
+    }
+
+    function claimExtraRewards() private {
+        IExtraStream(rewardsStream).claim();
     }
 
     // claim vlCvx locker rewards and crv pool rewards

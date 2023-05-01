@@ -6,19 +6,25 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import { AfEth, CvxStrategy, SafEth } from "../typechain-types";
+import {
+  AfEth,
+  CvxStrategy,
+  ExtraRewardsStream,
+  SafEth,
+} from "../typechain-types";
 import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
-import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { epochDuration, getCurrentEpoch } from "./helpers/lockManagerHelpers";
 
 describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
+  let extraRewardStream: ExtraRewardsStream;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
@@ -27,10 +33,18 @@ describe("AfEth (CvxLockManager)", async function () {
     afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
     await afEth.deployed();
 
+    const ExtraRewardStreamFactory = await ethers.getContractFactory(
+      "ExtraRewardsStream"
+    );
+    extraRewardStream =
+      (await ExtraRewardStreamFactory.deploy()) as ExtraRewardsStream;
+    await extraRewardStream.deployed();
+
     const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
     cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
       safEth.address,
       afEth.address,
+      extraRewardStream.address,
     ])) as CvxStrategy;
     await cvxStrategy.deployed();
 
@@ -71,6 +85,13 @@ describe("AfEth (CvxLockManager)", async function () {
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+
+    // 4 lock periods. 64
+    const tx = await extraRewardStream.reset(
+      epochDuration * 64,
+      cvxStrategy.address
+    );
+    await tx.wait();
 
     snapshot = await takeSnapshot();
   });
