@@ -101,22 +101,20 @@ describe("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "508354031579118550620";
-    const crvPoolBalance = "1747636431031518475";
 
-    expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
+    expect(vlCvxBalance).eq(BigNumber.from("518490293350028363092"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq(crvPoolBalance);
-    expect(crvPoolEthAmount).eq(crvPoolBalance);
+    expect(crvPoolAfEthAmount).eq("1782589158984829093");
+    expect(crvPoolEthAmount).eq("1782589158984829093");
 
     // check position struct
-    const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
+    const positions = await cvxStrategy.positions(1);
+    expect(positions.afEthAmount).eq(BigNumber.from("1747636430364198726"));
+    expect(positions.curveBalance).eq(BigNumber.from("1747618953999895084"));
+    expect(positions.convexBalance).eq(BigNumber.from("508293514182321138011"));
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
@@ -128,7 +126,7 @@ describe("CvxStrategy", async function () {
     await stakeTx.wait();
     console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    const unstakeTx = await cvxStrategy.unstake(false, 0);
+    const unstakeTx = await cvxStrategy.unstake(false, 1);
     await unstakeTx.wait();
     console.log(await ethers.provider.getBalance(accounts[0].address));
 
