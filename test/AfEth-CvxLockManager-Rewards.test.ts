@@ -11,7 +11,7 @@ import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
-import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { epochDuration, getCurrentBlockTime, getCurrentEpoch, getCurrentEpochEndTime, getCurrentEpochStartTime } from "./helpers/lockManagerHelpers";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 
 describe("AfEth (CvxLockManager Rewards)", async function () {
@@ -208,7 +208,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     );
     const currentEpochStartTime = currentEpochData.date;
 
-    const epochDuration = 60 * 60 * 24 * 7;
+
     const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
       epochDuration
     );
@@ -253,7 +253,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     );
     const currentEpochStartTime = currentEpochData.date;
 
-    const epochDuration = 60 * 60 * 24 * 7;
     const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
       epochDuration
     );
@@ -329,7 +328,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     );
     const currentEpochStartTime = currentEpochData.date;
 
-    const epochDuration = 60 * 60 * 24 * 7;
     const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
       epochDuration
     );
@@ -367,7 +365,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       await getCurrentEpoch()
     );
     const currentEpochStartTime = BigNumber.from(currentEpochData.date);
-    const nextEpochStartTime = currentEpochStartTime.add(60 * 60 * 24 * 7);
+    const nextEpochStartTime = currentEpochStartTime.add(epochDuration);
 
     // increase time 1 hour
     await time.increase(60 * 60);
@@ -488,9 +486,100 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     expect(within1Percent(ethReceived1, ethReceived2.div(2))).eq(true);
   });
-  it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
+  it.only("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("1");
+
+    tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+
+    await time.increase(60 * 60 * 24 * 1);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+
+    console.log('getCurrentBlockTime', await getCurrentBlockTime());
+    console.log('getCurrentEpochStartTime', await getCurrentEpochStartTime());
+    console.log('getCurrentEpochEndTime', await getCurrentEpochEndTime());
+  });
+  it("Should be able to call claimRewards() multiple times or none and not effect rewards received from withdrawCvxAndRewards()", async function () {
     // TODO
   });
+
   it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
     // TODO
   });

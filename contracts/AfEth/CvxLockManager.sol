@@ -154,12 +154,14 @@ contract CvxLockManager is OwnableUpgradeable {
         claimvlCvxRewards();
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
-
+        console.log('amountClaimed', amountClaimed);
         // special case if claimRewards is called a second time in same epoch
         if (lastEpochFullyClaimed == currentEpoch - 1) {
             leftoverRewards += amountClaimed;
+            console.log('adding to leftover!!!!!!!!');
             return;
         }
+        console.log('not adding to leftover!!!!!!!!');
 
         (
             uint256 _unused1,
@@ -209,7 +211,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
         // position has been relocked since the originalUnlockEpoch passed
         // calculate its new unlock epoch
-        if (currentEpoch > originalUnlockEpoch) {
+        if (currentEpoch >= originalUnlockEpoch) {
             uint256 epochDifference = currentEpoch - originalUnlockEpoch;
             uint256 extraLockLengths = (epochDifference / 16) + 1;
             unlockEpoch = originalUnlockEpoch + extraLockLengths * 16;
@@ -257,6 +259,7 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function withdrawRewards(uint256 positionId) private {
+        console.log('withdraeing rewards for positionId: ', positionId);
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         // only claim rewards if needed
@@ -271,6 +274,9 @@ contract CvxLockManager is OwnableUpgradeable {
         );
         uint256 totalRewards = 0;
 
+        console.log('currentEpoch: ', currentEpoch);
+        console.log('startingEpoch: ', startingEpoch);
+        console.log('unlockEpoch: ', unlockEpoch);
         // add up total rewards for a position up until unlock epoch -1
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
@@ -292,6 +298,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
     // claim vlCvx rewards and convert to eth
     function claimvlCvxRewards() private {
+        console.log('claiming vlCVX rewards');
         address[] memory emptyArray;
         IClaimZap(cvxClaimZap).claimRewards(
             emptyArray,
