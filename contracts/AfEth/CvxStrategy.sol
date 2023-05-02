@@ -46,8 +46,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     struct Position {
         address owner; // owner of position
         uint256 curveBalance; // crv Pool LP amount
-        uint256 convexBalance; // cvx locked amount
-        uint256 afEthAmount; // afEth amount minted TODO: this may not be needed
+        uint256 afEthAmount; // afEth amount minted
         uint256 safEthAmount; // safEth amount minted
         uint256 createdAt; // block.timestamp
         bool claimed; // user has unstaked position
@@ -101,12 +100,12 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
-
         id = positionId;
+
         lockCvx(cvxAmount, id, msg.sender);
 
         uint256 safEthAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
-            0
+            0 // TODO: set minAmount
         );
         uint256 mintAmount = safEthAmount;
         IAfEth(afEth).mint(address(this), mintAmount);
@@ -120,7 +119,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         positions[id] = Position({
             owner: msg.sender,
             curveBalance: crvLpAmount,
-            convexBalance: cvxAmount,
             afEthAmount: mintAmount,
             safEthAmount: safEthAmount,
             createdAt: block.timestamp,
@@ -134,6 +132,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
+        require(position.owner == msg.sender, "not owner");
         position.claimed = true;
         if (_instantWithdraw) {
             // TODO: add instant withdraw function
@@ -148,14 +147,23 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         } else {
             requestUnlockCvx(id, msg.sender);
         }
-
+        uint256 ethBalanceBefore = address(this).balance;
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
+        uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
         withdrawCrvPool(crvPool, position.curveBalance);
         uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
+        uint256 safEthBalanceAfter = IERC20(safEth).balanceOf(address(this));
         uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
+        uint256 safEthBalance = safEthBalanceAfter - safEthBalanceBefore;
         IAfEth(afEth).burn(address(this), afEthBalance);
+        ISafEth(safEth).unstake(safEthBalance, 0); // TODO: add minOut
+        uint256 ethBalanceAfter = address(this).balance;
 
-        // TODO: send user eth
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{
+            value: ethBalanceAfter - ethBalanceBefore
+        }("");
+        require(sent, "Failed to send Ether");
         emit Unstaked(id, msg.sender);
     }
 

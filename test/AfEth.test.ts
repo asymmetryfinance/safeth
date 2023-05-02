@@ -122,7 +122,7 @@ describe("CvxStrategy", async function () {
     expect(positions.curveBalance).eq(BigNumber.from("1747618953999895084"));
     expect(positions.convexBalance).eq(BigNumber.from("508293514182321138011"));
   });
-  it("Should unstake", async function () {
+  it.only("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -138,7 +138,17 @@ describe("CvxStrategy", async function () {
 
     // TODO: check every scenario for unstaking
   });
+  it("Should fail unstake if not owner", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+    const userStrategySigner = cvxStrategy.connect(accounts[1]);
 
+    await expect(userStrategySigner.unstake(false, 2)).to.be.revertedWith(
+      "not owner"
+    );
+  });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // impersonate an account that has rewards to withdraw at the current block
