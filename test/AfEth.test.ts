@@ -90,6 +90,12 @@ describe("CvxStrategy", async function () {
       value: seedAmount,
     });
   });
+  it("Should seed CRV Pool", async function () {
+    const crvPoolBalance0 = await crvPool.balances(0);
+    expect(crvPoolBalance0).gt(0);
+    const crvPoolBalance1 = await crvPool.balances(1);
+    expect(crvPoolBalance1).gt(0);
+  });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");

@@ -7,20 +7,22 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
-import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/IClaimZap.sol";
+import "../interfaces/convex/ILockedCvx.sol";
+import "../interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
-import "./interfaces/ISafEth.sol";
-import "./interfaces/IAfEth.sol";
+import "../interfaces/ISafEth.sol";
+import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+    event Staked(uint256 indexed position, address indexed user);
+    event Unstaked(uint256 indexed position, address indexed user);
 
     mapping(uint256 => uint256) public crvEmissionsPerYear;
 
@@ -46,7 +48,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 curveBalance; // crv Pool LP amount
         uint256 convexBalance; // cvx locked amount
         uint256 afEthAmount; // afEth amount minted TODO: this may not be needed
-        uint256 safEthAmount; // afEth amount minted TODO: this may not be needed
+        uint256 safEthAmount; // safEth amount minted
         uint256 createdAt; // block.timestamp
         bool claimed; // user has unstaked position
     }
@@ -92,21 +94,21 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         initializeLockManager();
     }
 
-    function stake() public payable {
+    function stake() public payable returns (uint256 id) {
         require(crvPool != address(0), "Pool not initialized");
 
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
         uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
         uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
-        uint256 id = positionId;
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
 
+        id = positionId;
         lockCvx(cvxAmount, id, msg.sender);
 
         uint256 safEthAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0
         );
-        uint256 mintAmount = safEthAmount / 2; // TODO: dust will be left over from rounding
+        uint256 mintAmount = safEthAmount;
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
@@ -120,11 +122,12 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             curveBalance: crvLpAmount,
             convexBalance: cvxAmount,
             afEthAmount: mintAmount,
-            safEthAmount: mintAmount,
+            safEthAmount: safEthAmount,
             createdAt: block.timestamp,
             claimed: false
         });
         positionId++;
+        emit Staked(id, msg.sender);
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
@@ -153,6 +156,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         IAfEth(afEth).burn(address(this), afEthBalance);
 
         // TODO: send user eth
+        emit Unstaked(id, msg.sender);
     }
 
     function getAsymmetryRatio(
