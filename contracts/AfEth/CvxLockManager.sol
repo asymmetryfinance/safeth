@@ -246,7 +246,7 @@ contract CvxLockManager is OwnableUpgradeable {
                 cvxPositions[positionId].owner,
                 cvxPositions[positionId].cvxAmount
             ),
-            "Couldnt transfer"
+            "Couldn't transfer"
         );
         withdrawRewards(positionId);
 

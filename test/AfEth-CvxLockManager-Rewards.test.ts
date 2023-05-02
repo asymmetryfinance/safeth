@@ -70,8 +70,10 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
-
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
     snapshot = await takeSnapshot();
   });
 
@@ -90,7 +92,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     await tx.wait();
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     // wait 17 weeks
@@ -98,7 +100,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     const balanceBefore = await ethers.provider.getBalance(accounts[0].address);
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined = await tx.wait();
     const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
     const balanceAfter = await ethers.provider.getBalance(accounts[0].address);
@@ -134,14 +136,14 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     // wait 17 weeks
     await time.increase(60 * 60 * 24 * 7 * 17);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined = await tx.wait();
     const networkFeeExpensive = mined.gasUsed.mul(mined.effectiveGasPrice);
 
@@ -151,7 +153,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     // wait 17 weeks
@@ -160,7 +162,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined2 = await tx.wait();
     const networkFeeCheap = mined2.gasUsed.mul(mined2.effectiveGasPrice);
     expect(networkFeeCheap).lt(networkFeeExpensive);
@@ -175,7 +177,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     // wait 17 weeks
@@ -185,7 +187,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
     const balanceBefore = await ethers.provider.getBalance(cvxStrategy.address);
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const balanceAfter = await ethers.provider.getBalance(cvxStrategy.address);
     await tx.wait();
     expect(balanceAfter).lt(balanceBefore);
@@ -393,10 +395,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("1");
 
-    const cvxStrategyInitialize = cvxStrategy.connect(accounts[0]);
-    // open a position forever (account 0). This is required so we can unstake others because of bug in curve pool
-    tx = await cvxStrategyInitialize.stake({ value: depositAmount });
-
     const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
     const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
 
@@ -441,10 +439,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("1");
-
-    const cvxStrategyInitialize = cvxStrategy.connect(accounts[0]);
-    // open a position forever (account 0). This is required so we can unstake others because of bug in curve pool
-    tx = await cvxStrategyInitialize.stake({ value: depositAmount });
 
     const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
     const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
@@ -501,7 +495,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     await time.increase(epochDuration * 17);
@@ -513,7 +507,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[0].address
     );
 
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined0 = await tx.wait();
     const networkFee0 = mined0.gasUsed.mul(mined0.effectiveGasPrice);
     const balanceAfter0 = await ethers.provider.getBalance(accounts[0].address);
@@ -528,7 +522,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     await time.increase(epochDuration * 17);
@@ -540,7 +534,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[0].address
     );
 
-    tx = await cvxStrategy.withdrawCvxAndRewards(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined1 = await tx.wait();
     const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
     const balanceAfter1 = await ethers.provider.getBalance(accounts[0].address);

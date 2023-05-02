@@ -90,7 +90,7 @@ describe("SafEth", function () {
       );
     });
     it("Should fail with wrong min/max", async function () {
-      let depositAmount = ethers.utils.parseEther(".2");
+      let depositAmount = ethers.utils.parseEther(".002");
       await expect(
         safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too low");
@@ -171,6 +171,12 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
         "derivative index out of bounds"
@@ -255,6 +261,12 @@ describe("SafEth", function () {
   });
 
   describe("Owner functions", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEthProxy.setPauseStaking(true);
@@ -362,8 +374,7 @@ describe("SafEth", function () {
 
   describe("Derivatives", async () => {
     let derivatives = [] as any;
-    beforeEach(async () => {
-      await resetToBlock(initialHardhatBlock);
+    before(async () => {
       derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
@@ -393,6 +404,10 @@ describe("SafEth", function () {
       ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
     });
     it("Should not be able to steal funds by sending derivative tokens", async function () {
       const strategy = await getLatestContract(safEthProxy.address, "SafEth");
@@ -651,7 +666,6 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("1");
       const tx1 = await safEth2.stake(0, { value: depositAmount });
       await tx1.wait();
-
       const derivativeCount = await safEth2.derivativeCount();
 
       for (let i = 0; i < derivativeCount; i++) {
@@ -663,7 +677,6 @@ describe("SafEth", function () {
           adminAccount
         );
         const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
-
         // admin withdraw from the derivatives in case of emergency
         const tx2 = await safEth2.adminWithdrawDerivative(
           i,
