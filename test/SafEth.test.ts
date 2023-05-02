@@ -19,6 +19,7 @@ import { WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { getUserAccounts } from "./helpers/integrationHelpers";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -55,9 +56,7 @@ describe("SafEth", function () {
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await resetToBlock(Number(process.env.BLOCK_NUMBER));
   });
 
   describe("Large Amounts", function () {
@@ -91,7 +90,7 @@ describe("SafEth", function () {
       );
     });
     it("Should fail with wrong min/max", async function () {
-      let depositAmount = ethers.utils.parseEther(".2");
+      let depositAmount = ethers.utils.parseEther(".002");
       await expect(
         safEthProxy.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too low");
@@ -172,6 +171,12 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
         "derivative index out of bounds"
@@ -256,6 +261,12 @@ describe("SafEth", function () {
   });
 
   describe("Owner functions", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEthProxy.setPauseStaking(true);
@@ -363,8 +374,7 @@ describe("SafEth", function () {
 
   describe("Derivatives", async () => {
     let derivatives = [] as any;
-    beforeEach(async () => {
-      await resetToBlock(initialHardhatBlock);
+    before(async () => {
       derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
@@ -394,6 +404,75 @@ describe("SafEth", function () {
       ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+    it("Should not be able to steal funds by sending derivative tokens", async function () {
+      const strategy = await getLatestContract(safEthProxy.address, "SafEth");
+      const userAccounts = await getUserAccounts();
+
+      const userStrategySigner = strategy.connect(userAccounts[0]);
+      const userStrategySigner2 = strategy.connect(userAccounts[1]);
+      const ethAmount = "100";
+      const depositAmount = ethers.utils.parseEther(ethAmount);
+
+      const stakeResult = await userStrategySigner.stake(0, {
+        value: depositAmount,
+      });
+
+      const userSfEthBalance = await strategy.balanceOf(
+        userAccounts[0].address
+      );
+      const userSfWithdraw = userSfEthBalance.sub(1);
+
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [WSTETH_WHALE],
+      });
+      const whaleSigner = await ethers.getSigner(WSTETH_WHALE);
+      const erc20 = new ethers.Contract(
+        WSTETH_ADDRESS,
+        ERC20.abi,
+        userAccounts[0]
+      );
+
+      const derivative = derivatives[2].address;
+
+      // remove all but 1 sfToken
+      await userStrategySigner.unstake(userSfWithdraw, 0);
+
+      const erc20Whale = erc20.connect(whaleSigner);
+      const erc20Amount = ethers.utils.parseEther("10");
+
+      // transfer tokens directly to the derivative (done by attacker)
+      await erc20Whale.transfer(derivative, erc20Amount);
+
+      // NEW USER ENTERS
+      const ethAmount2 = "1.5";
+      const depositAmount2 = ethers.utils.parseEther(ethAmount2);
+
+      await userStrategySigner2.stake(0, {
+        value: depositAmount2,
+      });
+
+      await stakeResult.wait();
+
+      const userSafEthBalance2 = await strategy.balanceOf(
+        userAccounts[1].address
+      );
+      expect(userSafEthBalance2).gt(0);
+
+      // attacker has 1 sfToken
+      const attakcerSafEthBalance = await strategy.balanceOf(
+        userAccounts[0].address
+      );
+      expect(attakcerSafEthBalance).eq(1);
+
+      // total supply is gt 1.
+      const totalSupply = await strategy.totalSupply();
+      expect(totalSupply).gt(1);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
@@ -587,7 +666,6 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("1");
       const tx1 = await safEth2.stake(0, { value: depositAmount });
       await tx1.wait();
-
       const derivativeCount = await safEth2.derivativeCount();
 
       for (let i = 0; i < derivativeCount; i++) {
@@ -599,7 +677,6 @@ describe("SafEth", function () {
           adminAccount
         );
         const ethBalanceBeforeWithdraw = await adminAccount.getBalance();
-
         // admin withdraw from the derivatives in case of emergency
         const tx2 = await safEth2.adminWithdrawDerivative(
           i,

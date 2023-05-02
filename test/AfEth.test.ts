@@ -17,12 +17,11 @@ import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe.skip("CvxStrategy", async function () {
+describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-  let initialHardhatBlock: number;
 
   const deployContracts = async () => {
     safEth = (await deploySafEth()) as SafEth;
@@ -42,9 +41,17 @@ describe.skip("CvxStrategy", async function () {
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
     const accounts = await ethers.getSigners();
     const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,
@@ -78,9 +85,12 @@ describe.skip("CvxStrategy", async function () {
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
   });
-  it.skip("Should stake", async function () {
+  it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -91,22 +101,20 @@ describe.skip("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1753573896811820076";
 
-    expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
+    expect(vlCvxBalance).eq(BigNumber.from("518490293350028363092"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq(crvPoolBalance);
-    expect(crvPoolEthAmount).eq(crvPoolBalance);
+    expect(crvPoolAfEthAmount).eq("1782589158984829093");
+    expect(crvPoolEthAmount).eq("1782589158984829093");
 
     // check position struct
-    const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
+    const positions = await cvxStrategy.positions(1);
+    expect(positions.afEthAmount).eq(BigNumber.from("1747636430364198726"));
+    expect(positions.curveBalance).eq(BigNumber.from("1747618953999895084"));
+    expect(positions.convexBalance).eq(BigNumber.from("508293514182321138011"));
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
@@ -118,12 +126,13 @@ describe.skip("CvxStrategy", async function () {
     await stakeTx.wait();
     console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    const unstakeTx = await cvxStrategy.unstake(false, 0);
+    const unstakeTx = await cvxStrategy.unstake(false, 1);
     await unstakeTx.wait();
     console.log(await ethers.provider.getBalance(accounts[0].address));
 
     // TODO: check every scenario for unstaking
   });
+
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // impersonate an account that has rewards to withdraw at the current block
@@ -145,18 +154,12 @@ describe.skip("CvxStrategy", async function () {
     const provider = waffle.provider;
     const startingBalance = await provider.getBalance(cvxStrategy.address);
 
-    const tx2 = await cvxStrategy.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
+    const tx2 = await cvxStrategy.claimRewards();
     await tx2.wait();
     const endingBalance = await provider.getBalance(cvxStrategy.address);
 
     expect(endingBalance.gt(startingBalance)).eq(true);
-
-    // TODO: Not reverting, need to look more into it trying to get this PR in
-    // await expect(
-    //   cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
-    // ).to.be.reverted;
   });
-
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
