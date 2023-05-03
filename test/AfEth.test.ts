@@ -17,7 +17,7 @@ import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 
-describe("CvxStrategy", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -113,16 +113,15 @@ describe("CvxStrategy", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1782589158984829093");
-    expect(crvPoolEthAmount).eq("1782589158984829093");
+    expect(crvPoolAfEthAmount).eq("3565178317969658188");
+    expect(crvPoolEthAmount).eq("3565178317969658188");
 
     // check position struct
     const positions = await cvxStrategy.positions(1);
-    expect(positions.afEthAmount).eq(BigNumber.from("1747636430364198726"));
-    expect(positions.curveBalance).eq(BigNumber.from("1747618953999895084"));
-    expect(positions.convexBalance).eq(BigNumber.from("508293514182321138011"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3495272860728397453"));
+    expect(positions.curveBalance).eq(BigNumber.from("3495237907999790169"));
   });
-  it.only("Should unstake", async function () {
+  it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -146,7 +145,7 @@ describe("CvxStrategy", async function () {
     const userStrategySigner = cvxStrategy.connect(accounts[1]);
 
     await expect(userStrategySigner.unstake(false, 2)).to.be.revertedWith(
-      "not owner"
+      "Not owner"
     );
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {

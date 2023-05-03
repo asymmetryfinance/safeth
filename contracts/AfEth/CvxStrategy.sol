@@ -17,6 +17,7 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
+import "hardhat/console.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
@@ -104,10 +105,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
         lockCvx(cvxAmount, id, msg.sender);
 
-        uint256 safEthAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
+        uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0 // TODO: set minAmount
         );
-        uint256 mintAmount = safEthAmount;
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
@@ -120,7 +120,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             owner: msg.sender,
             curveBalance: crvLpAmount,
             afEthAmount: mintAmount,
-            safEthAmount: safEthAmount,
+            safEthAmount: mintAmount,
             createdAt: block.timestamp,
             claimed: false
         });
@@ -132,7 +132,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
-        require(position.owner == msg.sender, "not owner");
+        require(position.owner == msg.sender, "Not owner");
         position.claimed = true;
         if (_instantWithdraw) {
             // TODO: add instant withdraw function
@@ -150,18 +150,17 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 ethBalanceBefore = address(this).balance;
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
         uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
+
         withdrawCrvPool(crvPool, position.curveBalance);
-        uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
-        uint256 safEthBalanceAfter = IERC20(safEth).balanceOf(address(this));
-        uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
-        uint256 safEthBalance = safEthBalanceAfter - safEthBalanceBefore;
-        IAfEth(afEth).burn(address(this), afEthBalance);
-        ISafEth(safEth).unstake(safEthBalance, 0); // TODO: add minOut
-        uint256 ethBalanceAfter = address(this).balance;
+        IAfEth(afEth).burn(address(this), IERC20(safEth).balanceOf(address(this)) - afEthBalanceBefore);
+        ISafEth(safEth).unstake(
+            IERC20(safEth).balanceOf(address(this)) - safEthBalanceBefore,
+            0
+        ); // TODO: add minOut
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{
-            value: ethBalanceAfter - ethBalanceBefore
+            value: address(this).balance - ethBalanceBefore
         }("");
         require(sent, "Failed to send Ether");
         emit Unstaked(id, msg.sender);
