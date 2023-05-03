@@ -531,10 +531,10 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
   // TODO finish these tests in a follow-up PR where we can mock the rewards for longer periods of time
   it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
-    // TODO
+    // TODO now that we have a way to mock rewards, we can test this
   });
   it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
-    // TODO
+    // TODO now that we have a way to mock rewards, we can test this
   });
 
   const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
