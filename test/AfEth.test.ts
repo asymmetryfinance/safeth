@@ -23,6 +23,14 @@ describe("CvxStrategy", async function () {
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
 
+
+  const deployContracts = async () => {
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
+  };
+
   before(async () => {
     await network.provider.request({
       method: "hardhat_reset",
@@ -42,10 +50,7 @@ describe("CvxStrategy", async function () {
       accounts[0]
     );
 
-    const deployResults = await deployStrategyContract();
-    afEth = deployResults.afEth;
-    safEth = deployResults.safEth;
-    cvxStrategy = deployResults.cvxStrategy;
+    await deployContracts();
 
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
@@ -150,10 +155,7 @@ describe("CvxStrategy", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
 
-    const deployResults = await deployStrategyContract();
-    afEth = deployResults.afEth;
-    safEth = deployResults.safEth;
-    cvxStrategy = deployResults.cvxStrategy;
+    await deployContracts();
 
     const r1 = await cvxStrategy.getAsymmetryRatio("150000000000000000");
     expect(r1).eq("298361212712598375"); // 29.94%
