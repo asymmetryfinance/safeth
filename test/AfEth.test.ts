@@ -154,7 +154,6 @@ describe("CvxStrategy", async function () {
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
-
     await deployContracts();
 
     const r1 = await cvxStrategy.getAsymmetryRatio("150000000000000000");

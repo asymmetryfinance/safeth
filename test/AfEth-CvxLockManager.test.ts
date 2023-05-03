@@ -142,6 +142,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
 
     await tx.wait();
+
     tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
     await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(
