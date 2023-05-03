@@ -38,7 +38,7 @@ export const deployStrategyContract = async () => {
     value: ethers.utils.parseEther("10.0"),
   });
   const tx = await extraRewardsStream.reset(
-    60 * 60 * 24 * 7 * 16,
+    60 * 60 * 24 * 7 * 16 * 16, // 16 lock periods (256 weeks) plenty of time to streaming rewards during all tests
     cvxStrategy.address
   );
   await tx.wait();
