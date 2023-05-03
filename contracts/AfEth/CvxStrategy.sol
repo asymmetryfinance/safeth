@@ -71,7 +71,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
     */
-    function initialize(address _safEth, address _afEth) external initializer {
+    function initialize(address _safEth, address _afEth, address _rewardsExtraStream) external initializer {
         _transferOwnership(msg.sender);
 
         safEth = _safEth;
@@ -89,7 +89,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         crvEmissionsPerYear[9] = 68703820;
         crvEmissionsPerYear[10] = 57772796;
 
-        initializeLockManager();
+        initializeLockManager(_rewardsExtraStream);
     }
 
     function stake() public payable {

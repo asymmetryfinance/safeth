@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { CRV_POOL_FACTORY, CVX_ADDRESS, VL_CVX } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
@@ -11,31 +11,14 @@ import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { deploySafEth } from "./helpers/upgradeHelpers";
 import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 
 describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
-
-  const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
-  };
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
@@ -45,7 +28,10 @@ describe("AfEth (CvxLockManager)", async function () {
       accounts[0]
     );
 
-    await deployContracts();
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
 
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
@@ -156,7 +142,6 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
 
     await tx.wait();
-
     tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
     await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(

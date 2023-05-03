@@ -1,4 +1,4 @@
-import { ethers, network, upgrades, waffle } from "hardhat";
+import { ethers, network, waffle } from "hardhat";
 import {
   CRV_POOL_FACTORY,
   CVX_ADDRESS,
@@ -15,30 +15,13 @@ import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
-import { deploySafEth } from "./helpers/upgradeHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 
 describe("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-
-  const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
-  };
 
   before(async () => {
     await network.provider.request({
@@ -59,7 +42,10 @@ describe("CvxStrategy", async function () {
       accounts[0]
     );
 
-    await deployContracts();
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
 
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
@@ -163,7 +149,11 @@ describe("CvxStrategy", async function () {
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);
-    await deployContracts();
+
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
 
     const r1 = await cvxStrategy.getAsymmetryRatio("150000000000000000");
     expect(r1).eq("298361212712598375"); // 29.94%
