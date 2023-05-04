@@ -16,8 +16,9 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deploySafEth } from "./helpers/upgradeHelpers";
+import { within1Percent } from "./helpers/functions";
 
-describe.only("AfEth (CvxStrategy)", async function () {
+describe("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -124,20 +125,37 @@ describe.only("AfEth (CvxStrategy)", async function () {
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-    // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    console.log(await ethers.provider.getBalance(accounts[0].address));
+
+    const ethBalanceBefore = await ethers.provider.getBalance(
+      accounts[0].address
+    );
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
+    let position1 = await cvxStrategy.cvxPositions(1);
+    let unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).eq(0);
+    const ethBalanceDuring = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    expect(ethBalanceBefore.sub(ethBalanceDuring)).gt(depositAmount);
 
     const unstakeTx = await cvxStrategy.unstake(false, 1);
     await unstakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    // TODO: check every scenario for unstaking
+    const ethBalanceAfter = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    position1 = await cvxStrategy.cvxPositions(1);
+    unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).gt(0);
+
+    within1Percent(
+      ethBalanceAfter.sub(ethBalanceDuring),
+      depositAmount.mul(70).div(100)
+    ); // 70% AAA ratio is in ETH, 30% will be in CVX
   });
-  it("Should fail unstake if not owner", async function () {
+  it("Should fail to unstake if not owner", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });

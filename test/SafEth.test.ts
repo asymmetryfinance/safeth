@@ -17,9 +17,9 @@ import {
 } from "@nomicfoundation/hardhat-network-helpers";
 import { WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
-import { getDifferenceRatio } from "./SafEth-Integration.test";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
+import { within1Percent } from "./helpers/functions";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -892,10 +892,5 @@ describe("SafEth", function () {
       ethBalances.push(ethBalanceEstimate);
     }
     return ethBalances;
-  };
-
-  const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
-    if (amount1.eq(amount2)) return true;
-    return getDifferenceRatio(amount1, amount2).gt("100");
   };
 });

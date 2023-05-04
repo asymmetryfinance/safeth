@@ -17,7 +17,6 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
-import "hardhat/console.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
@@ -104,7 +103,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         id = positionId;
 
         lockCvx(cvxAmount, id, msg.sender);
-
         uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0 // TODO: set minAmount
         );
@@ -156,13 +154,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         ISafEth(safEth).unstake(
             IERC20(safEth).balanceOf(address(this)) - safEthBalanceBefore,
             0
-        ); // TODO: add minOut
+        ); // TODO: add minOut ~.5% slippage
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{
             value: address(this).balance - ethBalanceBefore
         }("");
         require(sent, "Failed to send Ether");
+
         emit Unstaked(id, msg.sender);
     }
 

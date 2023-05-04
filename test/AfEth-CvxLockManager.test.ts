@@ -14,7 +14,7 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
 
-describe.only("AfEth (CvxLockManager)", async function () {
+describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
