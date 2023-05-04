@@ -198,6 +198,28 @@ describe("AfEth (CvxStrategy)", async function () {
       depositAmount.mul(70).div(100)
     ); // 70% AAA ratio is in ETH, 30% will be in CVX
   });
+  it("Should unstake everything and still be able to stake", async function () {
+    const depositAmount = ethers.utils.parseEther("5");
+
+    const unstakeTx = await cvxStrategy.unstake(false, 1);
+    await unstakeTx.wait();
+
+    let crvPoolAfEthAmount = await crvPool.balances(0);
+    let crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("69906488667325912");
+    expect(crvPoolSafEthAmount).eq("69906488667325912");
+
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+
+    crvPoolAfEthAmount = await crvPool.balances(0);
+    crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("3565179344057215037");
+    expect(crvPoolSafEthAmount).eq("3565179344057215037");
+  });
+  it("Shouldn't be able to unstake seed amount", async function () {
+    await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith("Not owner");
+  });
   it("Should fail to unstake if not owner", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
