@@ -283,6 +283,9 @@ contract SafEth is
         setTotalWeight();
     }
 
+    /**
+     * @notice - Sets total weight of all enabled derivatives
+     */
     function setTotalWeight() private {
         uint256 localTotalWeight = 0;
         uint256 count = derivativeCount;
@@ -369,6 +372,9 @@ contract SafEth is
         return (1e18 * underlyingValue) / safEthTotalSupply;
     }
 
+    /**
+     * @notice - Only allow ETH being sent from derivative contracts.
+     */
     receive() external payable {
         // Initialize a flag to track if the Ether sender is a registered derivative
         bool acceptSender;

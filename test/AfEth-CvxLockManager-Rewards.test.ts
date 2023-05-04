@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { CRV_POOL_FACTORY, VL_CVX } from "./helpers/constants";
 import {
   SnapshotRestorer,
@@ -12,7 +12,7 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { deploySafEth } from "./helpers/upgradeHelpers";
 import { epochDuration, getCurrentEpoch } from "./helpers/lockManagerHelpers";
-import { getDifferenceRatio } from "./SafEth-Integration.test";
+import { getDifferenceRatio } from "./helpers/functions";
 
 describe("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
@@ -36,6 +36,20 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     await afEth.setMinter(cvxStrategy.address);
   };
+
+  before(async () => {
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
+  });
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
