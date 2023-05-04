@@ -20,8 +20,9 @@ contract ExtraRewardsStream {
 
     function claim() public {
         uint256 elapsedTime = block.timestamp - startTime;
-        uint256 amount = ((totalAmount * elapsedTime) / duration) - claimedAmount;
-        if(amount > address(this).balance) amount = address(this).balance;
+        uint256 amount = ((totalAmount * elapsedTime) / duration) -
+            claimedAmount;
+        if (amount > address(this).balance) amount = address(this).balance;
         claimedAmount += amount;
         payable(recipient).transfer(amount);
     }
