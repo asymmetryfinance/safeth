@@ -18,7 +18,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deploySafEth } from "./helpers/upgradeHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe.only("AfEth (CvxStrategy)", async function () {
+describe("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -163,14 +163,14 @@ describe.only("AfEth (CvxStrategy)", async function () {
     );
     expect(ethBalanceBefore.sub(ethBalanceDuring)).gt(depositAmount);
 
-    const unstakeTx = await cvxStrategy.unstake(false, 1);
+    const unstakeTx = await cvxStrategy.unstake(false, 2);
     await unstakeTx.wait();
 
     // check crv liquidity pool after unstaking
     const crvPoolAfEthAmountAfter = await crvPool.balances(0);
     const crvPoolSafEthAmountAfter = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountAfter).eq("3565161698576112336");
-    expect(crvPoolSafEthAmountAfter).eq("3565161698576112336");
+    expect(crvPoolAfEthAmountAfter).eq("3565195967454642119");
+    expect(crvPoolSafEthAmountAfter).eq("3565195967454642119");
 
     // verify no loss in crv pool after unstake
     expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
@@ -187,7 +187,9 @@ describe.only("AfEth (CvxStrategy)", async function () {
     const ethBalanceAfter = await ethers.provider.getBalance(
       accounts[0].address
     );
-    position1 = await cvxStrategy.cvxPositions(1);
+    position1 = await cvxStrategy.cvxPositions(2);
+
+    // check cvx locked positions to have unlock epoch
     unlockEpoch = position1.unlockEpoch;
     expect(unlockEpoch).gt(0);
 
@@ -203,7 +205,7 @@ describe.only("AfEth (CvxStrategy)", async function () {
     await stakeTx.wait();
     const userStrategySigner = cvxStrategy.connect(accounts[1]);
 
-    await expect(userStrategySigner.unstake(false, 2)).to.be.revertedWith(
+    await expect(userStrategySigner.unstake(false, 3)).to.be.revertedWith(
       "Not owner"
     );
   });

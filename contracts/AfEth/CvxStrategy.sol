@@ -17,7 +17,6 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
-import "hardhat/console.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
@@ -247,7 +246,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
-            uint256(100000), // TODO: why hardcoded
+            0, // TODO: add min mint amount
             false
         );
         return (poolTokensMinted);
