@@ -28,16 +28,15 @@ export const notifyOnStakeUnstake = async () => {
     if (newTotalSupply.gt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Staked", 0, "latest");
       const latestEvent = events[events.length - 1];
-      notify(
-        `Stake detected https://etherscan.io/tx/${latestEvent.transactionHash}`
-      );
+      notify(`Stake Event`);
+      notify(`https://etherscan.io/tx/${latestEvent.transactionHash}`);
     } else if (newTotalSupply.lt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Unstaked", 0, "latest");
       const latestEvent = events[events.length - 1];
-      notify(
-        `Unstake detected https://etherscan.io/tx/${latestEvent.transactionHash}`
-      );
+      notify(`Unstake Event`);
+      notify(`https://etherscan.io/tx/${latestEvent.transactionHash}`);
     }
+    notify(`Total Supply: ${ethers.utils.formatEther(newTotalSupply)} safETH`);
   }
   previousTotalSupply = newTotalSupply;
 };
