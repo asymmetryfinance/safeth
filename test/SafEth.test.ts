@@ -171,12 +171,6 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
-    beforeEach(async () => {
-      snapshot = await takeSnapshot();
-    });
-    afterEach(async () => {
-      await snapshot.restore();
-    });
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
         "derivative index out of bounds"
@@ -261,12 +255,6 @@ describe("SafEth", function () {
   });
 
   describe("Owner functions", function () {
-    beforeEach(async () => {
-      snapshot = await takeSnapshot();
-    });
-    afterEach(async () => {
-      await snapshot.restore();
-    });
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEthProxy.setPauseStaking(true);
@@ -375,6 +363,9 @@ describe("SafEth", function () {
   describe("Derivatives", async () => {
     let derivatives = [] as any;
     before(async () => {
+      await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    });
+    beforeEach(async () => {
       derivatives = [];
       const factory0 = await ethers.getContractFactory("Reth");
       const factory1 = await ethers.getContractFactory("SfrxEth");
