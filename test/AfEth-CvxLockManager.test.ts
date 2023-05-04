@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { CRV_POOL_FACTORY, CVX_ADDRESS, VL_CVX } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
@@ -36,6 +36,20 @@ describe("AfEth (CvxLockManager)", async function () {
 
     await afEth.setMinter(cvxStrategy.address);
   };
+
+  before(async () => {
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
+  });
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
