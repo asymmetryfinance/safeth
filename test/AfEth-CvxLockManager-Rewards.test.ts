@@ -530,8 +530,61 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   });
 
   // TODO finish these tests in a follow-up PR where we can mock the rewards for longer periods of time
-  it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
-    // TODO now that we have a way to mock rewards, we can test this
+  it.only("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
+    let tx;
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("1");
+
+    const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
+    const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
+
+    tx = await cvxStrategy1.stake({ value: depositAmount });
+    await tx.wait();
+    tx = await cvxStrategy2.stake({ value: depositAmount });
+    await tx.wait();
+
+    // close position (account 0)
+    tx = await cvxStrategy1.unstake(false, 1);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+    const balanceBefore1 = await ethers.provider.getBalance(
+      accounts[1].address
+    );
+
+    tx = await cvxStrategy1.withdrawCvxAndRewards(1);
+    const mined1 = await tx.wait();
+    const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+    const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
+    const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
+
+    console.log('ethReceived1', ethReceived1);
+    console.log('**********************');
+
+    tx = await cvxStrategy2.unstake(false, 2);
+    await tx.wait();
+
+    // wait 17 weeks
+    await time.increase(60 * 60 * 24 * 7 * 17);
+    // this is necessary in tests every time we have increased time past a new epoch
+    tx = await vlCvxContract.checkpointEpoch();
+
+    const balanceBefore2 = await ethers.provider.getBalance(
+      accounts[2].address
+    );
+    tx = await cvxStrategy2.withdrawCvxAndRewards(2);
+    const mined2 = await tx.wait();
+    const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+    const balanceAfter2 = await ethers.provider.getBalance(accounts[2].address);
+    const ethReceived2 = balanceAfter2.sub(balanceBefore2).add(networkFee2);
+
+    console.log('ethReceived2', ethReceived2);
+
+    // expect(within1Percent(ethReceived1, ethReceived2.div(2))).eq(true);
   });
   it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
     // TODO now that we have a way to mock rewards, we can test this

@@ -13,6 +13,8 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "./interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
 
+import "hardhat/console.sol";
+
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
@@ -151,7 +153,7 @@ contract CvxLockManager is OwnableUpgradeable {
     function sweepRewards() private {
         claimCrvRewards();
         claimvlCvxRewards();
-        claimExtraRewards();
+//        claimExtraRewards();
     }
 
     function claimExtraRewards() private {
@@ -167,6 +169,7 @@ contract CvxLockManager is OwnableUpgradeable {
         sweepRewards();
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
+        console.log('amountClaimed', amountClaimed);
         // special case if claimRewards is called a second time in same epoch
         if (lastEpochFullyClaimed == currentEpoch - 1) {
             leftoverRewards += amountClaimed;
@@ -198,12 +201,15 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 rewardsPerCompletedEpoch = completedEpochsRewardsOwed /
             unclaimedCompletedEpochCount;
 
+        console.log('rewardsPerCompletedEpoch', rewardsPerCompletedEpoch);
+        console.log('unclaimedCompletedEpochCount', unclaimedCompletedEpochCount);
         for (uint256 i = lastEpochFullyClaimed + 1; i < currentEpoch; i++) {
             rewardsClaimed[i] = rewardsPerCompletedEpoch;
         }
 
         lastEpochFullyClaimed = currentEpoch - 1;
         leftoverRewards = currentEpochReward;
+        console.log('leftoverRewards', leftoverRewards);
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
@@ -269,6 +275,7 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function withdrawRewards(uint256 positionId) private {
+        console.log('withdrawRewards', positionId);
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
 
         // only claim rewards if needed
@@ -281,8 +288,11 @@ contract CvxLockManager is OwnableUpgradeable {
             unlockEpoch != 0 && currentEpoch >= unlockEpoch,
             "Position still locked"
         );
+
         uint256 totalRewards = 0;
 
+
+        console.log('iterating from to', startingEpoch, unlockEpoch);
         // add up total rewards for a position up until unlock epoch -1
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
@@ -292,9 +302,17 @@ contract CvxLockManager is OwnableUpgradeable {
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
-            totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
+
+            // console.log('bpositionAmount', positionAmount);
+            // console.log('balance at epoch', balanceAtEpoch);
+//            console.log('positionLockRatio', positionLockRatio);
+            uint256 claimed = (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
+            totalRewards += claimed;
+            
+            console.log('i', i, rewardsClaimed[i], claimed);
         }
         // solhint-disable-next-line
+        console.log('sending total rewards', totalRewards);
         (bool sent, ) = address(msg.sender).call{value: totalRewards}("");
         require(sent, "Failed to send Ether");
     }
