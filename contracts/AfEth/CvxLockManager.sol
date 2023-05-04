@@ -3,8 +3,8 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/IClaimZap.sol";
+import "../interfaces/convex/ILockedCvx.sol";
+import "../interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";

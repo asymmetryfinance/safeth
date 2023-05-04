@@ -16,13 +16,13 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
+import { within1Percent } from "./helpers/functions";
 
-describe("CvxStrategy", async function () {
+describe("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-
 
   const deployContracts = async () => {
     const deployResults = await deployStrategyContract();
@@ -81,6 +81,12 @@ describe("CvxStrategy", async function () {
       value: seedAmount,
     });
   });
+  it("Should seed CRV Pool", async function () {
+    const crvPoolBalance0 = await crvPool.balances(0);
+    expect(crvPoolBalance0).gt(0);
+    const crvPoolBalance1 = await crvPool.balances(1);
+    expect(crvPoolBalance1).gt(0);
+  });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
@@ -98,32 +104,58 @@ describe("CvxStrategy", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("1782589158984829093");
-    expect(crvPoolEthAmount).eq("1782589158984829093");
+    expect(crvPoolAfEthAmount).eq("3565178317969658188");
+    expect(crvPoolEthAmount).eq("3565178317969658188");
 
     // check position struct
     const positions = await cvxStrategy.positions(1);
-    expect(positions.afEthAmount).eq(BigNumber.from("1747636430364198726"));
-    expect(positions.curveBalance).eq(BigNumber.from("1747618953999895084"));
-    expect(positions.convexBalance).eq(BigNumber.from("508293514182321138011"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3495272860728397453"));
+    expect(positions.curveBalance).eq(BigNumber.from("3495237907999790169"));
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-    // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    console.log(await ethers.provider.getBalance(accounts[0].address));
+
+    const ethBalanceBefore = await ethers.provider.getBalance(
+      accounts[0].address
+    );
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
+    let position1 = await cvxStrategy.cvxPositions(1);
+    let unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).eq(0);
+    const ethBalanceDuring = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    expect(ethBalanceBefore.sub(ethBalanceDuring)).gt(depositAmount);
 
     const unstakeTx = await cvxStrategy.unstake(false, 1);
     await unstakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    // TODO: check every scenario for unstaking
+    const ethBalanceAfter = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    position1 = await cvxStrategy.cvxPositions(1);
+    unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).gt(0);
+
+    within1Percent(
+      ethBalanceAfter.sub(ethBalanceDuring),
+      depositAmount.mul(70).div(100)
+    ); // 70% AAA ratio is in ETH, 30% will be in CVX
   });
+  it("Should fail to unstake if not owner", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+    const userStrategySigner = cvxStrategy.connect(accounts[1]);
 
+    await expect(userStrategySigner.unstake(false, 2)).to.be.revertedWith(
+      "Not owner"
+    );
+  });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // impersonate an account that has rewards to withdraw at the current block

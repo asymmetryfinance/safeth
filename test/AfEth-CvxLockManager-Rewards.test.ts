@@ -11,8 +11,8 @@ import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { epochDuration, getCurrentEpoch } from "./helpers/lockManagerHelpers";
-import { getDifferenceRatio } from "./SafEth-Integration.test";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
+import { getDifferenceRatio } from "./helpers/functions";
 
 describe("AfEth (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
