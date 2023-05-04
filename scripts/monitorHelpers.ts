@@ -11,6 +11,37 @@ const webhookClient = new WebhookClient({
 
 const previousPriceData: Record<string, BigNumber> = {};
 
+let previousTotalSupply = BigNumber.from(0);
+
+export const notifyOnStakeUnstake = async () => {
+  const safEth = await ethers.getContractAt(
+    "SafEth",
+    "0xC57319e15d5D78Ba73c08C4E09d320705Bd4478D"
+  );
+  await safEth.deployed();
+
+  const newTotalSupply = await safEth.totalSupply();
+
+  console.log("newTotalSupply is", newTotalSupply);
+  console.log("previousTotalSupply is", previousTotalSupply);
+  if (!previousTotalSupply.eq(newTotalSupply)) {
+    if (newTotalSupply.gt(previousTotalSupply)) {
+      const events = await safEth.queryFilter("Staked", 0, "latest");
+      const latestEvent = events[events.length - 1];
+      notify(
+        `Stake detected https://etherscan.io/tx/${latestEvent.transactionHash}`
+      );
+    } else if (newTotalSupply.lt(previousTotalSupply)) {
+      const events = await safEth.queryFilter("Unstaked", 0, "latest");
+      const latestEvent = events[events.length - 1];
+      notify(
+        `Unstake detected https://etherscan.io/tx/${latestEvent.transactionHash}`
+      );
+    }
+  }
+  previousTotalSupply = newTotalSupply;
+};
+
 export const notifyOnPriceDrop = async (
   priceData: Record<string, BigNumber>
 ) => {
@@ -22,9 +53,9 @@ export const notifyOnPriceDrop = async (
       ? previousPriceData[key]
       : undefined;
     if (previousValue?.gt(value)) {
-      const message = `${key} dropped from ${previousValue} to ${value} @ block ${await hre.ethers.provider.getBlockNumber()}`;
-      console.log(message);
-      webhookClient.send(message);
+      notify(
+        `${key} dropped from ${previousValue} to ${value} @ block ${await hre.ethers.provider.getBlockNumber()}`
+      );
     }
     previousPriceData[key] = value;
   }
@@ -68,4 +99,9 @@ export const getContracts = async () => {
     chainLinkStEthEthFeed,
     wstEth,
   };
+};
+
+const notify = async (message: string) => {
+  console.log(message);
+  webhookClient.send(message);
 };
