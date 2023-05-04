@@ -246,7 +246,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
-            uint256(100000), // TODO: why hardcoded
+            0, // TODO: add min mint amount
             false
         );
         return (poolTokensMinted);

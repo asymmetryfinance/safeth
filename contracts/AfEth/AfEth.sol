@@ -8,6 +8,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract AfEth is ERC20, Ownable {
     address public minter;
 
+    /**
+     * @dev Throws if called by any account other than the minter.
+     */
+    modifier onlyMinter() {
+        require(minter == msg.sender, "caller is not the minter");
+        _;
+    }
+
     constructor(
         string memory _name,
         string memory _symbol
@@ -19,13 +27,11 @@ contract AfEth is ERC20, Ownable {
         minter = _newMinter;
     }
 
-    function mint(address to, uint256 amount) public {
-        require(msg.sender == minter, "not minter");
+    function mint(address to, uint256 amount) public onlyMinter {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) public {
-        require(msg.sender == minter, "not minter");
+    function burn(address from, uint256 amount) public onlyMinter {
         _burn(from, amount);
     }
 }
