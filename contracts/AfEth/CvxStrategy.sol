@@ -150,7 +150,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
 
         withdrawCrvPool(crvPool, position.curveBalance);
-        IAfEth(afEth).burn(address(this), IERC20(safEth).balanceOf(address(this)) - afEthBalanceBefore);
+        IAfEth(afEth).burn(address(this), IERC20(afEth).balanceOf(address(this)) - afEthBalanceBefore);
         ISafEth(safEth).unstake(
             IERC20(safEth).balanceOf(address(this)) - safEthBalanceBefore,
             0
