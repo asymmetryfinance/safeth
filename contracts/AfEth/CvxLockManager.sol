@@ -10,7 +10,7 @@ import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
-import "./interfaces/IExtraRewardsStream.sol";
+import "../interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
 
 import "hardhat/console.sol";
