@@ -17,6 +17,7 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
+import "hardhat/console.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);

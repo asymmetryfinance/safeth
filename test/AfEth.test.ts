@@ -18,7 +18,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deploySafEth } from "./helpers/upgradeHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("AfEth (CvxStrategy)", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -113,9 +113,9 @@ describe("AfEth (CvxStrategy)", async function () {
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
-    const crvPoolEthAmount = await crvPool.balances(1);
+    const crvPoolSafEthAmount = await crvPool.balances(1);
     expect(crvPoolAfEthAmount).eq("3565178317969658188");
-    expect(crvPoolEthAmount).eq("3565178317969658188");
+    expect(crvPoolSafEthAmount).eq("3565178317969658188");
 
     // check position struct
     const positions = await cvxStrategy.positions(1);
@@ -130,11 +130,34 @@ describe("AfEth (CvxStrategy)", async function () {
       accounts[0].address
     );
 
+    // check crv liquidity pool before staking
+    const crvPoolAfEthAmountBefore = await crvPool.balances(0);
+    const crvPoolSafEthAmountBefore = await crvPool.balances(1);
+    expect(crvPoolAfEthAmountBefore).eq("3565178317969658188");
+    expect(crvPoolSafEthAmountBefore).eq("3565178317969658188");
+
+    const afEthStrategyBalanceBefore = await afEth.balanceOf(
+      cvxStrategy.address
+    );
+    const safEthStrategyBalanceBefore = await safEth.balanceOf(
+      cvxStrategy.address
+    );
+
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
+
+    // check crv liquidity pool after staking
+    const crvPoolAfEthAmount = await crvPool.balances(0);
+    const crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("7060451177363428542");
+    expect(crvPoolSafEthAmount).eq("7060451177363428542");
+
+    // check cvx locked positions
     let position1 = await cvxStrategy.cvxPositions(1);
     let unlockEpoch = position1.unlockEpoch;
     expect(unlockEpoch).eq(0);
+
+    // check eth balance was deducted
     const ethBalanceDuring = await ethers.provider.getBalance(
       accounts[0].address
     );
@@ -142,6 +165,24 @@ describe("AfEth (CvxStrategy)", async function () {
 
     const unstakeTx = await cvxStrategy.unstake(false, 1);
     await unstakeTx.wait();
+
+    // check crv liquidity pool after unstaking
+    const crvPoolAfEthAmountAfter = await crvPool.balances(0);
+    const crvPoolSafEthAmountAfter = await crvPool.balances(1);
+    expect(crvPoolAfEthAmountAfter).eq("3565161698576112336");
+    expect(crvPoolSafEthAmountAfter).eq("3565161698576112336");
+
+    // verify no loss in crv pool after unstake
+    expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
+    expect(crvPoolSafEthAmountAfter).gte(crvPoolSafEthAmountAfter);
+
+    // verify token balances do not change
+    expect(afEthStrategyBalanceBefore).eq(
+      await afEth.balanceOf(cvxStrategy.address)
+    );
+    expect(safEthStrategyBalanceBefore).eq(
+      await safEth.balanceOf(cvxStrategy.address)
+    );
 
     const ethBalanceAfter = await ethers.provider.getBalance(
       accounts[0].address
