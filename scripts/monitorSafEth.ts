@@ -1,4 +1,8 @@
-import { notifyOnPriceDrop, getContracts } from "./monitorHelpers";
+import {
+  notifyOnPriceDrop,
+  getContracts,
+  notifyOnStakeUnstake,
+} from "./monitorHelpers";
 
 async function main() {
   console.log("Monitoring SafEth Health");
@@ -13,6 +17,7 @@ async function main() {
   } = await getContracts();
 
   while (true) {
+    notifyOnStakeUnstake();
     const priceData = {
       safEthPrice: await safEth.approxPrice(),
       wstEthPrice: await wstEthDerivative.ethPerDerivative(),
