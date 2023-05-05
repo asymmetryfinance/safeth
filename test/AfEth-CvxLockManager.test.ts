@@ -1,4 +1,4 @@
-import { ethers, network, upgrades } from "hardhat";
+import { ethers, network } from "hardhat";
 import { CRV_POOL_FACTORY, CVX_ADDRESS, VL_CVX } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
