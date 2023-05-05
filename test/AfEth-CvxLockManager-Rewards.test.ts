@@ -530,10 +530,10 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   });
 
   // TODO finish these tests in a follow-up PR where we can mock the rewards for longer periods of time
-  it.only("Should award roughly twice as much if stakes for twice as long", async function () {
+  it("Should award roughly twice as much if stakes for twice as long", async function () {
     // TODO now that we have a way to mock rewards, we can test this
   });
-  it.only("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
+  it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
     // TODO now that we have a way to mock rewards, we can test this
   });
 
