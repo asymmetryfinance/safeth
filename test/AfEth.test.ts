@@ -1,4 +1,4 @@
-import { ethers, network, upgrades, waffle } from "hardhat";
+import { ethers, network, waffle } from "hardhat";
 import {
   CRV_POOL_FACTORY,
   CVX_ADDRESS,
@@ -15,7 +15,7 @@ import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
-import { deploySafEth } from "./helpers/upgradeHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
 describe("AfEth (CvxStrategy)", async function () {
@@ -25,20 +25,10 @@ describe("AfEth (CvxStrategy)", async function () {
   let crvPool: any;
 
   const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
   };
 
   before(async () => {

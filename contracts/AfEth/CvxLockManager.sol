@@ -10,6 +10,10 @@ import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
+import "../interfaces/IExtraRewardsStream.sol";
+import "./ExtraRewardsStream.sol";
+
+import "hardhat/console.sol";
 
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
@@ -67,7 +71,9 @@ contract CvxLockManager is OwnableUpgradeable {
 
     uint256 maxSlippage;
 
-    function initializeLockManager() internal {
+    address public extraRewardsStream;
+
+    function initializeLockManager(address _extraRewardsStream) internal {
         bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
         ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
             vlCvxVoteDelegationId,
@@ -80,6 +86,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         if (lastEpochFullyClaimed == 0)
             lastEpochFullyClaimed = currentEpoch - 1;
+        extraRewardsStream = _extraRewardsStream;
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -145,6 +152,11 @@ contract CvxLockManager is OwnableUpgradeable {
     function sweepRewards() private {
         claimCrvRewards();
         claimvlCvxRewards();
+        claimExtraRewards();
+    }
+
+    function claimExtraRewards() private {
+        IExtraRewardsStream(extraRewardsStream).claim();
     }
 
     // claim vlCvx locker rewards and crv pool rewards
@@ -270,6 +282,7 @@ contract CvxLockManager is OwnableUpgradeable {
             unlockEpoch != 0 && currentEpoch >= unlockEpoch,
             "Position still locked"
         );
+
         uint256 totalRewards = 0;
 
         // add up total rewards for a position up until unlock epoch -1
@@ -281,7 +294,10 @@ contract CvxLockManager is OwnableUpgradeable {
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
-            totalRewards += (positionLockRatio * rewardsClaimed[i]) / 10 ** 18;
+
+            uint256 claimed = (positionLockRatio * rewardsClaimed[i]) /
+                10 ** 18;
+            totalRewards += claimed;
         }
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: totalRewards}("");

@@ -1,4 +1,4 @@
-import { ethers, network, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { CRV_POOL_FACTORY, VL_CVX } from "./helpers/constants";
 import {
   SnapshotRestorer,
@@ -10,8 +10,8 @@ import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { deploySafEth } from "./helpers/upgradeHelpers";
 import { epochDuration, getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { getDifferenceRatio } from "./helpers/functions";
 
 describe("AfEth (CvxLockManager Rewards)", async function () {
@@ -19,37 +19,6 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
-
-  const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
-  };
-
-  before(async () => {
-    await network.provider.request({
-      method: "hardhat_reset",
-      params: [
-        {
-          forking: {
-            jsonRpcUrl: process.env.MAINNET_URL,
-            blockNumber: Number(process.env.BLOCK_NUMBER),
-          },
-        },
-      ],
-    });
-  });
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
@@ -59,7 +28,10 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[0]
     );
 
-    await deployContracts();
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
 
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
@@ -558,11 +530,11 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   });
 
   // TODO finish these tests in a follow-up PR where we can mock the rewards for longer periods of time
-  it("Should award roughly twice as much if a user stays in for 2 locking periods", async function () {
-    // TODO
+  it.only("Should award roughly twice as much if stakes for twice as long", async function () {
+    // TODO now that we have a way to mock rewards, we can test this
   });
-  it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
-    // TODO
+  it.only("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
+    // TODO now that we have a way to mock rewards, we can test this
   });
 
   const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
