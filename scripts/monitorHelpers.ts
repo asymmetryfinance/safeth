@@ -22,21 +22,33 @@ export const notifyOnStakeUnstake = async () => {
 
   const newTotalSupply = await safEth.totalSupply();
 
-  console.log("newTotalSupply is", newTotalSupply);
-  console.log("previousTotalSupply is", previousTotalSupply);
   if (!previousTotalSupply.eq(newTotalSupply)) {
+    console.log("newTotalSupply is", newTotalSupply);
+    console.log("previousTotalSupply is", previousTotalSupply);
     if (newTotalSupply.gt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Staked", 0, "latest");
       const latestEvent = events[events.length - 1];
       notify(`Stake Event`);
-      notify(`https://etherscan.io/tx/${latestEvent.transactionHash}`);
+      notify(`${latestEvent.args.recipient}`);
+      notify(
+        `${ethers.utils.formatEther(
+          newTotalSupply.sub(previousTotalSupply)
+        )} safETH`
+      );
     } else if (newTotalSupply.lt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Unstaked", 0, "latest");
       const latestEvent = events[events.length - 1];
       notify(`Unstake Event`);
-      notify(`https://etherscan.io/tx/${latestEvent.transactionHash}`);
+      notify(`${latestEvent.args.recipient}`);
+      notify(
+        `${ethers.utils.formatEther(
+          newTotalSupply.sub(previousTotalSupply)
+        )} safETH`
+      );
     }
-    notify(`Total Supply: ${ethers.utils.formatEther(newTotalSupply)} safETH`);
+    notify(
+      `${ethers.utils.formatEther(newTotalSupply)} safETH (New Total Supply)`
+    );
   }
   previousTotalSupply = newTotalSupply;
 };
