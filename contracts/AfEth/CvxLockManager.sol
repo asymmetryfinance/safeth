@@ -98,6 +98,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 positionId,
         address owner
     ) internal {
+        console.log('LOCK CVX CALLED!');
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         cvxPositions[positionId].cvxAmount = cvxAmount;
         cvxPositions[positionId].open = true;
@@ -150,9 +151,9 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function sweepRewards() private {
-        claimCrvRewards();
-        claimvlCvxRewards();
-        //        claimExtraRewards();
+//        claimCrvRewards();
+//        claimvlCvxRewards();
+        claimExtraRewards();
     }
 
     function claimExtraRewards() private {
@@ -300,18 +301,16 @@ contract CvxLockManager is OwnableUpgradeable {
                 i,
                 address(this)
             );
+            console.log("balanceAtEpoch", i, balanceAtEpoch, positionAmount);
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
 
-            // console.log('bpositionAmount', positionAmount);
             // console.log('balance at epoch', balanceAtEpoch);
-            //            console.log('positionLockRatio', positionLockRatio);
+//            console.log('positionLockRatio', positionLockRatio);
             uint256 claimed = (positionLockRatio * rewardsClaimed[i]) /
                 10 ** 18;
             totalRewards += claimed;
-
-            console.log("i", i, rewardsClaimed[i], claimed);
         }
         // solhint-disable-next-line
         console.log("sending total rewards", totalRewards);
