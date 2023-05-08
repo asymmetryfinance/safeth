@@ -355,6 +355,7 @@ contract SafEth is
     /**
      * @notice - Get the approx price of safEth.
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
+     * @return - Approximate price of safEth in wei
      */
     function approxPrice() public view returns (uint256) {
         uint256 safEthTotalSupply = totalSupply();
