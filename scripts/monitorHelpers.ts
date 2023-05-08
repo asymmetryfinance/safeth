@@ -22,7 +22,7 @@ export const notifyOnStakeUnstake = async () => {
 
   const newTotalSupply = await safEth.totalSupply();
 
-  if (!previousTotalSupply.eq(newTotalSupply)) {
+  if (!previousTotalSupply.eq(newTotalSupply) && previousTotalSupply.gt(0)) {
     console.log("newTotalSupply is", newTotalSupply);
     console.log("previousTotalSupply is", previousTotalSupply);
     if (newTotalSupply.gt(previousTotalSupply)) {
