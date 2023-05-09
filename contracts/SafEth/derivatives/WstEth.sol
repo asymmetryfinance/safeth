@@ -72,7 +72,8 @@ contract WstEth is
         require(stEthAmount > 0, "No stETH to unwrap");
 
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
-        uint256 minOut = ((ethPerDerivative() * _amount) * (1e18 - maxSlippage)) / 1e36;
+        uint256 minOut = ((ethPerDerivative() * _amount) *
+            (1e18 - maxSlippage)) / 1e36;
 
         uint256 ethBalanceBefore = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
