@@ -36,6 +36,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
+    IVault public immutable balancerVault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -151,13 +153,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
-        // swaps into reth using 100% balancer pool
-        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapTo{value: msg.value}(
-            0,
-            10,
-            minOut,
-            idealOut
-        );
+
+        balancerSwap(msg.value);
         uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -182,34 +179,29 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         return underlyingBalance;
     }
 
-        /// @dev Perform a swap via Balancer
-    /// @param _amount Amount of ETH to swap
-    /// @param _from The token input
-    /// @param _to The token output
-    /// @param _recipient The recipient of the output tokens
-    function balancerSwap(uint256 _amount, address _from, address _to, address payable _recipient) private {
+    function balancerSwap(uint256 _amount) private {
         if (_amount == 0) {
             return;
         }
 
         IVault.SingleSwap memory swap;
-        swap.poolId = balancerPoolId;
+        swap.poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
         swap.kind = IVault.SwapKind.GIVEN_IN;
-        swap.assetIn = IAsset(_from);
-        swap.assetOut = IAsset(_to);
+        swap.assetIn = IAsset(W_ETH_ADDRESS);
+        swap.assetOut = IAsset(rethAddress());
         swap.amount = _amount;
 
         IVault.FundManagement memory fundManagement;
         fundManagement.sender = address(this);
-        fundManagement.recipient = _recipient;
+        fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
 
-        // Approve the vault to spend our WETH
-        TransferHelper.safeApprove(_from, address(balancerVault), _amount);
+        uint minOut = 0;
 
+        // TODO approve vault to spend out weth
         // Execute swap
-        balancerVault.swap(swap, fundManagement, 0, block.timestamp);
+        balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
     }
 
 
