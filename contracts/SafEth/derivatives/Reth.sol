@@ -15,6 +15,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
+
 contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
@@ -36,8 +37,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    IVault public immutable balancerVault =
+    IVault public constant balancerVault =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
+    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -149,12 +152,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 rethPerEth = (1e36) / ethPerDerivative();
         uint256 minOut = ((rethPerEth * msg.value) * (1e18 - maxSlippage)) /
             1e36;
-        uint256 idealOut = (rethPerEth * msg.value) / 1e18;
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
-
-        balancerSwap(msg.value);
+        balancerSwap(msg.value, minOut);
         uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -179,11 +180,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         return underlyingBalance;
     }
 
-    function balancerSwap(uint256 _amount) private {
+    function balancerSwap(uint256 _amount, uint256 _minOut) private {
         if (_amount == 0) {
             return;
         }
-
         IVault.SingleSwap memory swap;
         swap
             .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
@@ -197,12 +197,11 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
-
-        uint minOut = 0;
-
-        // TODO approve vault to spend out weth
+        
+        IWETH(wETH).deposit{value: _amount}();
+        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
         // Execute swap
-        balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
+        balancerVault.swap(swap, fundManagement, _minOut, block.timestamp);
     }
 
     receive() external payable {}
