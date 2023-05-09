@@ -36,8 +36,9 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    IVault public immutable balancerVault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-    
+    IVault public immutable balancerVault =
+        IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -118,8 +119,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             address(this)
         );
         uint256 ethPerReth = ethPerDerivative();
-        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) /
-            1e36;
+        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) / 1e36;
         uint256 idealOut = ((ethPerReth * _amount) / 1e18);
         IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
@@ -185,7 +185,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         }
 
         IVault.SingleSwap memory swap;
-        swap.poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
+        swap
+            .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
         swap.kind = IVault.SwapKind.GIVEN_IN;
         swap.assetIn = IAsset(W_ETH_ADDRESS);
         swap.assetOut = IAsset(rethAddress());
@@ -203,7 +204,6 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         // Execute swap
         balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
     }
-
 
     receive() external payable {}
 }

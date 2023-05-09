@@ -3,8 +3,10 @@ pragma solidity ^0.8.13;
 import "./IAsset.sol";
 
 interface IVault {
-
-    enum SwapKind { GIVEN_IN, GIVEN_OUT }
+    enum SwapKind {
+        GIVEN_IN,
+        GIVEN_OUT
+    }
 
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
@@ -38,5 +40,4 @@ interface IVault {
         uint256 limit,
         uint256 deadline
     ) external payable returns (uint256);
-
 }
