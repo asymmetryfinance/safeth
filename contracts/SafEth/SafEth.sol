@@ -6,10 +6,10 @@ import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
-
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -106,12 +106,12 @@ contract SafEth is
                 // This is slightly less than ethAmount because slippage
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
                 uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative() * depositAmount) / 1e18;
+                    .ethPerDerivative() * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
         }
         // mintedAmount represents a percentage of the total assets in the system
-        mintedAmount = (totalStakeValueEth * 1e18) / preDepositPrice;
+        mintedAmount = (totalStakeValueEth) / preDepositPrice;
         require(mintedAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintedAmount);
@@ -365,12 +365,11 @@ contract SafEth is
         for (uint256 i = 0; i < count; i++) {
             if (!derivatives[i].enabled) continue;
             IDerivative derivative = derivatives[i].derivative;
-            underlyingValue +=
-                (derivative.ethPerDerivative() * derivative.balance()) /
-                1e18;
+            underlyingValue += (derivative.ethPerDerivative() *
+                derivative.balance());
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
-        return (1e18 * underlyingValue) / safEthTotalSupply;
+        return (underlyingValue) / safEthTotalSupply;
     }
 
     /**

@@ -848,17 +848,21 @@ describe("SafEth", function () {
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
+      const startingPrice = await safEthProxy.approxPrice();
+      // starting price = 1 Eth
+      expect(startingPrice).eq("1000000000000000000");
+
       await safEthProxy.stake(0, { value: depositAmount });
 
-      const price1 = await safEthProxy.approxPrice();
-      // starting price = 1 Eth
-      expect(price1).eq("1000000000000000000");
+      const priceAfterStake = await safEthProxy.approxPrice();
+      // after initial stake price = 1 Eth
+      expect(priceAfterStake).eq("1000000000000000000");
 
       await time.increase(10000);
-      const price2 = await safEthProxy.approxPrice();
+      const priceAfterTimeIncrease = await safEthProxy.approxPrice();
 
       // price has increased after some time
-      expect(price2).gt(price1);
+      expect(priceAfterTimeIncrease).gt(priceAfterStake);
     });
   });
 
