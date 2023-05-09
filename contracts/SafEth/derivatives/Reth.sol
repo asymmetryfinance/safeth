@@ -6,6 +6,7 @@ import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/rocketpool/RocketSwapRouterInterface.sol";
+import "../../interfaces/balancer/IVault.sol";
 import "../../interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -111,31 +112,27 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     function withdraw(uint256 _amount) external onlyOwner {
         underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
-        if (canWithdrawFromRocketPool(_amount)) {
-            RocketTokenRETHInterface(rethAddress()).burn(_amount);
-        } else {
-            uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
-                address(this)
-            );
-            uint256 ethPerReth = ethPerDerivative();
-            uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) /
-                1e36;
-            uint256 idealOut = ((ethPerReth * _amount) / 1e18);
-            IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
+        uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        uint256 ethPerReth = ethPerDerivative();
+        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) /
+            1e36;
+        uint256 idealOut = ((ethPerReth * _amount) / 1e18);
+        IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
-            // swaps from reth into weth using 100% balancer pool
-            RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
-                0,
-                10,
-                minOut,
-                idealOut,
-                _amount
-            );
-            uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
-                address(this)
-            );
-            IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        }
+        // swaps from reth into weth using 100% balancer pool
+        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
+            0,
+            10,
+            minOut,
+            idealOut,
+            _amount
+        );
+        uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
@@ -184,6 +181,37 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     function balance() external view returns (uint256) {
         return underlyingBalance;
     }
+
+        /// @dev Perform a swap via Balancer
+    /// @param _amount Amount of ETH to swap
+    /// @param _from The token input
+    /// @param _to The token output
+    /// @param _recipient The recipient of the output tokens
+    function balancerSwap(uint256 _amount, address _from, address _to, address payable _recipient) private {
+        if (_amount == 0) {
+            return;
+        }
+
+        IVault.SingleSwap memory swap;
+        swap.poolId = balancerPoolId;
+        swap.kind = IVault.SwapKind.GIVEN_IN;
+        swap.assetIn = IAsset(_from);
+        swap.assetOut = IAsset(_to);
+        swap.amount = _amount;
+
+        IVault.FundManagement memory fundManagement;
+        fundManagement.sender = address(this);
+        fundManagement.recipient = _recipient;
+        fundManagement.fromInternalBalance = false;
+        fundManagement.toInternalBalance = false;
+
+        // Approve the vault to spend our WETH
+        TransferHelper.safeApprove(_from, address(balancerVault), _amount);
+
+        // Execute swap
+        balancerVault.swap(swap, fundManagement, 0, block.timestamp);
+    }
+
 
     receive() external payable {}
 }
