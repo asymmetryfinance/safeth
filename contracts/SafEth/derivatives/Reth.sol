@@ -172,9 +172,35 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        (, int256 chainLinkRethEthPrice, , , ) = chainLinkRethEthFeed
-            .latestRoundData();
-        return uint256(chainLinkRethEthPrice);
+        ChainlinkResponse memory cl;
+        try chainLinkRethEthFeed.latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 /* startedAt */,
+            uint256 updatedAt,
+            uint80 /* answeredInRound */
+        ) {
+            cl.success = true;
+            cl.roundId = roundId;
+            cl.answer = answer;
+            cl.updatedAt = updatedAt;
+        } catch {
+            cl.success = false;
+        }
+
+        // verify chainlink response
+        if (
+            cl.success == true &&
+            cl.roundId != 0 &&
+            cl.answer >= 0 &&
+            cl.updatedAt != 0 &&
+            cl.updatedAt <= block.timestamp &&
+            block.timestamp - cl.updatedAt <= 1 days
+        ) {
+            return uint256(cl.answer);
+        } else {
+            revert("Chainlink Failed");
+        }
     }
 
     /**
