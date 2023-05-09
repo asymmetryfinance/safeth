@@ -147,10 +147,9 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 rethPerEth = (1e36) / ethPerDerivative();
-        uint256 minOut = ((rethPerEth * msg.value) * (1e18 - maxSlippage)) /
-            1e36;
-        uint256 idealOut = (rethPerEth * msg.value) / 1e18;
+        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
+            ethPerDerivative();
+        uint256 idealOut = (1e18 * msg.value) / ethPerDerivative();
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );

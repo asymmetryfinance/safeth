@@ -147,7 +147,7 @@ contract SafEth is
             derivatives[i].derivative.withdraw(derivativeAmount);
             require(
                 address(this).balance - ethBefore != 0,
-                "Receive zero Ether"
+                "Received zero Ether"
             );
         }
         _burn(msg.sender, _safEthAmount);
