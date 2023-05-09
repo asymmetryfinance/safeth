@@ -197,7 +197,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
-        
+
         IWETH(wETH).deposit{value: _amount}();
         IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
         // Execute swap
