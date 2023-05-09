@@ -213,8 +213,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         swap
             .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
         swap.kind = IVault.SwapKind.GIVEN_IN;
-        swap.assetIn = IAsset(W_ETH_ADDRESS);
-        swap.assetOut = IAsset(rethAddress());
+        swap.assetIn = address(W_ETH_ADDRESS);
+        swap.assetOut = address(rethAddress());
         swap.amount = _amount;
 
         IVault.FundManagement memory fundManagement;
