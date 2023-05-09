@@ -104,13 +104,38 @@ contract WstEth is
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
-        (, int256 chainLinkStEthEthPrice, , , ) = chainLinkStEthEthFeed
-            .latestRoundData();
-        if (chainLinkStEthEthPrice < 0) chainLinkStEthEthPrice = 0;
-        uint256 ethPerWstEth = (stPerWst * uint256(chainLinkStEthEthPrice)) /
-            1e18;
-        return ethPerWstEth;
+        ChainlinkResponse memory cl;
+        try chainLinkStEthEthFeed.latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 /* startedAt */,
+            uint256 updatedAt,
+            uint80 /* answeredInRound */
+        ) {
+            cl.success = true;
+            cl.roundId = roundId;
+            cl.answer = answer;
+            cl.updatedAt = updatedAt;
+        } catch {
+            cl.success = false;
+        }
+
+        // verify chainlink response
+        if (
+            cl.success == true &&
+            cl.roundId != 0 &&
+            cl.answer >= 0 &&
+            cl.updatedAt != 0 &&
+            cl.updatedAt <= block.timestamp &&
+            block.timestamp - cl.updatedAt <= 1 days
+        ) {
+            uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
+            if (cl.answer < 0) cl.answer = 0;
+            uint256 ethPerWstEth = (stPerWst * uint256(cl.answer)) / 1e18;
+            return ethPerWstEth;
+        } else {
+            revert("Chainlink Failed");
+        }
     }
 
     /**

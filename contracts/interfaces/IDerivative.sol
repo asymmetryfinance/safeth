@@ -2,6 +2,14 @@
 pragma solidity 0.8.19;
 
 interface IDerivative {
+    // Represents a Chainlink oracle response
+    struct ChainlinkResponse {
+        uint80 roundId;
+        int256 answer;
+        uint256 updatedAt;
+        bool success;
+    }
+
     /// Returns human readable identifier string
     function name() external pure returns (string memory);
 
