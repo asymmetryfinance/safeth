@@ -6,6 +6,7 @@ import "../../interfaces/rocketpool/RocketStorageInterface.sol";
 import "../../interfaces/rocketpool/RocketTokenRETHInterface.sol";
 import "../../interfaces/rocketpool/RocketDepositPoolInterface.sol";
 import "../../interfaces/rocketpool/RocketSwapRouterInterface.sol";
+import "../../interfaces/balancer/IVault.sol";
 import "../../interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -14,6 +15,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
+
 contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
@@ -34,6 +36,11 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
+
+    IVault public constant balancerVault =
+        IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
+    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -111,31 +118,26 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     function withdraw(uint256 _amount) external onlyOwner {
         underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
-        if (canWithdrawFromRocketPool(_amount)) {
-            RocketTokenRETHInterface(rethAddress()).burn(_amount);
-        } else {
-            uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
-                address(this)
-            );
-            uint256 ethPerReth = ethPerDerivative();
-            uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) /
-                1e36;
-            uint256 idealOut = ((ethPerReth * _amount) / 1e18);
-            IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
+        uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        uint256 ethPerReth = ethPerDerivative();
+        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) / 1e36;
+        uint256 idealOut = ((ethPerReth * _amount) / 1e18);
+        IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
-            // swaps from reth into weth using 100% balancer pool
-            RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
-                0,
-                10,
-                minOut,
-                idealOut,
-                _amount
-            );
-            uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
-                address(this)
-            );
-            IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        }
+        // swaps from reth into weth using 100% balancer pool
+        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
+            0,
+            10,
+            minOut,
+            idealOut,
+            _amount
+        );
+        uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
+        IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
@@ -149,17 +151,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
             ethPerDerivative();
-        uint256 idealOut = (1e18 * msg.value) / ethPerDerivative();
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
-        // swaps into reth using 100% balancer pool
-        RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapTo{value: msg.value}(
-            0,
-            10,
-            minOut,
-            idealOut
-        );
+        balancerSwap(msg.value, minOut);
         uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -208,6 +203,30 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function balance() external view returns (uint256) {
         return underlyingBalance;
+    }
+
+    function balancerSwap(uint256 _amount, uint256 _minOut) private {
+        if (_amount == 0) {
+            return;
+        }
+        IVault.SingleSwap memory swap;
+        swap
+            .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
+        swap.kind = IVault.SwapKind.GIVEN_IN;
+        swap.assetIn = address(W_ETH_ADDRESS);
+        swap.assetOut = address(rethAddress());
+        swap.amount = _amount;
+
+        IVault.FundManagement memory fundManagement;
+        fundManagement.sender = address(this);
+        fundManagement.recipient = address(this);
+        fundManagement.fromInternalBalance = false;
+        fundManagement.toInternalBalance = false;
+
+        IWETH(wETH).deposit{value: _amount}();
+        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
+        // Execute swap
+        balancerVault.swap(swap, fundManagement, _minOut, block.timestamp);
     }
 
     receive() external payable {}
