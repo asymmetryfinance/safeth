@@ -4,7 +4,7 @@ async function main() {
   const RethDeployment = await ethers.getContractFactory("Reth");
   console.log("Upgrading Reth...");
   await upgrades.upgradeProxy(
-    "0x8D5dD29592bf3bD5DC98Eb6c0E895fEa4Bd890D0",
+    "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3",
     RethDeployment
   );
 

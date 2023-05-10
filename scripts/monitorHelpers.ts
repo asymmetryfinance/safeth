@@ -16,7 +16,7 @@ let previousTotalSupply = BigNumber.from(0);
 export const notifyOnStakeUnstake = async () => {
   const safEth = await ethers.getContractAt(
     "SafEth",
-    "0xC57319e15d5D78Ba73c08C4E09d320705Bd4478D"
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5"
   );
   await safEth.deployed();
 
@@ -75,19 +75,19 @@ export const notifyOnPriceDrop = async (
 export const getContracts = async () => {
   const safEth = await ethers.getContractAt(
     "SafEth",
-    "0xC57319e15d5D78Ba73c08C4E09d320705Bd4478D"
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5"
   );
   const wstEthDerivative = await ethers.getContractAt(
     "WstEth",
-    "0x1533eDbe274AA1B9fB5dB2652D6d143e939B306f"
+    "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad"
   );
   const rethDerivative = await ethers.getContractAt(
     "Reth",
-    "0x8D5dD29592bf3bD5DC98Eb6c0E895fEa4Bd890D0"
+    "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3"
   );
   const sfrxEthDerivative = await ethers.getContractAt(
     "SfrxEth",
-    "0x1eD84a676f3ba626389cB131e7c1bc32935bbA37"
+    "0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A"
   );
 
   const chainLinkStEthEthFeed = new ethers.Contract(

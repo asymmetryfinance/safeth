@@ -4,7 +4,7 @@ async function main() {
   const WstEthDeployment = await ethers.getContractFactory("WstEth");
   console.log("Upgrading WstEth...");
   await upgrades.upgradeProxy(
-    "0x1533eDbe274AA1B9fB5dB2652D6d143e939B306f",
+    "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad",
     WstEthDeployment
   );
 

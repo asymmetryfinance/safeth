@@ -12,7 +12,6 @@ import "hardhat/console.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-
 contract SfrxEth is
     ERC165Storage,
     IDerivative,

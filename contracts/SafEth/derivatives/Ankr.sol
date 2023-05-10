@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
-
 contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ANKR_ETH_ADDRESS =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;

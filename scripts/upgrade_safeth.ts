@@ -4,7 +4,7 @@ async function main() {
   const SafEthDeployment = await ethers.getContractFactory("SafEth");
   console.log("Upgrading SafEth...");
   await upgrades.upgradeProxy(
-    "0xC57319e15d5D78Ba73c08C4E09d320705Bd4478D",
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
     SafEthDeployment
   );
 
