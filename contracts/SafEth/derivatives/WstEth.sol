@@ -50,7 +50,7 @@ contract WstEth is
         );
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public {
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
         chainLinkStEthEthFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 

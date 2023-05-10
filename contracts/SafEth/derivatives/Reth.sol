@@ -62,7 +62,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         );
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public {
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
         chainLinkRethEthFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 

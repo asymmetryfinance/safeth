@@ -52,7 +52,7 @@ contract StakeWise is
         maxSlippage = (1 * 1e16); // 1%
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public {
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
         // noop (for now until we fully test and integrate ankr)
     }
 
