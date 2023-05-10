@@ -530,8 +530,32 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   });
 
   // TODO finish these tests in a follow-up PR where we can mock the rewards for longer periods of time
-  it("Should award roughly twice as much if stakes for twice as long", async function () {
-    // TODO now that we have a way to mock rewards, we can test this
+  it.only("Should award roughly twice as much if stakes for twice as long", async function () {
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    const depositAmount = ethers.utils.parseEther("5");
+
+    // open position
+    let tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+
+    // wait 4 lock periods + a week
+    for (let i = 0; i < 16 * 5 + 1; i++) {
+      await increaseEpochAndRelock();
+    }
+
+    tx = await cvxStrategy.unstake(false, 1);
+    await tx.wait();
+
+    // wait 1 lock periods + a week
+    for (let i = 0; i < 16 + 1; i++) {
+      await increaseEpochAndRelock();
+    }
+
+    const balanceBefore = await ethers.provider.getBalance(accounts[0].address);
+    console.log("balanceBefore", balanceBefore);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
+    const mined = await tx.wait();
   });
   it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
     // TODO now that we have a way to mock rewards, we can test this
@@ -540,5 +564,16 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
     return getDifferenceRatio(amount1, amount2).gt("100");
+  };
+
+  // increase time by 1 week and relock like the oracle will at a minimum once a week.
+  const increaseEpochAndRelock = async () => {
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    await time.increase(60 * 60 * 24 * 7);
+    let tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.relockCvx();
+    await tx.wait();
   };
 });
