@@ -552,7 +552,7 @@ describe("SafEth", function () {
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
-      const derivativeToUpgrade = derivatives[0];
+      const derivativeToUpgrade = derivatives[1];
 
       const upgradedDerivative = await upgrade(
         derivativeToUpgrade.address,

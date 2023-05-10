@@ -24,8 +24,7 @@ contract WstEth is
     address private constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
-    AggregatorV3Interface constant chainLinkStEthEthFeed =
-        AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
+    AggregatorV3Interface chainLinkStEthEthFeed;
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
@@ -46,6 +45,13 @@ contract WstEth is
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 1e16); // 1%
+        chainLinkStEthEthFeed = AggregatorV3Interface(
+            0x86392dC19c0b719886221c78AB11eb8Cf5c52812
+        );
+    }
+
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
+        chainLinkStEthEthFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
     /**
