@@ -38,7 +38,6 @@ async function main() {
     name: "SfrxEth",
     address: sfrx.address,
   });
-
   const WstDeployment = await ethers.getContractFactory("WstEth");
   const wst = await upgrades.deployProxy(WstDeployment, [safEth.address]);
   await wst.deployed();
