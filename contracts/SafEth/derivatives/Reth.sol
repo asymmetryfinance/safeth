@@ -31,8 +31,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_SWAP_ROUTER =
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
-    AggregatorV3Interface constant chainLinkRethEthFeed =
-        AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
+    AggregatorV3Interface chainLinkRethEthFeed;
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
@@ -58,6 +57,13 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 1e16); // 1%
+        chainLinkRethEthFeed = AggregatorV3Interface(
+            0x536218f9E9Eb48863970252233c8F271f554C2d0
+        );
+    }
+
+    function setChainlinkFeed(address _priceFeedAddress) public {
+        chainLinkRethEthFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
     /**

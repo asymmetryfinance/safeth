@@ -40,6 +40,10 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         maxSlippage = (1 * 1e16); // 1%
     }
 
+    function setChainlinkFeed(address _priceFeedAddress) public {
+        // noop (for now until we fully test and integrate ankr)
+    }
+
     /**
         @notice - Return derivative name
     */
@@ -89,7 +93,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
+        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18); // TODO chainlink needed here maybe????
     }
 
     /**
