@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 interface IDerivative {
+    // Represents a Chainlink oracle response
+    struct ChainlinkResponse {
+        uint80 roundId;
+        int256 answer;
+        uint256 updatedAt;
+        bool success;
+    }
+
     /// Returns human readable identifier string
     function name() external pure returns (string memory);
 
@@ -12,7 +20,7 @@ interface IDerivative {
     function withdraw(uint256 amount) external;
 
     /// Estimated price per derivative when depositing amount
-    function ethPerDerivative(uint256 amount) external view returns (uint256);
+    function ethPerDerivative() external view returns (uint256);
 
     /// underlying derivative balance held by this contract
     function balance() external view returns (uint256);

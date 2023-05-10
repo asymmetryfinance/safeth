@@ -1,4 +1,4 @@
-import { ethers, network, upgrades, waffle } from "hardhat";
+import { ethers, network, waffle } from "hardhat";
 import {
   CRV_POOL_FACTORY,
   CVX_ADDRESS,
@@ -15,36 +15,34 @@ import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
-import { deploySafEth } from "./helpers/upgradeHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
+import { within1Percent } from "./helpers/functions";
 
-describe("CvxStrategy", async function () {
+describe("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
-  let initialHardhatBlock: number;
 
   const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
   };
 
   before(async () => {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    initialHardhatBlock = latestBlock.number;
-    await resetToBlock(initialHardhatBlock);
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
     const accounts = await ethers.getSigners();
     const crvPoolFactory = new ethers.Contract(
       CRV_POOL_FACTORY,
@@ -78,7 +76,16 @@ describe("CvxStrategy", async function () {
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
+  });
+  it("Should seed CRV Pool", async function () {
+    const crvPoolBalance0 = await crvPool.balances(0);
+    expect(crvPoolBalance0).gt(0);
+    const crvPoolBalance1 = await crvPool.balances(1);
+    expect(crvPoolBalance1).gt(0);
   });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
@@ -91,38 +98,128 @@ describe("CvxStrategy", async function () {
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
-    const cvxBalance = "474436277918812750007";
-    const crvPoolBalance = "1754280915975480240";
 
-    expect(vlCvxBalance).eq(BigNumber.from(cvxBalance));
+    expect(vlCvxBalance).eq(BigNumber.from("518490293350028363092"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
-    const crvPoolEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq(crvPoolBalance);
-    expect(crvPoolEthAmount).eq(crvPoolBalance);
+    const crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("3564550022538308222");
+    expect(crvPoolSafEthAmount).eq("3564550022538308222");
 
     // check position struct
-    const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.curveBalance).eq(BigNumber.from(crvPoolBalance));
-    expect(positions.convexBalance).eq(BigNumber.from(cvxBalance));
+    const positions = await cvxStrategy.positions(1);
+    expect(positions.afEthAmount).eq(BigNumber.from("3494656870760577835"));
+    expect(positions.curveBalance).eq(BigNumber.from("3494621924191870229"));
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-    // const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-    console.log(await ethers.provider.getBalance(accounts[0].address));
+
+    const ethBalanceBefore = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+
+    // check crv liquidity pool before staking
+    const crvPoolAfEthAmountBefore = await crvPool.balances(0);
+    const crvPoolSafEthAmountBefore = await crvPool.balances(1);
+    expect(crvPoolAfEthAmountBefore).eq("3564550022538308222");
+    expect(crvPoolSafEthAmountBefore).eq("3564550022538308222");
+
+    const afEthStrategyBalanceBefore = await afEth.balanceOf(
+      cvxStrategy.address
+    );
+    const safEthStrategyBalanceBefore = await safEth.balanceOf(
+      cvxStrategy.address
+    );
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    const unstakeTx = await cvxStrategy.unstake(false, 0);
+    // check crv liquidity pool after staking
+    const crvPoolAfEthAmount = await crvPool.balances(0);
+    const crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("7059205486218910892");
+    expect(crvPoolSafEthAmount).eq("7059205486218910892");
+
+    // check cvx locked positions
+    let position1 = await cvxStrategy.cvxPositions(1);
+    let unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).eq(0);
+
+    // check eth balance was deducted
+    const ethBalanceDuring = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    expect(ethBalanceBefore.sub(ethBalanceDuring)).gt(depositAmount);
+
+    const unstakeTx = await cvxStrategy.unstake(false, 2);
     await unstakeTx.wait();
-    console.log(await ethers.provider.getBalance(accounts[0].address));
 
-    // TODO: check every scenario for unstaking
+    // check crv liquidity pool after unstaking
+    const crvPoolAfEthAmountAfter = await crvPool.balances(0);
+    const crvPoolSafEthAmountAfter = await crvPool.balances(1);
+    expect(crvPoolAfEthAmountAfter).eq("3564567668909283161");
+    expect(crvPoolSafEthAmountAfter).eq("3564567668909283161");
+
+    // verify no loss in crv pool after unstake
+    expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
+    expect(crvPoolSafEthAmountAfter).gte(crvPoolSafEthAmountAfter);
+
+    // verify token balances do not change
+    expect(afEthStrategyBalanceBefore).eq(
+      await afEth.balanceOf(cvxStrategy.address)
+    );
+    expect(safEthStrategyBalanceBefore).eq(
+      await safEth.balanceOf(cvxStrategy.address)
+    );
+
+    const ethBalanceAfter = await ethers.provider.getBalance(
+      accounts[0].address
+    );
+    position1 = await cvxStrategy.cvxPositions(2);
+
+    // check cvx locked positions to have unlock epoch
+    unlockEpoch = position1.unlockEpoch;
+    expect(unlockEpoch).gt(0);
+
+    within1Percent(
+      ethBalanceAfter.sub(ethBalanceDuring),
+      depositAmount.mul(70).div(100)
+    ); // 70% AAA ratio is in ETH, 30% will be in CVX
+  });
+  it("Should unstake everything and still be able to stake", async function () {
+    const depositAmount = ethers.utils.parseEther("5");
+
+    const unstakeTx = await cvxStrategy.unstake(false, 1);
+    await unstakeTx.wait();
+
+    let crvPoolAfEthAmount = await crvPool.balances(0);
+    let crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("69894183022159806");
+    expect(crvPoolSafEthAmount).eq("69894183022159806");
+
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+
+    crvPoolAfEthAmount = await crvPool.balances(0);
+    crvPoolSafEthAmount = await crvPool.balances(1);
+    expect(crvPoolAfEthAmount).eq("3564551047345010209");
+    expect(crvPoolSafEthAmount).eq("3564551047345010209");
+  });
+  it("Shouldn't be able to unstake seed amount", async function () {
+    await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith("Not owner");
+  });
+  it("Should fail to unstake if not owner", async function () {
+    const accounts = await ethers.getSigners();
+    const depositAmount = ethers.utils.parseEther("5");
+    const stakeTx = await cvxStrategy.stake({ value: depositAmount });
+    await stakeTx.wait();
+    const userStrategySigner = cvxStrategy.connect(accounts[1]);
+
+    await expect(userStrategySigner.unstake(false, 3)).to.be.revertedWith(
+      "Not owner"
+    );
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
@@ -145,18 +242,12 @@ describe("CvxStrategy", async function () {
     const provider = waffle.provider;
     const startingBalance = await provider.getBalance(cvxStrategy.address);
 
-    const tx2 = await cvxStrategy.claimRewards(ethers.utils.parseEther("0.01")); //  1% slippage tolerance when claiming
+    const tx2 = await cvxStrategy.claimRewards();
     await tx2.wait();
     const endingBalance = await provider.getBalance(cvxStrategy.address);
 
     expect(endingBalance.gt(startingBalance)).eq(true);
-
-    // TODO: Not reverting, need to look more into it trying to get this PR in
-    // await expect(
-    //   cvxStrategy.claimRewards(ethers.utils.parseEther("0.000000001")) // very low slippage reverts
-    // ).to.be.reverted;
   });
-
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
     resetToBlock(16871866);

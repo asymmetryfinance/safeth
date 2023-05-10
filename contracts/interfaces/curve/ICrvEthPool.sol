@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
 /// https://etherscan.io/address/0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511#code
 interface ICrvEthPool {

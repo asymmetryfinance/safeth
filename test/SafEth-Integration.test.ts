@@ -1,5 +1,5 @@
 import { SafEth } from "../typechain-types";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
 import {
   getAdminAccount,
@@ -10,6 +10,7 @@ import {
 } from "./helpers/integrationHelpers";
 import { getLatestContract } from "./helpers/upgradeHelpers";
 import { BigNumber } from "ethers";
+import { within1Percent } from "./helpers/functions";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
@@ -31,6 +32,17 @@ describe("SafEth Integration Test", function () {
     startingBalances = await getUserBalances();
     networkFeesPerAccount = startingBalances.map(() => BigNumber.from(0));
     totalStakedPerAccount = startingBalances.map(() => BigNumber.from(0));
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
   });
 
   it("Should deploy the strategy contract", async function () {
@@ -51,7 +63,7 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth"];
+    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr"];
     const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
@@ -71,6 +83,13 @@ describe("SafEth Integration Test", function () {
     }
 
     const derivativeCount = await strategy.derivativeCount();
+    await strategy.setPauseStaking(false);
+
+    // ankr slippage tolerance needs to be set high for the integration test
+    // withdraws are affecting the pool but price is oraclePrice that doesnt change
+    // so with enough tests slippage becomes high because there is no arb happening
+    const t = await strategy.setMaxSlippage(3, "30000000000000000"); // 3% slippage
+    await t.wait();
 
     expect(derivativeCount).eq(supportedDerivatives.length);
   });
@@ -155,7 +174,7 @@ describe("SafEth Integration Test", function () {
       const withdrawAmount = await strategy.balanceOf(userAccounts[i].address);
       if (withdrawAmount.eq(0)) continue;
       const userStrategySigner = strategy.connect(userAccounts[i]);
-      const unstakeResult = await userStrategySigner.unstake(withdrawAmount);
+      const unstakeResult = await userStrategySigner.unstake(withdrawAmount, 0);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
       networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
@@ -180,23 +199,8 @@ describe("SafEth Integration Test", function () {
         totalSlippagePerAccount[i]
       );
       const staked = totalStakedPerAccount[i];
+
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });
 });
-
-const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.eq(amount2)) return true;
-  return getDifferenceRatio(amount1, amount2).gt("100");
-};
-
-// Get ratio between 2 amounts such that % diff = 1/ratio
-// Example: 200 = 0.5%, 100 = 1%, 50 = 2%, 25 = 4%, etc
-// Useful for comparing ethers bignumbers that dont support floating point numbers
-export const getDifferenceRatio = (amount1: BigNumber, amount2: BigNumber) => {
-  if (amount1.lt(0) || amount2.lt(0)) throw new Error("Positive values only");
-  const difference = amount1.gt(amount2)
-    ? amount1.sub(amount2)
-    : amount2.sub(amount1);
-  return amount1.div(difference);
-};

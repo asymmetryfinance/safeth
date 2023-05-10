@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -7,21 +7,22 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "../interfaces/uniswap/ISwapRouter.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
-import "./interfaces/convex/ILockedCvx.sol";
-import "./interfaces/convex/IClaimZap.sol";
+import "../interfaces/convex/ILockedCvx.sol";
+import "../interfaces/convex/IClaimZap.sol";
 import "../interfaces/curve/ICvxCrvCrvPool.sol";
 import "../interfaces/curve/IFxsEthPool.sol";
 import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/curve/ICvxFxsFxsPool.sol";
 import "../interfaces/curve/IAfEthPool.sol";
-import "./interfaces/ISafEth.sol";
-import "./interfaces/IAfEth.sol";
-import "hardhat/console.sol";
+import "../interfaces/ISafEth.sol";
+import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+    event Staked(uint256 indexed position, address indexed user);
+    event Unstaked(uint256 indexed position, address indexed user);
 
     mapping(uint256 => uint256) public crvEmissionsPerYear;
 
@@ -37,24 +38,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
-    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
-    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
-    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
-
-    address public constant FXS_ETH_CRV_POOL_ADDRESS =
-        0x941Eb6F616114e4Ecaa85377945EA306002612FE;
-    address public constant CVXFXS_FXS_CRV_POOL_ADDRESS =
-        0xd658A338613198204DCa1143Ac3F01A722b5d94A;
-    address public constant CVXCRV_CRV_CRV_POOL_ADDRESS =
-        0x9D0464996170c6B9e75eED71c68B99dDEDf279e8;
-    address public constant CRV_ETH_CRV_POOL_ADDRESS =
-        0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511;
-    address public constant CVX_ETH_CRV_POOL_ADDRESS =
-        0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
-    address public constant SNAPSHOT_DELEGATE_REGISTRY =
-        0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
     address afEth;
     address crvPool;
@@ -63,9 +46,8 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     struct Position {
         address owner; // owner of position
         uint256 curveBalance; // crv Pool LP amount
-        uint256 convexBalance; // cvx locked amount
-        uint256 afEthAmount; // afEth amount minted TODO: this may not be needed
-        uint256 safEthAmount; // afEth amount minted TODO: this may not be needed
+        uint256 afEthAmount; // afEth amount minted
+        uint256 safEthAmount; // safEth amount minted
         uint256 createdAt; // block.timestamp
         bool claimed; // user has unstaked position
     }
@@ -90,7 +72,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
     */
-    function initialize(address _safEth, address _afEth) external initializer {
+    function initialize(
+        address _safEth,
+        address _afEth,
+        address _rewardsExtraStream
+    ) external initializer {
         _transferOwnership(msg.sender);
 
         safEth = _safEth;
@@ -108,29 +94,22 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         crvEmissionsPerYear[9] = 68703820;
         crvEmissionsPerYear[10] = 57772796;
 
-        // Assumes AfEth contract owns the vote locked convex
-        // This will need to be done elseware if other contracts own or wrap the vote locked convex
-        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
-        ISnapshotDelegationRegistry(SNAPSHOT_DELEGATE_REGISTRY).setDelegate(
-            vlCvxVoteDelegationId,
-            owner()
-        );
-
-        lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        initializeLockManager(_rewardsExtraStream);
     }
 
-    function stake() external payable {
-        uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
-        uint256 ethAmountForCvx = (msg.value * ratio) / 10 ** 18;
-        uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
-        uint256 id = positionId;
-        uint256 cvxAmount = swapCvx(ethAmountForCvx);
-        lockCvx(cvxAmount, id, msg.sender);
+    function stake() public payable returns (uint256 id) {
+        require(crvPool != address(0), "Pool not initialized");
 
-        uint256 safEthAmount = ISafEth(safEth).stake{
-            value: ethAmountForSafEth
-        }();
-        uint256 mintAmount = safEthAmount / 2; // TODO: dust will be left over from rounding
+        uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
+        uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
+        uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
+        uint256 cvxAmount = swapCvx(ethAmountForCvx);
+        id = positionId;
+
+        lockCvx(cvxAmount, id, msg.sender);
+        uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
+            0 // TODO: set minAmount
+        );
         IAfEth(afEth).mint(address(this), mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
@@ -142,19 +121,20 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         positions[id] = Position({
             owner: msg.sender,
             curveBalance: crvLpAmount,
-            convexBalance: cvxAmount,
             afEthAmount: mintAmount,
             safEthAmount: mintAmount,
             createdAt: block.timestamp,
             claimed: false
         });
         positionId++;
+        emit Staked(id, msg.sender);
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
+        require(position.owner == msg.sender, "Not owner");
         position.claimed = true;
         if (_instantWithdraw) {
             // TODO: add instant withdraw function
@@ -169,14 +149,27 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         } else {
             requestUnlockCvx(id, msg.sender);
         }
-
+        uint256 ethBalanceBefore = address(this).balance;
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
-        withdrawCrvPool(crvPool, position.curveBalance);
-        uint256 afEthBalanceAfter = IERC20(afEth).balanceOf(address(this));
-        uint256 afEthBalance = afEthBalanceAfter - afEthBalanceBefore;
-        IAfEth(afEth).burn(address(this), afEthBalance);
+        uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
 
-        // TODO: send user eth
+        withdrawCrvPool(crvPool, position.curveBalance);
+        IAfEth(afEth).burn(
+            address(this),
+            IERC20(afEth).balanceOf(address(this)) - afEthBalanceBefore
+        );
+        ISafEth(safEth).unstake(
+            IERC20(safEth).balanceOf(address(this)) - safEthBalanceBefore,
+            0
+        ); // TODO: add minOut ~.5% slippage
+
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{
+            value: address(this).balance - ethBalanceBefore
+        }("");
+        require(sent, "Failed to send Ether");
+
+        emit Unstaked(id, msg.sender);
     }
 
     function getAsymmetryRatio(
@@ -186,11 +179,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             ((block.timestamp - 1597471200) / 31556926) + 1
         ];
         uint256 cvxTotalSupplyAsCrv = (crvPerCvx() *
-            IERC20(CVX).totalSupply()) / 10 ** 18;
+            IERC20(CVX).totalSupply()) / 1e18;
         uint256 supplyEmissionRatio = cvxTotalSupplyAsCrv /
             crvEmissionsThisYear;
         uint256 ratioPercentage = supplyEmissionRatio * apy;
-        return (ratioPercentage) / (10 ** 18 + (ratioPercentage / 10 ** 18));
+        return (ratioPercentage) / (1e18 + (ratioPercentage / 1e18));
     }
 
     function crvPerCvx() public view returns (uint256) {
@@ -201,7 +194,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             .latestRoundData();
         if (chainLinkCrvEthPrice < 0) chainLinkCrvEthPrice = 0;
         return
-            (uint256(chainLinkCvxEthPrice) * 10 ** 18) /
+            (uint256(chainLinkCvxEthPrice) * 1e18) /
             uint256(chainLinkCrvEthPrice);
     }
 
@@ -257,7 +250,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
-            uint256(100000), // TODO: why hardcoded
+            0, // TODO: add min mint amount
             false
         );
         return (poolTokensMinted);
@@ -271,100 +264,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         IAfEthPool(_pool).remove_liquidity(_amount, min_amounts);
     }
 
-    function updateCrvPool(address _crvPool) public onlyOwner {
+    function updateCrvPool(address _crvPool) external payable onlyOwner {
+        require(msg.value > 0, "Must seed pool");
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
-    }
-
-    function claimRewards(uint256 _maxSlippage) public onlyOwner {
-        address[] memory emptyArray;
-        IClaimZap(cvxClaimZap).claimRewards(
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            0,
-            0,
-            0,
-            0,
-            8
-        );
-        // cvxFxs -> fxs
-        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
-        if (cvxFxsBalance > 0) {
-            uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
-            ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
-                1,
-                0,
-                cvxFxsBalance,
-                minOut
-            );
-        }
-
-        // fxs -> eth
-        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
-        if (fxsBalance > 0) {
-            uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
-                1,
-                0,
-                10 ** 18
-            );
-            uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
-
-            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
-
-            IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
-                1,
-                0,
-                fxsBalance,
-                minOut
-            );
-        }
-        // cvxCrv -> crv
-        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
-        if (cvxCrvBalance > 0) {
-            uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
-                .get_dy(1, 0, 10 ** 18);
-            uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
-            ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
-                1,
-                0,
-                cvxCrvBalance,
-                minOut
-            );
-        }
-
-        // crv -> eth
-        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
-        if (crvBalance > 0) {
-            uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
-                1,
-                0,
-                10 ** 18
-            );
-            uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
-                (10 ** 18 - _maxSlippage)) / 10 ** 18;
-
-            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
-            ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
-                1,
-                0,
-                crvBalance,
-                minOut
-            );
-        }
-
-        return;
+        this.stake{value: msg.value}();
     }
 
     receive() external payable {}

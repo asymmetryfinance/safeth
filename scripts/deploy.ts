@@ -3,13 +3,13 @@ import hre, { upgrades, ethers } from "hardhat";
 async function main() {
   const SafEthDeployment = await ethers.getContractFactory("SafEth");
   const safEth = await upgrades.deployProxy(SafEthDeployment, [
-    "Asymmetry Finance ETH",
+    "Simple Asymmetry Finance ETH",
     "safETH",
   ]);
 
   await safEth.deployed();
 
-  console.log("AF Strategy deployed to:", safEth.address);
+  console.log("SafEth deployed to:", safEth.address);
 
   await hre.ethernal.push({
     name: "SafEth",
@@ -21,7 +21,7 @@ async function main() {
   const reth = await upgrades.deployProxy(rethDeployment, [safEth.address]);
   await reth.deployed();
   await safEth.addDerivative(reth.address, "1000000000000000000");
-  console.log("RETH deployed to:", reth.address);
+  console.log("rEth deployed to:", reth.address);
 
   await hre.ethernal.push({
     name: "Reth",
@@ -33,22 +33,22 @@ async function main() {
   await sfrx.deployed();
 
   await safEth.addDerivative(sfrx.address, "1000000000000000000");
-  console.log("sfrx deployed to:", sfrx.address);
+  console.log("sfrxEth deployed to:", sfrx.address);
   await hre.ethernal.push({
     name: "SfrxEth",
     address: sfrx.address,
   });
-
   const WstDeployment = await ethers.getContractFactory("WstEth");
   const wst = await upgrades.deployProxy(WstDeployment, [safEth.address]);
   await wst.deployed();
 
   await safEth.addDerivative(wst.address, "1000000000000000000");
-  console.log("wst deployed to:", wst.address);
+  console.log("wstEth deployed to:", wst.address);
   await hre.ethernal.push({
     name: "WstEth",
     address: wst.address,
   });
+  await safEth.setPauseStaking(false);
 }
 
 main()

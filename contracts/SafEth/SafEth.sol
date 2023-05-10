@@ -1,37 +1,56 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/IWETH.sol";
-import "../interfaces/uniswap/ISwapRouter.sol";
-import "../interfaces/lido/IWStETH.sol";
-import "../interfaces/lido/IstETH.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
-    OwnableUpgradeable,
-    SafEthStorage
+    Ownable2StepUpgradeable,
+    SafEthStorage,
+    ReentrancyGuardUpgradeable
 {
-    event ChangeMinAmount(uint256 indexed minAmount);
-    event ChangeMaxAmount(uint256 indexed maxAmount);
+    event ChangeMinAmount(
+        uint256 indexed oldMinAmount,
+        uint256 indexed newMinAmount
+    );
+    event ChangeMaxAmount(
+        uint256 indexed oldMaxAmount,
+        uint256 indexed newMaxAmount
+    );
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
-    event SetMaxSlippage(uint256 indexed index, uint256 slippage);
-    event Staked(address indexed recipient, uint ethIn, uint totalStakeValue);
-    event Unstaked(address indexed recipient, uint ethOut, uint safEthIn);
-    event WeightChange(uint indexed index, uint weight);
+    event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
+    event Staked(
+        address indexed recipient,
+        uint256 indexed ethIn,
+        uint256 indexed totalStakeValue,
+        uint256 price
+    );
+    event Unstaked(
+        address indexed recipient,
+        uint256 indexed ethOut,
+        uint256 indexed safEthIn
+    );
+    event WeightChange(
+        uint256 indexed index,
+        uint256 indexed weight,
+        uint256 indexed totalWeight
+    );
     event DerivativeAdded(
         address indexed contractAddress,
-        uint weight,
-        uint index
+        uint256 indexed weight,
+        uint256 indexed index
     );
     event Rebalanced();
+    event DerivativeDisabled(uint256 indexed index);
+    event DerivativeEnabled(uint256 indexed index);
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -50,78 +69,91 @@ contract SafEth is
         string memory _tokenSymbol
     ) external initializer {
         ERC20Upgradeable.__ERC20_init(_tokenName, _tokenSymbol);
-        _transferOwnership(msg.sender);
-        minAmount = 5 * 10 ** 17; // initializing with .5 ETH as minimum
-        maxAmount = 200 * 10 ** 18; // initializing with 200 ETH as maximum
+        Ownable2StepUpgradeable.__Ownable2Step_init();
+        minAmount = 5 * 1e16; // initializing with .05 ETH as minimum
+        maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
+        pauseStaking = true; // pause staking on initialize for adding derivatives
+        __ReentrancyGuard_init();
     }
 
     /**
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
+        @param _minOut - minimum amount of safETH to mint
+        @return mintedAmount - amount of safETH minted
     */
-    function stake() external payable returns (uint256 mintedAmount) {
-        require(pauseStaking == false, "staking is paused");
+    function stake(
+        uint256 _minOut
+    ) external payable nonReentrant returns (uint256 mintedAmount) {
+        require(!pauseStaking, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
+        require(totalWeight > 0, "total weight is zero");
 
-        uint256 underlyingValue = 0;
-
-        // Getting underlying value in terms of ETH for each derivative
-        for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
-                    derivatives[i].balance()) /
-                10 ** 18;
-
-        uint256 totalSupply = totalSupply();
-        uint256 preDepositPrice; // Price of safETH in regards to ETH
-        if (totalSupply == 0)
-            preDepositPrice = 10 ** 18; // initializes with a price of 1
-        else preDepositPrice = (10 ** 18 * underlyingValue) / totalSupply;
-
+        uint256 preDepositPrice = approxPrice();
+        uint256 count = derivativeCount;
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint i = 0; i < derivativeCount; i++) {
-            uint256 weight = weights[i];
-            IDerivative derivative = derivatives[i];
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            uint256 weight = derivatives[i].weight;
             if (weight == 0) continue;
+            IDerivative derivative = derivatives[i].derivative;
             uint256 ethAmount = (msg.value * weight) / totalWeight;
 
-            // This is slightly less than ethAmount because slippage
-            uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint derivativeReceivedEthValue = (derivative.ethPerDerivative(
-                depositAmount
-            ) * depositAmount) / 10 ** 18;
-            totalStakeValueEth += derivativeReceivedEthValue;
+            if (ethAmount > 0) {
+                // This is slightly less than ethAmount because slippage
+                uint256 depositAmount = derivative.deposit{value: ethAmount}();
+                uint256 derivativeReceivedEthValue = (derivative
+                    .ethPerDerivative() * depositAmount);
+                totalStakeValueEth += derivativeReceivedEthValue;
+            }
         }
-        // mintAmount represents a percentage of the total assets in the system
-        uint256 mintAmount = (totalStakeValueEth * 10 ** 18) / preDepositPrice;
+        // mintedAmount represents a percentage of the total assets in the system
+        mintedAmount = (totalStakeValueEth) / preDepositPrice;
+        require(mintedAmount > _minOut, "mint amount less than minOut");
 
-        _mint(msg.sender, mintAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth);
-        return (mintAmount);
+        _mint(msg.sender, mintedAmount);
+        emit Staked(msg.sender, msg.value, totalStakeValueEth, approxPrice());
     }
 
     /**
         @notice - Unstake your safETH into ETH
         @dev - unstakes a percentage of safEth based on its total value
         @param _safEthAmount - amount of safETH to unstake into ETH
+        @param _minOut - minimum amount of ETH to unstake
     */
-    function unstake(uint256 _safEthAmount) external {
-        require(pauseUnstaking == false, "unstaking is paused");
+    function unstake(
+        uint256 _safEthAmount,
+        uint256 _minOut
+    ) external nonReentrant {
+        require(!pauseUnstaking, "unstaking is paused");
+        require(_safEthAmount > 0, "amount too low");
+        require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
+
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
+        uint256 count = derivativeCount;
 
-        for (uint256 i = 0; i < derivativeCount; i++) {
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
             // withdraw a percentage of each asset based on the amount of safETH
-            uint256 derivativeAmount = (derivatives[i].balance() *
+            uint256 derivativeAmount = (derivatives[i].derivative.balance() *
                 _safEthAmount) / safEthTotalSupply;
             if (derivativeAmount == 0) continue; // if derivative empty ignore
-            derivatives[i].withdraw(derivativeAmount);
+            // Add check for a zero Ether received
+            uint256 ethBefore = address(this).balance;
+            derivatives[i].derivative.withdraw(derivativeAmount);
+            require(
+                address(this).balance - ethBefore != 0,
+                "Received zero Ether"
+            );
         }
         _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        require(ethAmountToWithdraw > _minOut);
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
             ""
@@ -138,26 +170,28 @@ contract SafEth is
         @dev - Probably not going to be used often, if at all
     */
     function rebalanceToWeights() external onlyOwner {
-        uint256 ethAmountBefore = address(this).balance;
-        for (uint i = 0; i < derivativeCount; i++) {
-            if (derivatives[i].balance() > 0)
-                derivatives[i].withdraw(derivatives[i].balance());
-        }
-        uint256 ethAmountAfter = address(this).balance;
-        uint256 ethAmountToRebalance = ethAmountAfter - ethAmountBefore;
+        uint256 count = derivativeCount;
 
-        for (uint i = 0; i < derivativeCount; i++) {
-            if (weights[i] == 0 || ethAmountToRebalance == 0) continue;
-            uint256 ethAmount = (ethAmountToRebalance * weights[i]) /
+        for (uint256 i = 0; i < count; i++) {
+            uint256 balance = derivatives[i].derivative.balance();
+            if (derivatives[i].enabled && balance > 0)
+                derivatives[i].derivative.withdraw(balance);
+        }
+        uint256 ethAmountToRebalance = address(this).balance;
+        require(ethAmountToRebalance > 0, "no eth to rebalance");
+
+        for (uint256 i = 0; i < count; i++) {
+            if (derivatives[i].weight == 0 || !derivatives[i].enabled) continue;
+            uint256 ethAmount = (ethAmountToRebalance * derivatives[i].weight) /
                 totalWeight;
             // Price will change due to slippage
-            derivatives[i].deposit{value: ethAmount}();
+            derivatives[i].derivative.deposit{value: ethAmount}();
         }
         emit Rebalanced();
     }
 
     /**
-        @notice - Adds new derivative to the index fund
+        @notice - Changes Derivative weight based on derivative index
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
         @dev - Weights are approximate as it will slowly change as people stake
@@ -168,12 +202,53 @@ contract SafEth is
         uint256 _derivativeIndex,
         uint256 _weight
     ) external onlyOwner {
-        weights[_derivativeIndex] = _weight;
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
-        totalWeight = localTotalWeight;
-        emit WeightChange(_derivativeIndex, _weight);
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            derivatives[_derivativeIndex].enabled,
+            "derivative not enabled"
+        );
+        derivatives[_derivativeIndex].weight = _weight;
+        setTotalWeight();
+        emit WeightChange(_derivativeIndex, _weight, totalWeight);
+    }
+
+    /**
+        @notice - Disables Derivative based on derivative index
+        @param _derivativeIndex - index of the derivative you want to disable
+    */
+    function disableDerivative(uint256 _derivativeIndex) external onlyOwner {
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            derivatives[_derivativeIndex].enabled,
+            "derivative not enabled"
+        );
+        derivatives[_derivativeIndex].enabled = false;
+        setTotalWeight();
+        emit DerivativeDisabled(_derivativeIndex);
+    }
+
+    /**
+        @notice - Enables Derivative based on derivative index
+        @param _derivativeIndex - index of the derivative you want to enable
+    */
+    function enableDerivative(uint256 _derivativeIndex) external onlyOwner {
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            !derivatives[_derivativeIndex].enabled,
+            "derivative already enabled"
+        );
+        derivatives[_derivativeIndex].enabled = true;
+        setTotalWeight();
+        emit DerivativeEnabled(_derivativeIndex);
     }
 
     /**
@@ -185,15 +260,40 @@ contract SafEth is
         address _contractAddress,
         uint256 _weight
     ) external onlyOwner {
-        derivatives[derivativeCount] = IDerivative(_contractAddress);
-        weights[derivativeCount] = _weight;
-        derivativeCount++;
+        try
+            ERC165(_contractAddress).supportsInterface(
+                type(IDerivative).interfaceId
+            )
+        returns (bool supported) {
+            // Contract supports ERC-165 but invalid
+            require(supported, "invalid derivative");
+        } catch {
+            // Contract doesn't support ERC-165
+            revert("invalid contract");
+        }
 
-        uint256 localTotalWeight = 0;
-        for (uint256 i = 0; i < derivativeCount; i++)
-            localTotalWeight += weights[i];
-        totalWeight = localTotalWeight;
+        derivatives[derivativeCount].derivative = IDerivative(_contractAddress);
+        derivatives[derivativeCount].weight = _weight;
+        derivatives[derivativeCount].enabled = true;
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
+        unchecked {
+            ++derivativeCount;
+        }
+        setTotalWeight();
+    }
+
+    /**
+     * @notice - Sets total weight of all enabled derivatives
+     */
+    function setTotalWeight() private {
+        uint256 localTotalWeight = 0;
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled || derivatives[i].weight == 0) continue;
+            localTotalWeight += derivatives[i].weight;
+        }
+        totalWeight = localTotalWeight;
     }
 
     /**
@@ -202,10 +302,14 @@ contract SafEth is
         @param _slippage - new slippage amount in wei
     */
     function setMaxSlippage(
-        uint _derivativeIndex,
-        uint _slippage
+        uint256 _derivativeIndex,
+        uint256 _slippage
     ) external onlyOwner {
-        derivatives[_derivativeIndex].setMaxSlippage(_slippage);
+        require(
+            _derivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        derivatives[_derivativeIndex].derivative.setMaxSlippage(_slippage);
         emit SetMaxSlippage(_derivativeIndex, _slippage);
     }
 
@@ -214,8 +318,8 @@ contract SafEth is
         @param _minAmount - amount to set as minimum stake value
     */
     function setMinAmount(uint256 _minAmount) external onlyOwner {
+        emit ChangeMinAmount(minAmount, _minAmount);
         minAmount = _minAmount;
-        emit ChangeMinAmount(minAmount);
     }
 
     /**
@@ -223,8 +327,8 @@ contract SafEth is
         @param _maxAmount - amount to set as maximum stake value
     */
     function setMaxAmount(uint256 _maxAmount) external onlyOwner {
+        emit ChangeMaxAmount(maxAmount, _maxAmount);
         maxAmount = _maxAmount;
-        emit ChangeMaxAmount(maxAmount);
     }
 
     /**
@@ -232,8 +336,9 @@ contract SafEth is
         @param _pause - true disables staking / false enables staking
     */
     function setPauseStaking(bool _pause) external onlyOwner {
+        require(pauseStaking != _pause, "already set");
         pauseStaking = _pause;
-        emit StakingPaused(pauseStaking);
+        emit StakingPaused(_pause);
     }
 
     /**
@@ -241,23 +346,47 @@ contract SafEth is
         @param _pause - true disables unstaking / false enables unstaking
     */
     function setPauseUnstaking(bool _pause) external onlyOwner {
+        require(pauseUnstaking != _pause, "already set");
         pauseUnstaking = _pause;
-        emit UnstakingPaused(pauseUnstaking);
+        emit UnstakingPaused(_pause);
     }
 
     /**
      * @notice - Get the approx price of safEth.
      * @dev - This is approximate because of slippage when acquiring / selling the underlying
+     * @return - Approximate price of safEth in wei
      */
-    function approxPrice() external view returns (uint256) {
+    function approxPrice() public view returns (uint256) {
+        uint256 safEthTotalSupply = totalSupply();
         uint256 underlyingValue = 0;
-        for (uint i = 0; i < derivativeCount; i++)
-            underlyingValue +=
-                (derivatives[i].ethPerDerivative(derivatives[i].balance()) *
-                    derivatives[i].balance()) /
-                10 ** 18;
-        return (10 ** 18 * underlyingValue) / totalSupply();
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            IDerivative derivative = derivatives[i].derivative;
+            underlyingValue += (derivative.ethPerDerivative() *
+                derivative.balance());
+        }
+        if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
+        return (underlyingValue) / safEthTotalSupply;
     }
 
-    receive() external payable {}
+    /**
+     * @notice - Only allow ETH being sent from derivative contracts.
+     */
+    receive() external payable {
+        // Initialize a flag to track if the Ether sender is a registered derivative
+        bool acceptSender;
+
+        // Loop through the registered derivatives
+        uint256 count = derivativeCount;
+        for (uint256 i; i < count; ++i) {
+            acceptSender = (address(derivatives[i].derivative) == msg.sender);
+            if (acceptSender) {
+                break;
+            }
+        }
+        // Require that the sender is a registered derivative to accept the Ether transfer
+        require(acceptSender, "Not a derivative contract");
+    }
 }

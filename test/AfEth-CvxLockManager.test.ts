@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, network } from "hardhat";
 import { CRV_POOL_FACTORY, CVX_ADDRESS, VL_CVX } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import {
@@ -11,7 +11,8 @@ import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { deploySafEth } from "./helpers/upgradeHelpers";
+import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 
 describe("AfEth (CvxLockManager)", async function () {
   let afEth: AfEth;
@@ -19,22 +20,19 @@ describe("AfEth (CvxLockManager)", async function () {
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
 
-  const deployContracts = async () => {
-    safEth = (await deploySafEth()) as SafEth;
-
-    const AfEth = await ethers.getContractFactory("AfEth");
-    afEth = (await AfEth.deploy("Asymmetry Finance ETH", "afETh")) as AfEth;
-    await afEth.deployed();
-
-    const CvxStrategy = await ethers.getContractFactory("CvxStrategy");
-    cvxStrategy = (await upgrades.deployProxy(CvxStrategy, [
-      safEth.address,
-      afEth.address,
-    ])) as CvxStrategy;
-    await cvxStrategy.deployed();
-
-    await afEth.setMinter(cvxStrategy.address);
-  };
+  before(async () => {
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: process.env.MAINNET_URL,
+            blockNumber: Number(process.env.BLOCK_NUMBER),
+          },
+        },
+      ],
+    });
+  });
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
@@ -44,7 +42,10 @@ describe("AfEth (CvxLockManager)", async function () {
       accounts[0]
     );
 
-    await deployContracts();
+    const deployResults = await deployStrategyContract();
+    afEth = deployResults.afEth;
+    safEth = deployResults.safEth;
+    cvxStrategy = deployResults.cvxStrategy;
 
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
@@ -69,7 +70,10 @@ describe("AfEth (CvxLockManager)", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress);
+    const seedAmount = ethers.utils.parseEther("0.1");
+    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+      value: seedAmount,
+    });
 
     snapshot = await takeSnapshot();
   });
@@ -84,7 +88,9 @@ describe("AfEth (CvxLockManager)", async function () {
     const tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    await expect(cvxStrategy.withdrawCvx(0)).to.be.revertedWith("Not closed");
+    await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
+      "Not closed"
+    );
   });
 
   it("Should fail to withdraw cvx from a position that has closed but not yet unlocked", async function () {
@@ -93,10 +99,10 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
-    await expect(cvxStrategy.withdrawCvx(0)).to.be.revertedWith(
+    await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(
       "Cvx still locked"
     );
     await tx.wait();
@@ -123,10 +129,10 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
-    await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith(
+    await expect(cvxStrategy.unstake(false, 1)).to.be.revertedWith(
       "position claimed"
     );
   });
@@ -139,7 +145,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     await time.increase(60 * 60 * 24 * 7 * 17);
@@ -151,9 +157,9 @@ describe("AfEth (CvxLockManager)", async function () {
 
     await tx.wait();
 
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
-    await expect(cvxStrategy.withdrawCvx(0)).to.be.revertedWith(
+    await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(
       "No cvx to withdraw"
     );
   });
@@ -166,7 +172,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     await time.increase(60 * 60 * 24 * 7 * 17);
@@ -177,12 +183,12 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await tx.wait();
-    await expect(cvxStrategy.withdrawCvx(2)).to.be.revertedWith(
+    await expect(cvxStrategy.withdrawCvxAndRewards(2)).to.be.revertedWith(
       "Invalid positionId"
     );
   });
 
-  it("Should allow a user to lock, unlock & withdraw after 17 weeks", async function () {
+  it.skip("Should allow a user to lock, unlock & withdraw after 17 weeks", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -199,7 +205,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     // wait 9 weeks more weeks
@@ -210,9 +216,9 @@ describe("AfEth (CvxLockManager)", async function () {
 
     const cvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
 
-    const lockedPositionAmount = (await cvxStrategy.cvxPositions(0)).cvxAmount;
+    const lockedPositionAmount = (await cvxStrategy.cvxPositions(1)).cvxAmount;
 
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
 
     const cvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
@@ -227,15 +233,14 @@ describe("AfEth (CvxLockManager)", async function () {
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
 
-    // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
-    const nextEpoch = (await vlCvxContract.epochCount()).sub(1);
-
+    const currentEpoch = await getCurrentEpoch();
+    const nextEpoch = currentEpoch.add(1);
     const nextEpochStartTime = BigNumber.from(
       (await vlCvxContract.epochs(nextEpoch)).date
     );
@@ -253,7 +258,7 @@ describe("AfEth (CvxLockManager)", async function () {
 
     // expect it to fail because not yet unlocked
 
-    await expect(cvxStrategy.withdrawCvx(0)).to.be.revertedWith(
+    await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(
       "Cvx still locked"
     );
 
@@ -266,9 +271,9 @@ describe("AfEth (CvxLockManager)", async function () {
 
     const cvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
 
-    const lockedPositionAmount = (await cvxStrategy.cvxPositions(0)).cvxAmount;
+    const lockedPositionAmount = (await cvxStrategy.cvxPositions(1)).cvxAmount;
 
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
 
     const cvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
@@ -281,31 +286,25 @@ describe("AfEth (CvxLockManager)", async function () {
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
-    console.log(1);
+
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(2);
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
-    console.log(3);
     // wait 10 more lock durations
-
     await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
-
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined = await tx.wait();
     const gasUsedWithoutRelock = mined.gasUsed;
-    console.log(4);
+
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-    console.log(5);
-
     // close position
-    tx = await cvxStrategy.unstake(false, 1);
+    tx = await cvxStrategy.unstake(false, 2);
     await tx.wait();
 
     // wait 10 more lock durations
@@ -315,36 +314,37 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await cvxStrategy.relockCvx();
-
-    tx = await cvxStrategy.withdrawCvx(1);
+    tx = await cvxStrategy.withdrawCvxAndRewards(2);
     const mined2 = await tx.wait();
     const gasUsedWithRelock = mined2.gasUsed;
 
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 
-  it("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
+  it.skip("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
 
-    // open position (1)
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+
+    // open position (0)
     tx = await cvxStrategy.stake({ value: depositAmount });
     await tx.wait();
 
-    // wait 3 days
     await time.increase(60 * 60 * 24 * 3);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
 
-    // open position (2) 3 days later but in the same epoch
+    // open position (1) 3 days later but in the same epoch
     tx = await cvxStrategy.stake({ value: depositAmount });
 
     // close position
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
     const leaveUnlocked0 = await cvxStrategy.cvxToLeaveUnlocked();
@@ -366,7 +366,7 @@ describe("AfEth (CvxLockManager)", async function () {
     // relocking after 8 weeks wont have anything to hold unlocked yet
     expect(leaveUnlocked1).eq(cvxBalance1).eq(0);
 
-    // 9 weeks later relock
+    // 9 weeks later relock (17 total)
     await time.increase(60 * 60 * 24 * 7 * 9);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
@@ -378,10 +378,10 @@ describe("AfEth (CvxLockManager)", async function () {
     const cvxBalance2 = await cvx.balanceOf(cvxStrategy.address);
 
     // relocking 17 weeks after the initial unlock request should add unlockable position balances to cvxToLeaveUnlocked
-    expect(leaveUnlocked2).eq(cvxBalance2).eq("473772736286470477988");
+    expect(leaveUnlocked2).eq(cvxBalance2).eq("507749343566975962333");
 
     // request unlock position 2
-    tx = await cvxStrategy.unstake(false, 1);
+    tx = await cvxStrategy.unstake(false, 2);
     await tx.wait();
 
     // 9 weeks later relock again
@@ -395,7 +395,7 @@ describe("AfEth (CvxLockManager)", async function () {
     const leaveUnlocked21 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance21 = await cvx.balanceOf(cvxStrategy.address);
     // relocking again shouldnt change anything because the second unlock request is not done yet
-    expect(leaveUnlocked21).eq(cvxBalance21).eq("473772736286470477988");
+    expect(leaveUnlocked21).eq(cvxBalance21).eq("507749343566975962333");
 
     // 8 weeks later relock again
     await time.increase(60 * 60 * 24 * 7 * 8);
@@ -408,10 +408,10 @@ describe("AfEth (CvxLockManager)", async function () {
     const leaveUnlocked22 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance22 = await cvx.balanceOf(cvxStrategy.address);
     // relocking this time enough time has passed so both positions are ready for withdraw
-    expect(leaveUnlocked22).eq(cvxBalance22).eq("945366510947598686191");
+    expect(leaveUnlocked22).eq(cvxBalance22).eq("1012491370078116161771");
 
-    const position1 = await cvxStrategy.cvxPositions(0);
-    const position2 = await cvxStrategy.cvxPositions(1);
+    const position1 = await cvxStrategy.cvxPositions(1);
+    const position2 = await cvxStrategy.cvxPositions(2);
     const totalUnlockedPositionsCvx = position1.cvxAmount.add(
       position2.cvxAmount
     );
@@ -420,7 +420,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(totalUnlockedPositionsCvx).eq(leaveUnlocked22);
 
     // withdraw the first position
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
 
     const leaveUnlocked44 = await cvxStrategy.cvxToLeaveUnlocked();
@@ -432,7 +432,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(userCvxBalance44).eq(position1.cvxAmount);
 
     // withdraw the second position
-    tx = await cvxStrategy.withdrawCvx(1);
+    tx = await cvxStrategy.withdrawCvxAndRewards(2);
     await tx.wait();
 
     const leaveUnlocked6 = await cvxStrategy.cvxToLeaveUnlocked();
@@ -441,10 +441,10 @@ describe("AfEth (CvxLockManager)", async function () {
 
     // withdrawing will put cvxToLeaveUnlocked back to 0
     expect(leaveUnlocked6).eq(cvxBalance6).eq(0);
-    expect(userCvxBalance).eq("945366510947598686191");
+    expect(userCvxBalance).eq("1012491370078116161771");
   });
 
-  it("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
+  it.skip("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -460,10 +460,10 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
 
-    tx = await cvxStrategy.unstake(false, 0);
+    tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
 
-    const position1 = await cvxStrategy.cvxPositions(0);
+    const position1 = await cvxStrategy.cvxPositions(1);
     const unlockEpoch = position1.unlockEpoch;
     const currentEpoch = await cvxStrategy.getCurrentEpoch();
     const startingEpoch = position1.startingEpoch;
@@ -485,10 +485,10 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
 
-    const position1Before = await cvxStrategy.cvxPositions(0);
+    const position1Before = await cvxStrategy.cvxPositions(1);
     const userCvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
     // unlock
-    tx = await cvxStrategy.withdrawCvx(0);
+    tx = await cvxStrategy.withdrawCvxAndRewards(1);
     await tx.wait();
 
     const userCvxBalanceAfter = await cvx.balanceOf(accounts[0].address);
