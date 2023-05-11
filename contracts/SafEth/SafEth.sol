@@ -36,7 +36,8 @@ contract SafEth is
     event Unstaked(
         address indexed recipient,
         uint256 indexed ethOut,
-        uint256 indexed safEthIn
+        uint256 indexed safEthIn,
+        uint256 price
     );
     event WeightChange(
         uint256 indexed index,
@@ -114,7 +115,7 @@ contract SafEth is
         require(mintedAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintedAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth, approxPrice());
+        emit Staked(msg.sender, msg.value, totalStakeValueEth, preDepositPrice);
     }
 
     /**
@@ -159,7 +160,7 @@ contract SafEth is
             ""
         );
         require(sent, "Failed to send Ether");
-        emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount);
+        emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount, approxPrice());
     }
 
     /**
