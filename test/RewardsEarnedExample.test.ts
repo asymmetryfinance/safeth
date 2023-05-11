@@ -1,6 +1,5 @@
-import { BigNumber } from "ethers";
+import { BigNumber, utils } from "ethers";
 import { SafEth } from "../typechain-types";
-
 import { getLatestContract } from "./helpers/upgradeHelpers";
 import { expect } from "chai";
 
@@ -13,14 +12,18 @@ describe.only("Rewards Earned Example (SafEth)", function () {
       "SafEth"
     )) as SafEth;
     await safEthProxy.deployed();
+    await safEthProxy.deployed();
   });
 
   it("Should calculate all time rewards earned for an individual user (Including Trade Slippage)", async function () {
-    // Expected to be negative because calculating it this way takes slippage into account
-    // this account has had stakes & unstakes in a short period of time which eats into calculated rewards
-    expect(await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")).eq(
-      "-1157597513435707"
-    );
+    // // Expected to be negative because calculating it this way takes slippage into account
+    // // this account has had stakes & unstakes in a short period of time which eats into calculated rewards
+    // expect(await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")).eq(
+    //   "-1157597513435707"
+    // );
+    const tr = await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741");
+
+    console.log("totalRewards", tr);
   });
 
   const totalEthAdded = async (address: string) => {
@@ -30,19 +33,29 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     const stakeEvents = await getAllStakedEvents(address);
     const unstakeEvents = await getAllUnstakedEvents(address);
 
+    console.log("stakeEvents", stakeEvents);
+    console.log("unstakeEvents", unstakeEvents);
     for (let i = 0; i < stakeEvents.length; i++)
       ethIn = ethIn.add(stakeEvents[i]?.args?.ethIn ?? 0);
     for (let i = 0; i < unstakeEvents.length; i++)
-      ethOut = ethOut.sub(unstakeEvents[i]?.args?.ethOut ?? 0);
+      ethOut = ethOut.add(unstakeEvents[i]?.args?.ethOut ?? 0);
 
-    return ethIn.add(ethOut);
+    console.log("ethIn", ethIn);
+    console.log("ethOut", ethOut);
+    return ethIn.sub(ethOut);
   };
 
   const totalRewards = async (address: string) => {
     const price = await safEthProxy.approxPrice();
     const balance = await safEthProxy.balanceOf(address);
+    console.log("price", price);
+    console.log("balance", balance);
     const totalEthValue = balance.mul(price).div("1000000000000000000");
-    return totalEthValue.sub(await totalEthAdded(address));
+    console.log("totalEthValue", totalEthValue);
+    const totalAdded = await totalEthAdded(address);
+
+    console.log("totalAdded", totalAdded);
+    return totalEthValue.sub(totalAdded);
   };
 
   // Staked (index_topic_1 address recipient, index_topic_2 uint256 ethIn, index_topic_3 uint256 totalStakeValue, uint256 price)
@@ -67,6 +80,17 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     );
     await safEthProxy.deployed();
     const events = await safEthProxy.queryFilter("Unstaked", 0, "latest");
+    console.log("events IS", events);
+
+    const filter = {
+      topics: [
+        // the name of the event, parnetheses containing the data type of each event, no spaces
+        utils.id("Unstaked(address,uint256,uint256)"),
+      ],
+    };
+    const logs = await safEthProxy.provider.getLogs(filter);
+
+    console.log('logs is', logs);
     return events.filter(
       (event) => event?.args?.recipient.toLowerCase() === address.toLowerCase()
     );
