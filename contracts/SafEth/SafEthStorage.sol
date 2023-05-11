@@ -26,10 +26,11 @@ contract SafEthStorage {
     uint256 public minAmount; // minimum amount to stake
     uint256 public maxAmount; // maximum amount to stake
     mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
+    uint256 internal floorPrice = 1e18; // lowest price to sell preminted SafEth
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }

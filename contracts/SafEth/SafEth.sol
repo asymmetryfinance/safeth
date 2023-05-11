@@ -85,13 +85,18 @@ contract SafEth is
     */
     function stake(
         uint256 _minOut
-    ) external payable nonReentrant returns (uint256 mintedAmount) {
+    )
+        external
+        payable
+        nonReentrant
+        returns (uint256 mintedAmount, uint256 depositPrice)
+    {
         require(!pauseStaking, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
 
-        uint256 preDepositPrice = approxPrice();
+        depositPrice = approxPrice();
         uint256 count = derivativeCount;
         uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
         for (uint256 i = 0; i < count; i++) {
@@ -110,11 +115,11 @@ contract SafEth is
             }
         }
         // mintedAmount represents a percentage of the total assets in the system
-        mintedAmount = (totalStakeValueEth) / preDepositPrice;
+        mintedAmount = (totalStakeValueEth) / depositPrice;
         require(mintedAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintedAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth, approxPrice());
+        emit Staked(msg.sender, msg.value, totalStakeValueEth, depositPrice);
     }
 
     /**
@@ -160,6 +165,20 @@ contract SafEth is
         );
         require(sent, "Failed to send Ether");
         emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount);
+    }
+
+    /**
+        @notice - Premints safEth for future users
+     */
+    function preMint() external payable onlyOwner returns (uint256) {
+        uint256 amount = msg.value;
+        uint256 minAmount = (amount * 1e18) / floorPrice;
+        (uint256 mintedAmount, uint256 depositPrice) = this.stake{
+            value: msg.value
+        }(minAmount);
+        
+        floorPrice = depositPrice;
+        return mintedAmount;
     }
 
     /**
