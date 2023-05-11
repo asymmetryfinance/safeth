@@ -769,7 +769,7 @@
             "label": "derivatives",
             "offset": 0,
             "slot": "206",
-            "type": "t_mapping(t_uint256,t_struct(Derivatives)5924_storage)",
+            "type": "t_mapping(t_uint256,t_struct(Derivatives)2624_storage)",
             "contract": "SafEthStorage",
             "src": "contracts/SafEth/SafEthStorage.sol:28"
           },
@@ -819,7 +819,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IDerivative)8125": {
+          "t_contract(IDerivative)2695": {
             "label": "contract IDerivative",
             "numberOfBytes": "20"
           },
@@ -831,7 +831,7 @@
             "label": "mapping(address => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Derivatives)5924_storage)": {
+          "t_mapping(t_uint256,t_struct(Derivatives)2624_storage)": {
             "label": "mapping(uint256 => struct SafEthStorage.Derivatives)",
             "numberOfBytes": "32"
           },
@@ -839,12 +839,12 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Derivatives)5924_storage": {
+          "t_struct(Derivatives)2624_storage": {
             "label": "struct SafEthStorage.Derivatives",
             "members": [
               {
                 "label": "derivative",
-                "type": "t_contract(IDerivative)8125",
+                "type": "t_contract(IDerivative)2695",
                 "offset": 0,
                 "slot": "0"
               },
@@ -1186,6 +1186,274 @@
           "t_mapping(t_bytes4,t_bool)": {
             "label": "mapping(bytes4 => bool)",
             "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "7b0b6097f07232a50bd108b89f89c13c973849156573f27102d6c31368001b96": {
+      "address": "0xcE2B86550d3925c5588020ec003773bEe38fD03C",
+      "txHash": "0x55fd5c706e614d3a285adfc128612e4f38969707c41786dc8aaab2f274e8ee81",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_balances",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:37"
+          },
+          {
+            "label": "_allowances",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:39"
+          },
+          {
+            "label": "_totalSupply",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:41"
+          },
+          {
+            "label": "_name",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_string_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:43"
+          },
+          {
+            "label": "_symbol",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_string_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:44"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_array(t_uint256)45_storage",
+            "contract": "ERC20Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:400"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_pendingOwner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "Ownable2StepUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:27"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "Ownable2StepUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:70"
+          },
+          {
+            "label": "pauseStaking",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_bool",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:22"
+          },
+          {
+            "label": "pauseUnstaking",
+            "offset": 1,
+            "slot": "201",
+            "type": "t_bool",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:23"
+          },
+          {
+            "label": "derivativeCount",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_uint256",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:24"
+          },
+          {
+            "label": "totalWeight",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_uint256",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:25"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_uint256",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:26"
+          },
+          {
+            "label": "maxAmount",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_uint256",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:27"
+          },
+          {
+            "label": "derivatives",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_mapping(t_uint256,t_struct(Derivatives)2802_storage)",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:28"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "SafEthStorage",
+            "src": "contracts/SafEth/SafEthStorage.sol:34"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:80"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)45_storage": {
+            "label": "uint256[45]",
+            "numberOfBytes": "1440"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDerivative)4138": {
+            "label": "contract IDerivative",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Derivatives)2802_storage)": {
+            "label": "mapping(uint256 => struct SafEthStorage.Derivatives)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Derivatives)2802_storage": {
+            "label": "struct SafEthStorage.Derivatives",
+            "members": [
+              {
+                "label": "derivative",
+                "type": "t_contract(IDerivative)4138",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "weight",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "enabled",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
           },
           "t_uint256": {
             "label": "uint256",
