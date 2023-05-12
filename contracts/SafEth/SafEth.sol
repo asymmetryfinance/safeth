@@ -160,7 +160,12 @@ contract SafEth is
             ""
         );
         require(sent, "Failed to send Ether");
-        emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount, approxPrice());
+        emit Unstaked(
+            msg.sender,
+            ethAmountToWithdraw,
+            _safEthAmount,
+            approxPrice()
+        );
     }
 
     /**
