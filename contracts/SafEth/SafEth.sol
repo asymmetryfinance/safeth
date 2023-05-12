@@ -6,6 +6,7 @@ import "./SafEthStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -31,13 +32,16 @@ contract SafEth is
         address indexed recipient,
         uint256 indexed ethIn,
         uint256 indexed totalStakeValue,
-        uint256 price
+        uint256 price,
+        uint256 safEthOut,
+        uint256 newSafEthBalance
     );
     event Unstaked(
         address indexed recipient,
         uint256 indexed ethOut,
         uint256 indexed safEthIn,
-        uint256 price
+        uint256 price,
+        uint256 newSafEthBalance
     );
     event WeightChange(
         uint256 indexed index,
@@ -115,7 +119,9 @@ contract SafEth is
         require(mintedAmount > _minOut, "mint amount less than minOut");
 
         _mint(msg.sender, mintedAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth, preDepositPrice);
+
+        uint256 newSafEthBalance = IERC20(address(this)).balanceOf(address(msg.sender));
+        emit Staked(msg.sender, msg.value, totalStakeValueEth, preDepositPrice, mintedAmount, newSafEthBalance);
     }
 
     /**
@@ -160,11 +166,14 @@ contract SafEth is
             ""
         );
         require(sent, "Failed to send Ether");
+
+        uint256 newSafEthBalance = IERC20(address(this)).balanceOf(address(msg.sender));
         emit Unstaked(
             msg.sender,
             ethAmountToWithdraw,
             _safEthAmount,
-            approxPrice()
+            approxPrice(),
+            newSafEthBalance
         );
     }
 
