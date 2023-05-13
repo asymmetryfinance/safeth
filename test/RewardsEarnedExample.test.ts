@@ -1,7 +1,6 @@
 import { BigNumber, utils } from "ethers";
 import { SafEth } from "../typechain-types";
 import { getLatestContract } from "./helpers/upgradeHelpers";
-import { expect } from "chai";
 
 describe.only("Rewards Earned Example (SafEth)", function () {
   let safEthProxy: SafEth;
@@ -11,6 +10,12 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     safEthBalanceChange: BigNumber;
     price: BigNumber;
     txid: string;
+    blockNumber: number;
+  };
+
+  type StakeRewardRange = {
+    safEthBalance: BigNumber;
+    priceChange: BigNumber;
   };
 
   before(async () => {
@@ -21,33 +26,44 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     await safEthProxy.deployed();
   });
 
-  it("Should calculate all time rewards earned for an individual user (Including Trade Slippage)", async function () {
-    // Expected to be negative because calculating it this way takes slippage into account
-    // this account has had stakes & unstakes in a short period of time which eats into calculated rewards
-    expect(await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")).eq(
-      "-1343020514632141"
+  it.only("Should calculate all time rewards earned for an individual user (Excluding Trade Slippage)", async function () {
+    console.log(
+      "totalRewards",
+      await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")
     );
   });
 
-  const totalEthInOut = async (address: string) => {
-    const events = await getAllStakeUnstakeEvents(address);
-    let total = BigNumber.from(0);
-
-    for (let i = 0; i < events.length; i++)
-      total = total.add(events[i].ethBalanceChange);
-    return total.mul(-1);
-  };
-
   const totalRewards = async (address: string) => {
-    const price = await safEthProxy.approxPrice();
-    const balance = await safEthProxy.balanceOf(address);
-    const totalEthValue = balance.mul(price).div("1000000000000000000");
-    console.log("totalEthValue", totalEthValue);
-    const totalAdded = await totalEthInOut(address);
+    const events = await getAllStakeUnstakeEvents(address);
 
-    console.log("totalEthAdded", totalAdded);
-    console.log("totalEthValue", totalEthValue);
-    return totalEthValue.sub(totalAdded);
+    let runningTotal = BigNumber.from(0);
+
+    const rewardRanges: StakeRewardRange[] = [];
+
+    for (let i = 0; i < events.length - 1; i++) {
+      runningTotal = runningTotal.add(events[i].safEthBalanceChange ?? "0");
+      const priceChange = events[i + 1].price.sub(events[i].price);
+      const safEthBalance = runningTotal;
+      rewardRanges.push({ safEthBalance, priceChange });
+    }
+
+    const currentPrice = await safEthProxy.approxPrice();
+    // special case: from last event to now
+    rewardRanges.push({
+      safEthBalance: runningTotal,
+      priceChange: currentPrice.sub(events[events.length - 1].price),
+    });
+
+    let sum = BigNumber.from(0);
+
+    for (let i = 0; i < rewardRanges.length; i++) {
+      const reward = rewardRanges[i].safEthBalance
+        .mul(rewardRanges[i].priceChange)
+        .div("1000000000000000000");
+      sum = sum.add(reward);
+    }
+
+    return sum;
   };
 
   // Staked (index_topic_1 address recipient, index_topic_2 uint256 ethIn, index_topic_3 uint256 totalStakeValue, uint256 price)
@@ -75,13 +91,53 @@ describe.only("Rewards Earned Example (SafEth)", function () {
           ).div(stakedEvent?.args?.price),
           price: stakedEvent?.args?.price,
           txid: stakedEvent?.transactionHash,
+          blockNumber: stakedEvent?.blockNumber,
         };
       }
     );
 
     const formattedUnstakedEvents = await getAllUnstakedEvents(address);
 
-    return formattedStakedEvents.concat(formattedUnstakedEvents);
+    const allFormattedEvents = formattedStakedEvents.concat(
+      formattedUnstakedEvents
+    );
+
+    // sort by block number
+    const allFormattedEventsSorted = allFormattedEvents.sort((a, b) => {
+      return a.blockNumber - b.blockNumber;
+    });
+
+    // fill in price for any unstaked events from before the upgrade that dont have it
+    // use the closest non-zero next price
+    for (let i = 0; i < allFormattedEventsSorted.length; i++) {
+      if (allFormattedEventsSorted[i].price.eq(0)) {
+        let j = i + 1;
+        while (
+          j < allFormattedEventsSorted.length &&
+          allFormattedEventsSorted[j].price.eq(0)
+        ) {
+          j++;
+        }
+        if (j < allFormattedEventsSorted.length) {
+          allFormattedEventsSorted[i].price = allFormattedEventsSorted[j].price;
+        }
+      }
+    }
+
+    let index;
+    for (let i = allFormattedEventsSorted.length - 1; i >= 0; i--) {
+      if (allFormattedEventsSorted[i].price.eq("1000000000000000000")) {
+        index = i;
+        break;
+      }
+    }
+    // Only include events from the last time price was exactly 10e18
+    // Anything before that is us testing staking and unstaking and will be inaccurate
+    const eventsFromStart = allFormattedEventsSorted.slice(
+      index,
+      allFormattedEventsSorted.length
+    );
+    return eventsFromStart;
   };
 
   const getAllUnstakedEvents = async (address: string) => {
@@ -107,7 +163,6 @@ describe.only("Rewards Earned Example (SafEth)", function () {
 
     const allLogs = logs.concat(logsLegacy);
 
-    console.log("allLogs is", allLogs);
     const allLogsFiltered = allLogs.filter((log) =>
       log.topics[1].includes(address.toLowerCase().slice(2, 42))
     );
@@ -118,6 +173,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
         safEthBalanceChange: BigNumber.from(log.topics[3]).mul(-1),
         price: log.data !== "0x" ? BigNumber.from(log.data) : BigNumber.from(0),
         txid: log.transactionHash,
+        blockNumber: log.blockNumber,
       };
     });
   };
