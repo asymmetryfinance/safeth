@@ -48,7 +48,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     }
 
     const currentPrice = await safEthProxy.approxPrice();
-    // special case: from last event to now
+    // special case: add the range from from last event to now
     rewardRanges.push({
       safEthBalance: runningTotal,
       priceChange: currentPrice.sub(events[events.length - 1].price),
@@ -107,23 +107,6 @@ describe.only("Rewards Earned Example (SafEth)", function () {
       return a.blockNumber - b.blockNumber;
     });
 
-    // fill in price for any unstaked events from before the upgrade that dont have it
-    // use the closest non-zero next price
-    for (let i = 0; i < allFormattedEventsSorted.length; i++) {
-      if (allFormattedEventsSorted[i].price.eq(0)) {
-        let j = i + 1;
-        while (
-          j < allFormattedEventsSorted.length &&
-          allFormattedEventsSorted[j].price.eq(0)
-        ) {
-          j++;
-        }
-        if (j < allFormattedEventsSorted.length) {
-          allFormattedEventsSorted[i].price = allFormattedEventsSorted[j].price;
-        }
-      }
-    }
-
     let index;
     for (let i = allFormattedEventsSorted.length - 1; i >= 0; i--) {
       if (allFormattedEventsSorted[i].price.eq("1000000000000000000")) {
@@ -132,11 +115,24 @@ describe.only("Rewards Earned Example (SafEth)", function () {
       }
     }
     // Only include events from the last time price was exactly 10e18
-    // Anything before that is us testing staking and unstaking and will be inaccurate
+    // Anything before is us testing staking and unstaking and will be inaccurate
     const eventsFromStart = allFormattedEventsSorted.slice(
       index,
       allFormattedEventsSorted.length
     );
+
+    // fill in price for any unstaked events from before the upgrade that dont have it
+    // use the closest non-zero previous price price (this should be the last stake event)
+    for (let i = 0; i < eventsFromStart.length; i++) {
+      if (eventsFromStart[i].price.eq(0)) {
+        let j = i - 1;
+        while (j > 0 && eventsFromStart[j].price.eq(0)) {
+          j--;
+        }
+        eventsFromStart[i].price = eventsFromStart[j].price;
+      }
+    }
+
     return eventsFromStart;
   };
 
