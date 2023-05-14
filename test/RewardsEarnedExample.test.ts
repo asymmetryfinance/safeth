@@ -13,11 +13,6 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     blockNumber: number;
   };
 
-  type StakeRewardRange = {
-    safEthBalance: BigNumber;
-    priceChange: BigNumber;
-  };
-
   before(async () => {
     safEthProxy = (await getLatestContract(
       "0x6732efaf6f39926346bef8b821a04b6361c4f3e5", // mainnet safEth
@@ -26,7 +21,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     await safEthProxy.deployed();
   });
 
-  it.only("Should calculate all time rewards earned for an individual user (Excluding Trade Slippage)", async function () {
+  it.only("Should calculate all time rewards earned for all users (Including Trade Slippage)", async function () {
     console.log(
       "totalRewards",
       await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")
@@ -34,42 +29,26 @@ describe.only("Rewards Earned Example (SafEth)", function () {
   });
 
   const totalRewards = async (address: string) => {
-    const events = await getAllStakeUnstakeEvents(address);
+    const events = await getAllStakeUnstakeEvents();
 
-    let runningTotal = BigNumber.from(0);
-
-    const rewardRanges: StakeRewardRange[] = [];
-
-    for (let i = 0; i < events.length - 1; i++) {
-      runningTotal = runningTotal.add(events[i].safEthBalanceChange ?? "0");
-      const priceChange = events[i + 1].price.sub(events[i].price);
-      const safEthBalance = runningTotal;
-      rewardRanges.push({ safEthBalance, priceChange });
+    // sum of eth into and out of the contract
+    let ethSum = BigNumber.from(0);
+    for (let i = 0; i < events.length; i++) {
+      ethSum = ethSum.sub(events[i].ethBalanceChange);
     }
 
-    const currentPrice = await safEthProxy.approxPrice();
-    // special case: add the range from from last event to now
-    rewardRanges.push({
-      safEthBalance: runningTotal,
-      priceChange: currentPrice.sub(events[events.length - 1].price),
-    });
+    // total eth value of all safEth in existence
+    const totalValue = (await safEthProxy.totalSupply())
+      .mul(await safEthProxy.approxPrice())
+      .div("1000000000000000000");
 
-    let sum = BigNumber.from(0);
-
-    for (let i = 0; i < rewardRanges.length; i++) {
-      const reward = rewardRanges[i].safEthBalance
-        .mul(rewardRanges[i].priceChange)
-        .div("1000000000000000000");
-      sum = sum.add(reward);
-    }
-
-    return sum;
+    // total rewards = (total value) - (sum of all eth into contract)
+    // Negative in this test because there have been so many stakes unstakes & a rebalance so slippage has has an effect
+    return totalValue.sub(ethSum);
   };
 
   // Staked (index_topic_1 address recipient, index_topic_2 uint256 ethIn, index_topic_3 uint256 totalStakeValue, uint256 price)
-  const getAllStakeUnstakeEvents = async (
-    address: string
-  ): Promise<StakeUnstakeEvent[]> => {
+  const getAllStakeUnstakeEvents = async (): Promise<StakeUnstakeEvent[]> => {
     const safEthProxy = await getLatestContract(
       "0x6732efaf6f39926346bef8b821a04b6361c4f3e5", // mainnet safEth
       "SafEth"
@@ -77,12 +56,8 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     await safEthProxy.deployed();
 
     const stakedEvents = await safEthProxy.queryFilter("Staked", 0, "latest");
-    const filteredStakedEvents = stakedEvents.filter(
-      (stakedEvent) =>
-        stakedEvent?.args?.recipient.toLowerCase() === address.toLowerCase()
-    );
 
-    const formattedStakedEvents: StakeUnstakeEvent[] = filteredStakedEvents.map(
+    const formattedStakedEvents: StakeUnstakeEvent[] = stakedEvents.map(
       (stakedEvent) => {
         return {
           ethBalanceChange: BigNumber.from(stakedEvent?.args?.ethIn).mul(-1),
@@ -96,7 +71,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
       }
     );
 
-    const formattedUnstakedEvents = await getAllUnstakedEvents(address);
+    const formattedUnstakedEvents = await getAllUnstakedEvents();
 
     const allFormattedEvents = formattedStakedEvents.concat(
       formattedUnstakedEvents
@@ -136,7 +111,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     return eventsFromStart;
   };
 
-  const getAllUnstakedEvents = async (address: string) => {
+  const getAllUnstakedEvents = async () => {
     const safEthProxy = await getLatestContract(
       "0x6732efaf6f39926346bef8b821a04b6361c4f3e5", // mainnet safEth
       "SafEth"
@@ -159,11 +134,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
 
     const allLogs = logs.concat(logsLegacy);
 
-    const allLogsFiltered = allLogs.filter((log) =>
-      log.topics[1].includes(address.toLowerCase().slice(2, 42))
-    );
-
-    return allLogsFiltered.map((log) => {
+    return allLogs.map((log) => {
       return {
         ethBalanceChange: BigNumber.from(log.topics[2]),
         safEthBalanceChange: BigNumber.from(log.topics[3]).mul(-1),
