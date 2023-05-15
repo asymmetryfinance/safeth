@@ -26,15 +26,12 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     await safEthProxy.deployed();
   });
 
-  it.only("Should calculate all time rewards earned for an individual user (Excluding Trade Slippage)", async function () {
-    console.log(
-      "totalRewards",
-      await totalRewards("0x8a65ac0e23f31979db06ec62af62b132a6df4741")
-    );
+  it.only("Should calculate all time rewards (Excluding Trade Slippage)", async function () {
+    console.log("totalRewards", await totalRewards());
   });
 
-  const totalRewards = async (address: string) => {
-    const events = await getAllStakeUnstakeEvents(address);
+  const totalRewards = async () => {
+    const events = await getAllStakeUnstakeEvents();
 
     let runningTotal = BigNumber.from(0);
 
@@ -67,9 +64,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
   };
 
   // Staked (index_topic_1 address recipient, index_topic_2 uint256 ethIn, index_topic_3 uint256 totalStakeValue, uint256 price)
-  const getAllStakeUnstakeEvents = async (
-    address: string
-  ): Promise<StakeUnstakeEvent[]> => {
+  const getAllStakeUnstakeEvents = async (): Promise<StakeUnstakeEvent[]> => {
     const safEthProxy = await getLatestContract(
       "0x6732efaf6f39926346bef8b821a04b6361c4f3e5", // mainnet safEth
       "SafEth"
@@ -77,12 +72,8 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     await safEthProxy.deployed();
 
     const stakedEvents = await safEthProxy.queryFilter("Staked", 0, "latest");
-    const filteredStakedEvents = stakedEvents.filter(
-      (stakedEvent) =>
-        stakedEvent?.args?.recipient.toLowerCase() === address.toLowerCase()
-    );
 
-    const formattedStakedEvents: StakeUnstakeEvent[] = filteredStakedEvents.map(
+    const formattedStakedEvents: StakeUnstakeEvent[] = stakedEvents.map(
       (stakedEvent) => {
         return {
           ethBalanceChange: BigNumber.from(stakedEvent?.args?.ethIn).mul(-1),
@@ -96,7 +87,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
       }
     );
 
-    const formattedUnstakedEvents = await getAllUnstakedEvents(address);
+    const formattedUnstakedEvents = await getAllUnstakedEvents();
 
     const allFormattedEvents = formattedStakedEvents.concat(
       formattedUnstakedEvents
@@ -136,7 +127,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
     return eventsFromStart;
   };
 
-  const getAllUnstakedEvents = async (address: string) => {
+  const getAllUnstakedEvents = async () => {
     const safEthProxy = await getLatestContract(
       "0x6732efaf6f39926346bef8b821a04b6361c4f3e5", // mainnet safEth
       "SafEth"
@@ -159,11 +150,7 @@ describe.only("Rewards Earned Example (SafEth)", function () {
 
     const allLogs = logs.concat(logsLegacy);
 
-    const allLogsFiltered = allLogs.filter((log) =>
-      log.topics[1].includes(address.toLowerCase().slice(2, 42))
-    );
-
-    return allLogsFiltered.map((log) => {
+    return allLogs.map((log) => {
       return {
         ethBalanceChange: BigNumber.from(log.topics[2]),
         safEthBalanceChange: BigNumber.from(log.topics[3]).mul(-1),
