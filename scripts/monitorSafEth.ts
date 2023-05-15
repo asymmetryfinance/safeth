@@ -1,11 +1,16 @@
+import { ethers } from "ethers";
 import {
   notifyOnPriceDrop,
   getContracts,
   notifyOnStakeUnstake,
+  notfiyOnFailedTx,
 } from "./monitorHelpers";
 
 async function main() {
   console.log("Monitoring SafEth Health");
+  let lastBlockCheckedForFailedTx = await ethers
+    .getDefaultProvider()
+    .getBlockNumber();
 
   const {
     safEth,
@@ -29,6 +34,9 @@ async function main() {
       };
 
       notifyOnPriceDrop(priceData);
+      lastBlockCheckedForFailedTx = await notfiyOnFailedTx(
+        lastBlockCheckedForFailedTx
+      );
     } catch (error) {
       console.error("Error: ", error);
     }
@@ -38,7 +46,9 @@ async function main() {
 }
 
 main()
-  .then(() => process.exit(0))
+  .then(() => {
+    process.exit(0);
+  })
   .catch((error) => {
     console.error(error);
     process.exit(1);
