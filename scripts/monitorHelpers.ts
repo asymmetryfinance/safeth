@@ -77,8 +77,11 @@ export const notfiyOnFailedTx = async (
   lastBlockCheckedForFailedTx: number
 ): Promise<number> => {
   const { safEth } = await getContracts();
-  const etherscanProvider = new ethers.providers.EtherscanProvider();
-  const currentBlock = await ethers.getDefaultProvider().getBlockNumber();
+  const etherscanProvider = new ethers.providers.EtherscanProvider(
+    "homestead",
+    process.env.ETHERSCAN_API_KEY
+  );
+  const currentBlock = await etherscanProvider.getBlockNumber();
   return etherscanProvider
     .getHistory(safEth.address, lastBlockCheckedForFailedTx, currentBlock)
     .then(async (history) => {
