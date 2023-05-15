@@ -12,6 +12,7 @@ const webhookClient = new WebhookClient({
 const previousPriceData: Record<string, BigNumber> = {};
 
 let previousTotalSupply = BigNumber.from(0);
+const failedTransactions: string[] = [];
 
 export const notifyOnStakeUnstake = async () => {
   const safEth = await ethers.getContractAt(
@@ -70,6 +71,45 @@ export const notifyOnPriceDrop = async (
     }
     previousPriceData[key] = value;
   }
+};
+
+export const notfiyOnFailedTx = async (
+  lastBlockCheckedForFailedTx: number
+): Promise<number> => {
+  const { safEth } = await getContracts();
+  const etherscanProvider = new ethers.providers.EtherscanProvider();
+  const currentBlock = await ethers.getDefaultProvider().getBlockNumber();
+  return etherscanProvider
+    .getHistory(safEth.address, lastBlockCheckedForFailedTx, currentBlock)
+    .then(async (history) => {
+      history.forEach(async (tx) => {
+        try {
+          await ethers.provider.call(
+            {
+              to: tx.to,
+              from: tx.from,
+              nonce: tx.nonce,
+              gasLimit: tx.gasLimit,
+              gasPrice: tx.gasPrice,
+              data: tx.data,
+              value: tx.value,
+              chainId: tx.chainId,
+              type: tx.type ?? undefined,
+              accessList: tx.accessList,
+            },
+            tx.blockNumber
+          );
+        } catch (error) {
+          if (!failedTransactions.includes(tx.hash)) {
+            failedTransactions.push(tx.hash);
+            notify(`Failed Transaction Detected`);
+            notify(tx.hash);
+          }
+          console.log("Error: ", error);
+        }
+      });
+      return currentBlock;
+    });
 };
 
 export const getContracts = async () => {
