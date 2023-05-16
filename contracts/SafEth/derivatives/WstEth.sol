@@ -127,7 +127,7 @@ contract WstEth is
             cl.answer >= 0 &&
             cl.updatedAt != 0 &&
             cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 1 days
+            block.timestamp - cl.updatedAt <= 25 hours
         ) {
             uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
             if (cl.answer < 0) cl.answer = 0;
