@@ -87,28 +87,19 @@ export const notfiyOnFailedTx = async (
     .then(async (history) => {
       history.forEach(async (tx) => {
         try {
-          await ethers.provider.call(
-            {
-              to: tx.to,
-              from: tx.from,
-              nonce: tx.nonce,
-              gasLimit: tx.gasLimit,
-              gasPrice: tx.gasPrice,
-              data: tx.data,
-              value: tx.value,
-              chainId: tx.chainId,
-              type: tx.type ?? undefined,
-              accessList: tx.accessList,
-            },
-            tx.blockNumber
+          const receipt = await etherscanProvider.getTransactionReceipt(
+            tx.hash
           );
-        } catch (error) {
-          if (!failedTransactions.includes(tx.hash)) {
-            failedTransactions.push(tx.hash);
-            notify(`Failed Transaction Detected`);
-            notify(tx.hash);
+          if (receipt.status === 0) {
+            if (!failedTransactions.includes(tx.hash)) {
+              failedTransactions.push(tx.hash);
+              notify(`Failed Transaction Detected`);
+              notify(tx.hash);
+            }
           }
-          console.log("Error: ", error);
+        } catch (error) {
+          console.log("Failed to get receipt data: ", error);
+          return lastBlockCheckedForFailedTx;
         }
       });
       return currentBlock;
