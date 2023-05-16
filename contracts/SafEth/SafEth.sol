@@ -361,7 +361,7 @@ contract SafEth is
         uint256 derivativeInde,
         address feed
     ) external onlyOwner {
-        derivatives[derivativeInde].derivative.setChainlinkFeed(feed);
+        derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
     }
 
     /**
