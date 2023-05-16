@@ -74,6 +74,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
       value: seedAmount,
     });
+
     snapshot = await takeSnapshot();
   });
 

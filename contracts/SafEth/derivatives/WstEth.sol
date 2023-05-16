@@ -11,7 +11,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
-
 contract WstEth is
     ERC165Storage,
     IDerivative,

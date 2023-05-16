@@ -8,7 +8,6 @@ import {
 } from "../../typechain-types";
 
 export const deployStrategyContract = async () => {
-  console.log("deploying strategy contract");
   const safEth = (await deploySafEth()) as SafEth;
 
   await safEth.deployed();
