@@ -15,6 +15,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
+
 contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
@@ -160,6 +161,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
             ethPerDerivative();
+
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -177,7 +179,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function ethPerDerivative() public view returns (uint256) {
         ChainlinkResponse memory cl;
-        try chainLinkRethEthFeed.latestRoundData() returns (
+        try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
@@ -203,7 +205,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         ) {
             return uint256(cl.answer);
         } else {
-            revert("Chainlink Failed");
+            revert("Chainlink Failed Reth");
         }
     }
 

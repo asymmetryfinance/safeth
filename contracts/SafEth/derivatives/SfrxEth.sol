@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IFrxEthEthPool.sol";
 import "../../interfaces/frax/IFrxETHMinter.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
-import "hardhat/console.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
