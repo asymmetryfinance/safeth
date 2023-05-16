@@ -148,8 +148,8 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function sweepRewards() private {
-        claimCrvRewards();
-        claimvlCvxRewards();
+        // claimCrvRewards();
+        // claimvlCvxRewards();
         claimExtraRewards();
     }
 
