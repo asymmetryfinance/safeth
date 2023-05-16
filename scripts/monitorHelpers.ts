@@ -12,6 +12,7 @@ const webhookClient = new WebhookClient({
 const previousPriceData: Record<string, BigNumber> = {};
 
 let previousTotalSupply = BigNumber.from(0);
+const failedTransactions: string[] = [];
 
 export const notifyOnStakeUnstake = async () => {
   const safEth = await ethers.getContractAt(
@@ -70,6 +71,39 @@ export const notifyOnPriceDrop = async (
     }
     previousPriceData[key] = value;
   }
+};
+
+export const notfiyOnFailedTx = async (
+  lastBlockCheckedForFailedTx: number
+): Promise<number> => {
+  const { safEth } = await getContracts();
+  const etherscanProvider = new ethers.providers.EtherscanProvider(
+    "homestead",
+    process.env.ETHERSCAN_API_KEY
+  );
+  const currentBlock = await etherscanProvider.getBlockNumber();
+  return etherscanProvider
+    .getHistory(safEth.address, lastBlockCheckedForFailedTx, currentBlock)
+    .then(async (history) => {
+      history.forEach(async (tx) => {
+        try {
+          const receipt = await etherscanProvider.getTransactionReceipt(
+            tx.hash
+          );
+          if (receipt.status === 0) {
+            if (!failedTransactions.includes(tx.hash)) {
+              failedTransactions.push(tx.hash);
+              notify(`Failed Transaction Detected`);
+              notify(tx.hash);
+            }
+          }
+        } catch (error) {
+          console.log("Failed to get receipt data: ", error);
+          return lastBlockCheckedForFailedTx;
+        }
+      });
+      return currentBlock;
+    });
 };
 
 export const getContracts = async () => {
