@@ -357,6 +357,13 @@ contract SafEth is
         emit UnstakingPaused(_pause);
     }
 
+    function setChainlinkFeed(
+        uint256 derivativeIndex,
+        address feed
+    ) external onlyOwner {
+        derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
+    }
+
     /**
      * @notice - Get the approx price of safEth.
      * @dev - This is approximate because of slippage when acquiring / selling the underlying

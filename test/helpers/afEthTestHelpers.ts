@@ -10,6 +10,24 @@ import {
 export const deployStrategyContract = async () => {
   const safEth = (await deploySafEth()) as SafEth;
 
+  await safEth.deployed();
+
+  const RethFeedFactory = await ethers.getContractFactory(
+    "ChainLinkRethFeedMock"
+  );
+  const WstFeedFactory = await ethers.getContractFactory(
+    "ChainLinkWstFeedMock"
+  );
+  const rethFeed = await RethFeedFactory.deploy();
+  await rethFeed.deployed();
+  const wstFeed = await WstFeedFactory.deploy();
+  await wstFeed.deployed();
+
+  let t = await safEth.setChainlinkFeed(0, rethFeed.address);
+  await t.wait();
+  t = await safEth.setChainlinkFeed(2, wstFeed.address);
+  await t.wait();
+
   const AfEthFactory = await ethers.getContractFactory("AfEth");
   const afEth = (await AfEthFactory.deploy(
     "Asymmetry Finance ETH",

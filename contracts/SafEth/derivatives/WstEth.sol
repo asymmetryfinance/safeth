@@ -115,7 +115,7 @@ contract WstEth is
      */
     function ethPerDerivative() public view returns (uint256) {
         ChainlinkResponse memory cl;
-        try chainLinkStEthEthFeed.latestRoundData() returns (
+        try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
@@ -144,7 +144,7 @@ contract WstEth is
             uint256 ethPerWstEth = (stPerWst * uint256(cl.answer)) / 1e18;
             return ethPerWstEth;
         } else {
-            revert("Chainlink Failed");
+            revert("Chainlink Failed Wst");
         }
     }
 

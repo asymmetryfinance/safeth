@@ -188,7 +188,7 @@ describe("AfEth (CvxLockManager)", async function () {
     );
   });
 
-  it.skip("Should allow a user to lock, unlock & withdraw after 17 weeks", async function () {
+  it("Should allow a user to lock, unlock & withdraw after 17 weeks", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -281,7 +281,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it.skip("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+  it("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -321,7 +321,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 
-  it.skip("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
+  it("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
@@ -444,7 +444,7 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(userCvxBalance).eq("1012491370078116161771");
   });
 
-  it.skip("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
+  it("Should correctly calculate the unlock epoch and unlock a position that has been relocked multiple times", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);

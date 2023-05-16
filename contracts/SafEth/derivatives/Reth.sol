@@ -177,7 +177,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function ethPerDerivative() public view returns (uint256) {
         ChainlinkResponse memory cl;
-        try chainLinkRethEthFeed.latestRoundData() returns (
+        try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
@@ -203,7 +203,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         ) {
             return uint256(cl.answer);
         } else {
-            revert("Chainlink Failed");
+            revert("Chainlink Failed Reth");
         }
     }
 
