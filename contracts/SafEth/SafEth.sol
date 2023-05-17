@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "./SafEthStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -31,7 +32,8 @@ contract SafEth is
         address indexed recipient,
         uint256 indexed ethIn,
         uint256 indexed totalStakeValue,
-        uint256 price
+        uint256 price,
+        bool usedPremint
     );
     event Unstaked(
         address indexed recipient,
@@ -81,8 +83,8 @@ contract SafEth is
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
-        @param _minOut - minimum amount of safETH to mint
-        @return mintedAmount - amount of safETH minted
+        @param _minOut - Minimum amount of safETH to mint
+        @return mintedAmount - Amount of safETH minted
     */
     function stake(
         uint256 _minOut
@@ -98,36 +100,54 @@ contract SafEth is
         require(totalWeight > 0, "total weight is zero");
 
         depositPrice = approxPrice();
-        uint256 count = derivativeCount;
-        uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint256 i = 0; i < count; i++) {
-            if (!derivatives[i].enabled) continue;
-            uint256 weight = derivatives[i].weight;
-            if (weight == 0) continue;
-            IDerivative derivative = derivatives[i].derivative;
-            uint256 ethAmount = (msg.value * weight) / totalWeight;
+        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
 
-            if (ethAmount > 0) {
-                // This is slightly less than ethAmount because slippage
-                uint256 depositAmount = derivative.deposit{value: ethAmount}();
-                uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative() * depositAmount);
-                totalStakeValueEth += derivativeReceivedEthValue;
+        bool preMinted = false;
+        if (msg.value <= preMintedAmount && msg.value <= maxPremintAmount) {
+            preMintedAmount = preMintedAmount - msg.value;
+            uint256 amountToMint = (msg.value * depositPrice) / 1e18;
+            transfer(msg.sender, amountToMint);
+            preMinted = true;
+        } else {
+            uint256 count = derivativeCount;
+            // Loop through each derivative and deposit the correct amount of ETH
+            for (uint256 i = 0; i < count; i++) {
+                if (!derivatives[i].enabled) continue;
+                uint256 weight = derivatives[i].weight;
+                if (weight == 0) continue;
+                IDerivative derivative = derivatives[i].derivative;
+                uint256 ethAmount = (msg.value * weight) / totalWeight;
+
+                if (ethAmount > 0) {
+                    // This is slightly less than ethAmount because slippage
+                    uint256 depositAmount = derivative.deposit{
+                        value: ethAmount
+                    }();
+                    uint256 derivativeReceivedEthValue = (derivative
+                        .ethPerDerivative() * depositAmount);
+                    totalStakeValueEth += derivativeReceivedEthValue;
+                }
             }
+            // MintedAmount represents a percentage of the total assets in the system
+            mintedAmount = (totalStakeValueEth) / depositPrice;
+            require(mintedAmount > _minOut, "mint amount less than minOut");
+            _mint(msg.sender, mintedAmount);
         }
-        // mintedAmount represents a percentage of the total assets in the system
-        mintedAmount = (totalStakeValueEth) / depositPrice;
-        require(mintedAmount > _minOut, "mint amount less than minOut");
-        _mint(msg.sender, mintedAmount);
 
-        emit Staked(msg.sender, msg.value, totalStakeValueEth, depositPrice);
+        emit Staked(
+            msg.sender,
+            msg.value,
+            totalStakeValueEth,
+            depositPrice,
+            preMinted
+        );
     }
 
     /**
         @notice - Unstake your safETH into ETH
-        @dev - unstakes a percentage of safEth based on its total value
-        @param _safEthAmount - amount of safETH to unstake into ETH
-        @param _minOut - minimum amount of ETH to unstake
+        @dev - Unstakes a percentage of safEth based on its total value
+        @param _safEthAmount - Amount of safETH to unstake into ETH
+        @param _minOut - Minimum amount of ETH to unstake
     */
     function unstake(
         uint256 _safEthAmount,
@@ -182,8 +202,9 @@ contract SafEth is
         (uint256 mintedAmount, uint256 depositPrice) = this.stake{
             value: msg.value
         }(minAmount);
-        
+
         floorPrice = depositPrice;
+        preMintedAmount += mintedAmount;
         return mintedAmount;
     }
 
