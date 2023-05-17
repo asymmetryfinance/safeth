@@ -4,9 +4,14 @@ import hre, { ethers } from "hardhat";
 import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
 import { wstEthAbi } from "../test/abi/WstEthAbi";
 
-const webhookClient = new WebhookClient({
+const webhookClientPrice = new WebhookClient({
   id: process.env.MONITOR_WEBHOOK_ID ?? "",
   token: process.env.MONITOR_WEBHOOK_TOKEN ?? "",
+});
+
+const webhookClientEvent = new WebhookClient({
+  id: process.env.MONITOR_WEBHOOK_ID_EVENT ?? "",
+  token: process.env.MONITOR_WEBHOOK_TOKEN_EVENT ?? "",
 });
 
 const previousPriceData: Record<string, BigNumber> = {};
@@ -29,9 +34,9 @@ export const notifyOnStakeUnstake = async () => {
     if (newTotalSupply.gt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Staked", 0, "latest");
       const latestEvent = events[events.length - 1];
-      notify(`Stake Event`);
-      notify(`${latestEvent.args.recipient}`);
-      notify(
+      notifyEventChannel(`**Stake Event**  :chart:`);
+      notifyEventChannel(`${latestEvent.args.recipient}`);
+      notifyEventChannel(
         `${ethers.utils.formatEther(
           newTotalSupply.sub(previousTotalSupply)
         )} safETH`
@@ -39,15 +44,15 @@ export const notifyOnStakeUnstake = async () => {
     } else if (newTotalSupply.lt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Unstaked", 0, "latest");
       const latestEvent = events[events.length - 1];
-      notify(`Unstake Event`);
-      notify(`${latestEvent.args.recipient}`);
-      notify(
+      notifyEventChannel(`**Unstake Event**  :chart_with_downwards_trend:`);
+      notifyEventChannel(`${latestEvent.args.recipient}`);
+      notifyEventChannel(
         `${ethers.utils.formatEther(
           newTotalSupply.sub(previousTotalSupply)
         )} safETH`
       );
     }
-    notify(
+    notifyEventChannel(
       `${ethers.utils.formatEther(newTotalSupply)} safETH (New Total Supply)`
     );
   }
@@ -65,8 +70,8 @@ export const notifyOnPriceDrop = async (
       ? previousPriceData[key]
       : undefined;
     if (previousValue?.gt(value)) {
-      notify(
-        `${key} dropped from ${previousValue} to ${value} @ block ${await hre.ethers.provider.getBlockNumber()}`
+      notifyPriceChannel(
+        `**${key}** dropped from **${previousValue}** to **${value}** @ block ${await hre.ethers.provider.getBlockNumber()}`
       );
     }
     previousPriceData[key] = value;
@@ -93,8 +98,9 @@ export const notfiyOnFailedTx = async (
           if (receipt.status === 0) {
             if (!failedTransactions.includes(tx.hash)) {
               failedTransactions.push(tx.hash);
-              notify(`Failed Transaction Detected`);
-              notify(tx.hash);
+              notifyEventChannel(`**Failed Transaction Detected** :warning:`);
+              notifyEventChannel(tx.hash);
+              notifyEventChannel("@here");
             }
           }
         } catch (error) {
@@ -146,7 +152,12 @@ export const getContracts = async () => {
   };
 };
 
-const notify = async (message: string) => {
+const notifyPriceChannel = async (message: string) => {
   console.log(message);
-  webhookClient.send(message);
+  webhookClientPrice.send(message);
+};
+
+const notifyEventChannel = async (message: string) => {
+  console.log(message);
+  webhookClientEvent.send(message);
 };
