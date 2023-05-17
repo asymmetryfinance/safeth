@@ -1,54 +1,58 @@
 import hre, { upgrades, ethers } from "hardhat";
 
 async function main() {
-  const SafEthDeployment = await ethers.getContractFactory("SafEth");
-  const safEth = await upgrades.deployProxy(SafEthDeployment, [
-    "Simple Asymmetry Finance ETH",
-    "safETH",
-  ]);
+  // const SafEthDeployment = await ethers.getContractFactory("SafEth");
+  // const safEth = await upgrades.deployProxy(SafEthDeployment, [
+  //   "Simple Asymmetry Finance ETH",
+  //   "safETH",
+  // ]);
 
-  await safEth.deployed();
+  // await safEth.deployed();
 
-  console.log("SafEth deployed to:", safEth.address);
+  // console.log("SafEth deployed to:", safEth.address);
 
-  await hre.ethernal.push({
-    name: "SafEth",
-    address: safEth.address,
-  });
+  // await hre.ethernal.push({
+  //   name: "SafEth",
+  //   address: safEth.address,
+  // });
 
   // Deploy derivatives
   const rethDeployment = await ethers.getContractFactory("Reth");
-  const reth = await upgrades.deployProxy(rethDeployment, [safEth.address]);
+  const reth = await upgrades.deployProxy(rethDeployment, [
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
+  ]);
   await reth.deployed();
-  await safEth.addDerivative(reth.address, "1000000000000000000");
+  // await safEth.addDerivative(reth.address, "1000000000000000000");
   console.log("rEth deployed to:", reth.address);
 
-  await hre.ethernal.push({
-    name: "Reth",
-    address: reth.address,
-  });
+  // await hre.ethernal.push({
+  //   name: "Reth",
+  //   address: reth.address,
+  // });
 
-  const SfrxDeployment = await ethers.getContractFactory("SfrxEth");
-  const sfrx = await upgrades.deployProxy(SfrxDeployment, [safEth.address]);
-  await sfrx.deployed();
+  // const SfrxDeployment = await ethers.getContractFactory("SfrxEth");
+  // const sfrx = await upgrades.deployProxy(SfrxDeployment, [safEth.address]);
+  // await sfrx.deployed();
 
-  await safEth.addDerivative(sfrx.address, "1000000000000000000");
-  console.log("sfrxEth deployed to:", sfrx.address);
-  await hre.ethernal.push({
-    name: "SfrxEth",
-    address: sfrx.address,
-  });
+  // await safEth.addDerivative(sfrx.address, "1000000000000000000");
+  // console.log("sfrxEth deployed to:", sfrx.address);
+  // await hre.ethernal.push({
+  //   name: "SfrxEth",
+  //   address: sfrx.address,
+  // });
   const WstDeployment = await ethers.getContractFactory("WstEth");
-  const wst = await upgrades.deployProxy(WstDeployment, [safEth.address]);
+  const wst = await upgrades.deployProxy(WstDeployment, [
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
+  ]);
   await wst.deployed();
 
-  await safEth.addDerivative(wst.address, "1000000000000000000");
+  // await safEth.addDerivative(wst.address, "1000000000000000000");
   console.log("wstEth deployed to:", wst.address);
-  await hre.ethernal.push({
-    name: "WstEth",
-    address: wst.address,
-  });
-  await safEth.setPauseStaking(false);
+  // await hre.ethernal.push({
+  //   name: "WstEth",
+  //   address: wst.address,
+  // });
+  // await safEth.setPauseStaking(false);
 }
 
 main()
