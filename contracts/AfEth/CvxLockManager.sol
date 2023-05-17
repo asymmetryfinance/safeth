@@ -13,8 +13,6 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
 
-import "hardhat/console.sol";
-
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;

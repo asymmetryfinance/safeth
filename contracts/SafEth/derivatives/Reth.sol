@@ -30,7 +30,9 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_SWAP_ROUTER =
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
-    AggregatorV3Interface chainLinkRethEthFeed;
+    // Depricated
+    AggregatorV3Interface constant chainLinkRethEthFeed =
+        AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
@@ -39,6 +41,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    AggregatorV3Interface chainlinkFeed;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -56,13 +60,13 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
         maxSlippage = (1 * 1e16); // 1%
-        chainLinkRethEthFeed = AggregatorV3Interface(
+        chainlinkFeed = AggregatorV3Interface(
             0x536218f9E9Eb48863970252233c8F271f554C2d0
         );
     }
 
     function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
-        chainLinkRethEthFeed = AggregatorV3Interface(_priceFeedAddress);
+        chainlinkFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
     /**
@@ -173,7 +177,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function ethPerDerivative() public view returns (uint256) {
         ChainlinkResponse memory cl;
-        try chainLinkRethEthFeed.latestRoundData() returns (
+        try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
@@ -195,11 +199,11 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             cl.answer >= 0 &&
             cl.updatedAt != 0 &&
             cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 1 days
+            block.timestamp - cl.updatedAt <= 25 hours
         ) {
             return uint256(cl.answer);
         } else {
-            revert("Chainlink Failed");
+            revert("Chainlink Failed Reth");
         }
     }
 

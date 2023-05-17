@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 /// Test re-entrancy on SafEth
-import "hardhat/console.sol";
 import "../interfaces/ISafEth.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

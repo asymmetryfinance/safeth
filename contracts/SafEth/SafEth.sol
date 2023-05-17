@@ -36,7 +36,8 @@ contract SafEth is
     event Unstaked(
         address indexed recipient,
         uint256 indexed ethOut,
-        uint256 indexed safEthIn
+        uint256 indexed safEthIn,
+        uint256 price
     );
     event WeightChange(
         uint256 indexed index,
@@ -117,8 +118,8 @@ contract SafEth is
         // mintedAmount represents a percentage of the total assets in the system
         mintedAmount = (totalStakeValueEth) / depositPrice;
         require(mintedAmount > _minOut, "mint amount less than minOut");
-
         _mint(msg.sender, mintedAmount);
+
         emit Staked(msg.sender, msg.value, totalStakeValueEth, depositPrice);
     }
 
@@ -164,7 +165,12 @@ contract SafEth is
             ""
         );
         require(sent, "Failed to send Ether");
-        emit Unstaked(msg.sender, ethAmountToWithdraw, _safEthAmount);
+        emit Unstaked(
+            msg.sender,
+            ethAmountToWithdraw,
+            _safEthAmount,
+            approxPrice()
+        );
     }
 
     /**
@@ -368,6 +374,13 @@ contract SafEth is
         require(pauseUnstaking != _pause, "already set");
         pauseUnstaking = _pause;
         emit UnstakingPaused(_pause);
+    }
+
+    function setChainlinkFeed(
+        uint256 derivativeIndex,
+        address feed
+    ) external onlyOwner {
+        derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
     }
 
     /**
