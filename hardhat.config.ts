@@ -9,6 +9,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import "solidity-coverage";
 import "@openzeppelin/hardhat-upgrades";
+import "@openzeppelin/hardhat-defender";
 import "hardhat-ethernal";
 import { HardhatUserConfig } from "hardhat/types";
 
@@ -29,6 +30,10 @@ const config: HardhatUserConfig = {
         runs: 2000,
       },
     },
+  },
+  defender: {
+    apiKey: process.env.DEFENDER_API || "",
+    apiSecret: process.env.DEFENDER_SECRET || "",
   },
   ethernal: {
     disableSync: false, // If set to true, plugin will not sync blocks & txs
