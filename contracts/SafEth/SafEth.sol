@@ -25,6 +25,7 @@ contract SafEth is
         uint256 indexed oldMaxAmount,
         uint256 indexed newMaxAmount
     );
+    event MaxPremintAmount(uint256 indexed amount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
@@ -385,6 +386,17 @@ contract SafEth is
         require(pauseStaking != _pause, "already set");
         pauseStaking = _pause;
         emit StakingPaused(_pause);
+    }
+
+    /**
+        @notice - Sets the maximum amount a user can premint in one transaction
+        @param _amount - amount to set as maximum premint value
+        @dev - This is to prevent a whale from coming in and taking all the preminted funds
+        @dev - A user can stake multiple times and still receive the preminted funds
+    */
+    function setMaxPremintAmount(uint256 _amount) external onlyOwner {
+        maxPremintAmount = _amount;
+        emit MaxPremintAmount(_amount);
     }
 
     /**
