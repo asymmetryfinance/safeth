@@ -13,6 +13,8 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
 
+import "hardhat/console.sol";
+
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
@@ -83,8 +85,9 @@ contract CvxLockManager is OwnableUpgradeable {
         maxSlippage = 10 ** 16; // 1%
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
         if (lastEpochFullyClaimed == 0)
-            lastEpochFullyClaimed = currentEpoch - 1;
+            lastEpochFullyClaimed = currentEpoch;
         extraRewardsStream = _extraRewardsStream;
+        console.log('initializing, current epoch is', currentEpoch);
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -161,6 +164,7 @@ contract CvxLockManager is OwnableUpgradeable {
     // convert to eth and set claimed amounts for each epoch so we can what users are owed during withdraw
     function claimRewards() public {
         uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        console.log('claimRewards()', lastEpochFullyClaimed, currentEpoch);
 
         uint256 balanceBeforeClaim = address(this).balance;
         sweepRewards();
@@ -198,6 +202,7 @@ contract CvxLockManager is OwnableUpgradeable {
             unclaimedCompletedEpochCount;
 
         for (uint256 i = lastEpochFullyClaimed + 1; i < currentEpoch; i++) {
+            console.log('setting claimed at i to', i, rewardsPerCompletedEpoch);
             rewardsClaimed[i] = rewardsPerCompletedEpoch;
         }
 
@@ -290,6 +295,7 @@ contract CvxLockManager is OwnableUpgradeable {
             // they were not locked during the epoch in which they relocked.
             // no rewards owed for relock epoch
             bool isRelockEpoch = distanceFromStart != 0 && (distanceFromStart % 16) == 0;
+            console.log('i isRelock', i, isRelockEpoch);
             if(isRelockEpoch) continue;
 
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
@@ -302,6 +308,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
             uint256 claimed = (positionLockRatio * rewardsClaimed[i]) /
                 10 ** 18;
+            console.log('positionLockRatio claimed at i is', i, positionLockRatio, claimed);
             totalRewards += claimed;
         }
         // solhint-disable-next-line
