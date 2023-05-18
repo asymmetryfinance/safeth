@@ -199,7 +199,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             cl.answer >= 0 &&
             cl.updatedAt != 0 &&
             cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 1 days
+            block.timestamp - cl.updatedAt <= 25 hours
         ) {
             return uint256(cl.answer);
         } else {

@@ -358,10 +358,10 @@ contract SafEth is
     }
 
     function setChainlinkFeed(
-        uint256 derivativeInde,
+        uint256 derivativeIndex,
         address feed
     ) external onlyOwner {
-        derivatives[derivativeInde].derivative.setChainlinkFeed(feed);
+        derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
     }
 
     /**
