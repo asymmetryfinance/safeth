@@ -116,15 +116,11 @@ contract CvxLockManager is OwnableUpgradeable {
             address(this)
         );
 
-        // nothing to unlock
-        if (unlockable == 0) return;
-        // unlock all
-        ILockedCvx(vlCVX).processExpiredLocks(false);
+        // unlock all if possible
+        if (unlockable != 0)
+            ILockedCvx(vlCVX).processExpiredLocks(false);
 
         uint256 unlockedCvxBalance = IERC20(CVX).balanceOf(address(this));
-
-        // nothing to relock
-        if (unlockedCvxBalance == 0) return;
 
         uint256 toUnlock = 0;
         // we overlap with the previous relock by 1 epoch
@@ -135,6 +131,10 @@ contract CvxLockManager is OwnableUpgradeable {
             unlockSchedule[i] = 0;
         }
         cvxToLeaveUnlocked += toUnlock;
+
+        lastRelockEpoch = currentEpoch;
+        // nothing to relock
+        if (unlockedCvxBalance == 0) return;
 
         // relock everything minus unlocked obligations
         uint256 cvxAmountToRelock = unlockedCvxBalance - cvxToLeaveUnlocked;
@@ -203,6 +203,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
         lastEpochFullyClaimed = currentEpoch - 1;
         leftoverRewards = currentEpochReward;
+
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
@@ -222,8 +223,8 @@ contract CvxLockManager is OwnableUpgradeable {
         // calculate its new unlock epoch
         if (currentEpoch >= originalUnlockEpoch) {
             uint256 epochDifference = currentEpoch - originalUnlockEpoch;
-            uint256 extraLockLengths = (epochDifference / 16) + 1;
-            unlockEpoch = originalUnlockEpoch + extraLockLengths * 16;
+            uint256 extraLockLengths = (epochDifference / 17) + 1;
+            unlockEpoch = originalUnlockEpoch + extraLockLengths * 17;
         } else {
             unlockEpoch = originalUnlockEpoch;
         }
@@ -282,9 +283,15 @@ contract CvxLockManager is OwnableUpgradeable {
         );
 
         uint256 totalRewards = 0;
-
         // add up total rewards for a position up until unlock epoch -1
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
+            uint256 distanceFromStart = i - startingEpoch;
+
+            // they were not locked during the epoch in which they relocked.
+            // no rewards owed for relock epoch
+            bool isRelockEpoch = distanceFromStart != 0 && (distanceFromStart % 16) == 0;
+            if(isRelockEpoch) continue;
+
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
                 i,
                 address(this)
