@@ -10,7 +10,7 @@ import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { epochDuration, getCurrentEpoch } from "./helpers/lockManagerHelpers";
+import { epochDuration, getCurrentEpoch, getCurrentEpochEndTime } from "./helpers/lockManagerHelpers";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { getDifferenceRatio } from "./helpers/functions";
 
@@ -539,26 +539,28 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy1.stake({ value: depositAmount });
     await tx.wait();
 
-    // await incrementEpochs(17);
-
-    tx = await cvxStrategy1.unstake(false, 1);
+    await incrementEpochs(6);
+    tx = await cvxStrategy1.claimRewards();
     await tx.wait();
 
-    await incrementEpochs(17);
+    // tx = await cvxStrategy1.unstake(false, 1);
+    // await tx.wait();
+
+    // await incrementEpochs(22);
 
     // TODO test that it doesnt matter how long u wait after they unstake to withdraw
 
-    const balanceBefore1 = await ethers.provider.getBalance(
-      accounts[1].address
-    );
+    // const balanceBefore1 = await ethers.provider.getBalance(
+    //   accounts[1].address
+    // );
 
-    tx = await cvxStrategy1.withdrawCvxAndRewards(1);
-    const mined1 = await tx.wait();
-    const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
-    const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
-    const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
+    // tx = await cvxStrategy1.withdrawCvxAndRewards(1);
+    // const mined1 = await tx.wait();
+    // const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+    // const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
+    // const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
 
-    console.log("ethReceived1", ethReceived1);
+    // console.log("ethReceived1", ethReceived1);
 
     // const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
 
