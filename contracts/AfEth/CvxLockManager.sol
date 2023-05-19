@@ -173,7 +173,7 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
-        console.log('amount claimed', amountClaimed);
+        console.log('amountClaimed', amountClaimed, lastEpochFullyClaimed, currentEpoch);
         // console.log('block.timestamp', block.timestamp);
 
         // special case if claimRewards is called a second time in same epoch
@@ -192,7 +192,9 @@ contract CvxLockManager is OwnableUpgradeable {
 
         uint256 timeSinceCurrentEpochStart = block.timestamp -
             currentEpochStartingTime;
-        uint256 timeSincePositionOpen = (block.timestamp - firstUnclaimedEpochStartingTime);
+
+        //
+        uint256 timeSinceLastClaim = (block.timestamp - firstUnclaimedEpochStartingTime);
 
         // console.log('remainingTimeInCurrentEpoch', timeSinceCurrentEpochStart);
         // console.log('timeSincePositionOpen', timeSincePositionOpen);
@@ -201,10 +203,10 @@ contract CvxLockManager is OwnableUpgradeable {
 
         // % of claimed rewards that go to the current (incomplete) epoch
         uint256 currentEpochRewardRatio = (timeSinceCurrentEpochStart * 10 ** 18) /
-            timeSincePositionOpen;
+            timeSinceLastClaim;
             
         console.log('timeSinceCurrentEpochStart', timeSinceCurrentEpochStart);
-        console.log('timeSincePositionOpen', timeSincePositionOpen);
+        console.log('timeSincePositionOpen', timeSinceLastClaim);
 
         console.log('currentEpochRewardRatio', currentEpochRewardRatio);
 

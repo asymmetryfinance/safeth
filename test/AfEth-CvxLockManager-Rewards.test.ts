@@ -539,7 +539,17 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     tx = await cvxStrategy1.stake({ value: depositAmount });
     await tx.wait();
 
-    await incrementEpochs(6);
+    tx = await cvxStrategy1.claimRewards();
+    await tx.wait();
+
+    console.log('------------------------------------------------------------')
+
+    await incrementEpochs(1);
+    tx = await cvxStrategy1.claimRewards();
+    await tx.wait();
+
+    console.log('------------------------------------------------------------')
+    await incrementEpochs(1);
     tx = await cvxStrategy1.claimRewards();
     await tx.wait();
 

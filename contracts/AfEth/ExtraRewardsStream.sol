@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import "hardhat/console.sol";
+
 contract ExtraRewardsStream {
     uint256 public totalAmount;
     uint256 public duration;
@@ -24,6 +26,8 @@ contract ExtraRewardsStream {
             claimedAmount;
         if (amount > address(this).balance) amount = address(this).balance;
         claimedAmount += amount;
+
+        console.log('stream sending', amount, elapsedTime, duration);
         payable(recipient).transfer(amount);
     }
 
