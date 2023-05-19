@@ -206,7 +206,7 @@ contract CvxLockManager is OwnableUpgradeable {
             timeSinceLastClaim;
             
         console.log('timeSinceCurrentEpochStart', timeSinceCurrentEpochStart);
-        console.log('timeSincePositionOpen', timeSinceLastClaim);
+        console.log('timeSinceLastClaim', timeSinceLastClaim);
 
         console.log('currentEpochRewardRatio', currentEpochRewardRatio);
 

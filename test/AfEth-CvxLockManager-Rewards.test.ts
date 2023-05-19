@@ -536,41 +536,30 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
 
+    tx = await cvxStrategy1.claimRewards();
+    await tx.wait();
+
     tx = await cvxStrategy1.stake({ value: depositAmount });
     await tx.wait();
 
-    tx = await cvxStrategy1.claimRewards();
+//    await incrementEpochs(17);
+
+    tx = await cvxStrategy1.unstake(false, 1);
     await tx.wait();
 
-    console.log('------------------------------------------------------------')
+    await incrementEpochs(17);
 
-    await incrementEpochs(1);
-    tx = await cvxStrategy1.claimRewards();
-    await tx.wait();
+    const balanceBefore1 = await ethers.provider.getBalance(
+      accounts[1].address
+    );
 
-    console.log('------------------------------------------------------------')
-    await incrementEpochs(1);
-    tx = await cvxStrategy1.claimRewards();
-    await tx.wait();
+    tx = await cvxStrategy1.withdrawCvxAndRewards(1);
+    const mined1 = await tx.wait();
+    const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+    const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
+    const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
 
-    // tx = await cvxStrategy1.unstake(false, 1);
-    // await tx.wait();
-
-    // await incrementEpochs(22);
-
-    // TODO test that it doesnt matter how long u wait after they unstake to withdraw
-
-    // const balanceBefore1 = await ethers.provider.getBalance(
-    //   accounts[1].address
-    // );
-
-    // tx = await cvxStrategy1.withdrawCvxAndRewards(1);
-    // const mined1 = await tx.wait();
-    // const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
-    // const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
-    // const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
-
-    // console.log("ethReceived1", ethReceived1);
+    console.log("ethReceived1", ethReceived1);
 
     // const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
 
