@@ -106,11 +106,14 @@ contract SafEth is
 
         bool preMinted = false;
         if (msg.value <= preMintedAmount && msg.value <= maxPremintAmount) {
-            preMintedAmount = preMintedAmount - msg.value;
+            // Use preminted safeth
+            ethToClaim += msg.value;
             uint256 amountToMint = (msg.value * depositPrice) / 1e18;
+            preMintedAmount = preMintedAmount - amountToMint;
             transfer(msg.sender, amountToMint);
             preMinted = true;
         } else {
+            // Mint new safeth
             uint256 count = derivativeCount;
             // Loop through each derivative and deposit the correct amount of ETH
             for (uint256 i = 0; i < count; i++) {
@@ -198,16 +201,36 @@ contract SafEth is
     /**
         @notice - Premints safEth for future users
      */
-    function preMint() external payable onlyOwner returns (uint256) {
+    function preMint(
+        bool _useBalance
+    ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
-        uint256 minAmount = (amount * 1e18) / floorPrice;
+        if (_useBalance) {
+            amount += ethToClaim;
+            ethToClaim = 0;
+        }
+        uint256 priceEstimate = approxPrice();
+        uint256 estimatedPrice = priceEstimate < floorPrice
+            ? floorPrice
+            : priceEstimate;
+
+        uint256 minAmount = (amount * 1e18) / estimatedPrice;
         (uint256 mintedAmount, uint256 depositPrice) = this.stake{
-            value: msg.value
+            value: amount
         }(minAmount);
 
         floorPrice = depositPrice;
         preMintedAmount += mintedAmount;
         return mintedAmount;
+    }
+
+    /**
+        @notice - Premints safEth for future users
+     */
+    function claimEthFromPreMint() external payable onlyOwner {
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
+        ethToClaim = 0;
     }
 
     /**

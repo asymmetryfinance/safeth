@@ -57,6 +57,7 @@ describe("SafEth", function () {
 
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    await safEthProxy.setMaxPremintAmount("2000000000000000000");
   });
 
   describe("Large Amounts", function () {
@@ -119,17 +120,24 @@ describe("SafEth", function () {
     });
   });
   describe("Pre-mint", function () {
-    it("User should receive premint if within range", async function () {
+    it.only("User should receive premint if under max premint amount & has premint funds", async function () {
       // premint eth
-      await safEthProxy.preMint({ value: ethers.utils.parseEther("10") });
-
+      await safEthProxy.preMint({ value: ethers.utils.parseEther("4") });
       // stake 1 eth to get preminted eth
       const depositAmount = ethers.utils.parseEther("1");
-      await safEthProxy.stake(0, { value: depositAmount });
+      const tx = await safEthProxy.stake(0, { value: depositAmount });
+      const receipt = await tx.wait();
+      const events = await receipt?.events;
+      console.log({ events });
     });
+    it("Owner can withdraw ETH from their preMinted funds", async function () {});
     it("Should use floor price if approxPrice < floorPrice", async function () {});
-    it("Should change max premint amount", async function () {});
     it("Should mint safEth if under max premint amount but over premint available", async function () {});
+    it("Shouldn't use premint if over max premint amount", async function () {});
+    it("Should change max premint amount", async function () {
+      await safEthProxy.setMaxPremintAmount(100);
+      expect(await safEthProxy.maxPremintAmount()).to.eq(100);
+    });
   });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {

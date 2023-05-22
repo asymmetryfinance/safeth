@@ -26,9 +26,10 @@ contract SafEthStorage {
     uint256 public minAmount; // minimum amount to stake
     uint256 public maxAmount; // maximum amount to stake
     mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
-    uint256 internal floorPrice = 1e18; // lowest price to sell preminted SafEth
-    uint256 internal maxPremintAmount = 2 ether; // maximum amount of ETH that can be preminted
-    uint256 internal preMintedAmount; // maximum amount of ETH that can be preminted
+    uint256 internal floorPrice; // lowest price to sell preminted SafEth
+    uint256 public maxPremintAmount; // maximum amount of ETH that can be preminted
+    uint256 internal preMintedAmount; // amount of preminted safEth that is available
+    uint256 internal ethToClaim; // amount of ETH that was used to claim preminted safEth
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
