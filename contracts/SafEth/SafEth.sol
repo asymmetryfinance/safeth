@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -41,6 +42,11 @@ contract SafEth is
         uint256 indexed ethOut,
         uint256 indexed safEthIn,
         uint256 price
+    );
+    event PreMint(
+        uint256 indexed ethIn,
+        uint256 indexed mintAmount,
+        uint256 newFloorPrice
     );
     event WeightChange(
         uint256 indexed index,
@@ -100,17 +106,26 @@ contract SafEth is
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
 
-        uint256 priceEstimate = approxPrice();
-        depositPrice = priceEstimate < floorPrice ? floorPrice : priceEstimate;
+        depositPrice = approxPrice();
         uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
 
         bool preMinted = false;
-        if (msg.value <= preMintedAmount && msg.value <= maxPremintAmount) {
+        console.log("STAKE");
+        console.log(balanceOf(address(this)));
+        uint256 preMintPrice = depositPrice < floorPrice
+            ? floorPrice
+            : depositPrice;
+        uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
+        console.log(amountFromPreMint);
+        if (
+            amountFromPreMint <= preMintedSupply &&
+            msg.value <= maxPremintAmount
+        ) {
             // Use preminted safeth
             ethToClaim += msg.value;
-            uint256 amountToMint = (msg.value * depositPrice) / 1e18;
-            preMintedAmount = preMintedAmount - amountToMint;
-            transfer(msg.sender, amountToMint);
+            depositPrice = preMintPrice;
+            preMintedSupply -= amountFromPreMint;
+            IERC20(address(this)).transfer(msg.sender, amountFromPreMint);
             preMinted = true;
         } else {
             // Mint new safeth
@@ -202,6 +217,7 @@ contract SafEth is
         @notice - Premints safEth for future users
      */
     function preMint(
+        uint256 _minAmount,
         bool _useBalance
     ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
@@ -209,18 +225,13 @@ contract SafEth is
             amount += ethToClaim;
             ethToClaim = 0;
         }
-        uint256 priceEstimate = approxPrice();
-        uint256 estimatedPrice = priceEstimate < floorPrice
-            ? floorPrice
-            : priceEstimate;
-
-        uint256 minAmount = (amount * 1e18) / estimatedPrice;
         (uint256 mintedAmount, uint256 depositPrice) = this.stake{
             value: amount
-        }(minAmount);
+        }(_minAmount);
 
         floorPrice = depositPrice;
-        preMintedAmount += mintedAmount;
+        preMintedSupply += mintedAmount;
+        emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
     }
 
