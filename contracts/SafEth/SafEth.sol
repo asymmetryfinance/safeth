@@ -100,7 +100,8 @@ contract SafEth is
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
 
-        depositPrice = approxPrice();
+        uint256 priceEstimate = approxPrice();
+        depositPrice = priceEstimate < floorPrice ? floorPrice : priceEstimate;
         uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
 
         bool preMinted = false;

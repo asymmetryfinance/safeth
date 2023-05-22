@@ -118,6 +118,19 @@ describe("SafEth", function () {
       await safEthProxy.stake(0, { value: depositAmount });
     });
   });
+  describe("Pre-mint", function () {
+    it("User should receive premint if within range", async function () {
+      // premint eth
+      await safEthProxy.preMint({ value: ethers.utils.parseEther("10") });
+
+      // stake 1 eth to get preminted eth
+      const depositAmount = ethers.utils.parseEther("1");
+      await safEthProxy.stake(0, { value: depositAmount });
+    });
+    it("Should use floor price if approxPrice < floorPrice", async function () {});
+    it("Should change max premint amount", async function () {});
+    it("Should mint safEth if under max premint amount but over premint available", async function () {});
+  });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
       await expect(
