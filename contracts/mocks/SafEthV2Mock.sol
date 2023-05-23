@@ -27,9 +27,7 @@ contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
     }
 
     // Set floorprice so we can verify price won't go below
-    function setMockFloorPrice(
-        uint256 amount
-    ) public onlyOwner {
+    function setMockFloorPrice(uint256 amount) public onlyOwner {
         floorPrice = amount;
     }
 }
