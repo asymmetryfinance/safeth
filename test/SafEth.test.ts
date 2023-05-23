@@ -119,7 +119,7 @@ describe("SafEth", function () {
       await safEthProxy.stake(0, { value: depositAmount });
     });
   });
-  describe.only("Pre-mint", function () {
+  describe("Pre-mint", function () {
     it("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("2");
       expect(depositAmount).lte(await safEthProxy.maxPreMintAmount());
@@ -190,27 +190,38 @@ describe("SafEth", function () {
 
       expect(await safEthProxy.floorPrice()).lt(event?.args?.[3]);
     });
-    it("Should use floor price if approxPrice < floorPrice", async function () {
+    it("Should use floor price if approxPrice <= floorPrice", async function () {
+      // upgrade contract to support mocking floorPrice
+      const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+      await safEth2.deployed();
+
       const preMintAmount = ethers.utils.parseEther("2");
+
       // premint eth
-      let tx = await safEthProxy.preMint(0, false, {
+      let tx = await safEth2.preMint(0, false, {
         value: preMintAmount,
       });
       await tx.wait();
-
+      let floorPrice = await safEth2.floorPrice();
       const depositAmount = ethers.utils.parseEther("1");
-      const preMintSupply = await safEthProxy.preMintedSupply();
+      const preMintSupply = await safEth2.preMintedSupply();
 
-      expect(depositAmount).lt(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).lt(await safEth2.maxPreMintAmount());
       expect(depositAmount).lt(preMintSupply);
 
-      tx = await safEthProxy.stake(0, { value: depositAmount });
+      const mockedFloorPrice = floorPrice.mul(2);
+      await safEth2.setMockFloorPrice(mockedFloorPrice);
+
+      floorPrice = await safEth2.floorPrice();
+      const price = await safEth2.approxPrice();
+
+      expect(floorPrice).gt(price);
+
+      tx = await safEth2.stake(0, { value: depositAmount });
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
-      console.log("floor", await safEthProxy.floorPrice());
-      console.log("price", event?.args?.[3]);
-      expect(await safEthProxy.floorPrice()).lt(event?.args?.[3]);
+      expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
     });
     it("Owner can withdraw ETH from their preMinted funds", async function () {
       const ethToClaim = await safEthProxy.ethToClaim();

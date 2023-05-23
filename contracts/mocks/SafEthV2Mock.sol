@@ -25,4 +25,11 @@ contract SafEthV2Mock is SafEth, SafEthV2MockStorage {
     ) public onlyOwner {
         IERC20(tokenAddress).transfer(msg.sender, amount);
     }
+
+    // Set floorprice so we can verify price won't go below
+    function setMockFloorPrice(
+        uint256 amount
+    ) public onlyOwner {
+        floorPrice = amount;
+    }
 }
