@@ -115,6 +115,11 @@ contract SafEth is
             amountFromPreMint <= preMintedSupply &&
             msg.value <= maxPreMintAmount
         ) {
+            require(
+                amountFromPreMint > _minOut,
+                "preMint amount less than minOut"
+            );
+
             // Use preminted safeth
             ethToClaim += msg.value;
             depositPrice = preMintPrice;

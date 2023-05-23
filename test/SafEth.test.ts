@@ -297,9 +297,16 @@ describe("SafEth", function () {
     });
   });
   describe("Min Out", function () {
-    it("Should fail staking with minOut higher than expected safEth output", async function () {
+    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
+      await expect(
+        safEthProxy.stake(minOut, { value: depositAmount })
+      ).to.be.revertedWith("preMint amount less than minOut");
+    });
+    it("Should fail staking with minOut higher than expected safEth output", async function () {
+      const depositAmount = ethers.utils.parseEther("5");
+      const minOut = ethers.utils.parseEther("6");
       await expect(
         safEthProxy.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("mint amount less than minOut");
