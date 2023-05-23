@@ -241,9 +241,10 @@ contract SafEth is
     /**
         @notice - Premints safEth for future users
      */
-    function claimEthFromPreMint() external payable onlyOwner {
+    function claimEthFromPreMint() external onlyOwner {
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
+        require(sent, "Failed to send Ether");
         ethToClaim = 0;
     }
 
