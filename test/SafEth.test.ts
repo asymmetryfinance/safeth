@@ -120,7 +120,7 @@ describe("SafEth", function () {
     });
   });
   describe.only("Pre-mint", function () {
-    it.only("User should receive premint if under max premint amount & has premint funds", async function () {
+    it("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("2");
 
       // premint eth
@@ -129,13 +129,19 @@ describe("SafEth", function () {
       });
       let receipt = await tx.wait();
       let event = await receipt?.events?.[receipt?.events?.length - 1];
-      const amountToStake = event?.args?.[1];
-      // stake 1 eth to get preminted safeth
-      tx = await safEthProxy.stake(0, { value: amountToStake });
+      const preMintedAmount = event?.args?.[1];
+      // stake ~2 eth to get preminted safeth
+      // need to use a little less than 2 ETH due to price going up after staking
+      tx = await safEthProxy.stake(0, { value: preMintedAmount });
       receipt = await tx.wait();
-      event = await receipt?.events?.[1];
+      event = await receipt?.events?.[receipt?.events?.length - 1];
+      const amountMinted = await receipt?.events?.[0]?.args?.[2];
+
       expect(event?.args?.[4]).eq(true); // uses preminted safeth
-      expect(await safEthProxy.preMintedSupply()).eq(0); // mints safeth
+      expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
+      expect(await safEthProxy.preMintedSupply()).lt(
+        ethers.utils.parseEther(".0000001")
+      );
     });
     it("Shouldn't use premint if over max premint amount", async function () {
       const depositAmount = ethers.utils.parseEther("3");
@@ -147,7 +153,9 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
+    it("Owner can withdraw ETH from their preMinted funds", async function () {});
     it("Should use floor price if approxPrice < floorPrice", async function () {});
+    it("Should use approx price if approxPrice > floorPrice", async function () {});
     it("Should mint safEth if under max premint amount but over premint available", async function () {
       const depositAmount = ethers.utils.parseEther("1");
 
@@ -161,7 +169,6 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Owner can withdraw ETH from their preMinted funds", async function () {});
     it("Should change max premint amount", async function () {
       await safEthProxy.setMaxPremintAmount(100);
       expect(await safEthProxy.maxPremintAmount()).to.eq(100);

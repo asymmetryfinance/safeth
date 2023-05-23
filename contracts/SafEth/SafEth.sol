@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -107,16 +106,11 @@ contract SafEth is
         require(totalWeight > 0, "total weight is zero");
 
         depositPrice = approxPrice();
-        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
 
-        bool preMinted = false;
-        console.log("STAKE");
-        console.log(balanceOf(address(this)));
         uint256 preMintPrice = depositPrice < floorPrice
             ? floorPrice
             : depositPrice;
         uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
-        console.log(amountFromPreMint);
         if (
             amountFromPreMint <= preMintedSupply &&
             msg.value <= maxPremintAmount
@@ -126,10 +120,18 @@ contract SafEth is
             depositPrice = preMintPrice;
             preMintedSupply -= amountFromPreMint;
             IERC20(address(this)).transfer(msg.sender, amountFromPreMint);
-            preMinted = true;
+            emit Staked(
+                msg.sender,
+                msg.value,
+                (amountFromPreMint * depositPrice) / 1e18,
+                depositPrice,
+                true
+            );
         } else {
             // Mint new safeth
             uint256 count = derivativeCount;
+            uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+
             // Loop through each derivative and deposit the correct amount of ETH
             for (uint256 i = 0; i < count; i++) {
                 if (!derivatives[i].enabled) continue;
@@ -152,15 +154,14 @@ contract SafEth is
             mintedAmount = (totalStakeValueEth) / depositPrice;
             require(mintedAmount > _minOut, "mint amount less than minOut");
             _mint(msg.sender, mintedAmount);
+            emit Staked(
+                msg.sender,
+                msg.value,
+                totalStakeValueEth / 1e18,
+                depositPrice,
+                false
+            );
         }
-
-        emit Staked(
-            msg.sender,
-            msg.value,
-            totalStakeValueEth,
-            depositPrice,
-            preMinted
-        );
     }
 
     /**
@@ -215,6 +216,8 @@ contract SafEth is
 
     /**
         @notice - Premints safEth for future users
+        @param _minAmount - minimum amount to stake
+        @param _useBalance - should use balance from previous premint's to mint more
      */
     function preMint(
         uint256 _minAmount,
