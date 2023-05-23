@@ -27,7 +27,7 @@ contract SafEthStorage {
     uint256 public maxAmount; // maximum amount to stake
     mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
     uint256 public floorPrice; // lowest price to sell preminted SafEth
-    uint256 public maxPremintAmount; // maximum amount of ETH that can be preminted
+    uint256 public maxPreMintAmount; // maximum amount of ETH that can be preminted
     uint256 public preMintedSupply; // supply of preminted safEth that is available
     uint256 public ethToClaim; // amount of ETH that was used to claim preminted safEth
     /**

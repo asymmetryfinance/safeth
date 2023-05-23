@@ -25,7 +25,7 @@ contract SafEth is
         uint256 indexed oldMaxAmount,
         uint256 indexed newMaxAmount
     );
-    event MaxPremintAmount(uint256 indexed amount);
+    event MaxPreMintAmount(uint256 indexed amount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
@@ -113,7 +113,7 @@ contract SafEth is
         uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
         if (
             amountFromPreMint <= preMintedSupply &&
-            msg.value <= maxPremintAmount
+            msg.value <= maxPreMintAmount
         ) {
             // Use preminted safeth
             ethToClaim += msg.value;
@@ -432,9 +432,9 @@ contract SafEth is
         @dev - This is to prevent a whale from coming in and taking all the preminted funds
         @dev - A user can stake multiple times and still receive the preminted funds
     */
-    function setMaxPremintAmount(uint256 _amount) external onlyOwner {
-        maxPremintAmount = _amount;
-        emit MaxPremintAmount(_amount);
+    function setMaxPreMintAmount(uint256 _amount) external onlyOwner {
+        maxPreMintAmount = _amount;
+        emit MaxPreMintAmount(_amount);
     }
 
     /**
