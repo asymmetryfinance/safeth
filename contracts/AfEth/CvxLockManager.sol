@@ -105,7 +105,7 @@ contract CvxLockManager is OwnableUpgradeable {
         IERC20(CVX).approve(vlCVX, cvxAmount);
         ILockedCvx(vlCVX).lock(address(this), cvxAmount, 0);
 
-        if(firstLock) {
+        if (firstLock) {
             lastEpochFullyClaimed = currentEpoch - 1;
             firstLock = false;
         }
@@ -122,8 +122,7 @@ contract CvxLockManager is OwnableUpgradeable {
         );
 
         // unlock all if possible
-        if (unlockable != 0)
-            ILockedCvx(vlCVX).processExpiredLocks(false);
+        if (unlockable != 0) ILockedCvx(vlCVX).processExpiredLocks(false);
 
         uint256 unlockedCvxBalance = IERC20(CVX).balanceOf(address(this));
 
@@ -172,7 +171,6 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
-
         // special case if claimRewards is called a second time in same epoch
         if (lastEpochFullyClaimed == currentEpoch - 1) {
             leftoverRewards += amountClaimed;
@@ -189,11 +187,12 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 timeSinceCurrentEpochStart = block.timestamp -
             currentEpochStartingTime;
 
-        uint256 timeSinceLastClaim = (block.timestamp - firstUnclaimedEpochStartingTime);
+        uint256 timeSinceLastClaim = (block.timestamp -
+            firstUnclaimedEpochStartingTime);
 
         // % of claimed rewards that go to the current (incomplete) epoch
-        uint256 currentEpochRewardRatio = (timeSinceCurrentEpochStart * 10 ** 18) /
-            timeSinceLastClaim;
+        uint256 currentEpochRewardRatio = (timeSinceCurrentEpochStart *
+            10 ** 18) / timeSinceLastClaim;
 
         // how much of the claimed rewards go to the current (incomplete) epoch
         uint256 currentEpochReward = (currentEpochRewardRatio * amountClaimed) /
@@ -307,13 +306,13 @@ contract CvxLockManager is OwnableUpgradeable {
 
             // they were not locked during the epoch in which they relocked.
             // no rewards owed for relock epoch
-            bool isRelockEpoch = distanceFromStart != 0 && ( (distanceFromStart + 1) % 17) == 0;
-            if(isRelockEpoch) continue;
+            bool isRelockEpoch = distanceFromStart != 0 &&
+                ((distanceFromStart + 1) % 17) == 0;
+            if (isRelockEpoch) continue;
 
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
-
 
             uint256 claimed = (positionLockRatio * rewardsClaimed[i]) /
                 10 ** 18;

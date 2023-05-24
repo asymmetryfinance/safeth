@@ -7,7 +7,11 @@ import {
   SNAPSHOT_DELEGATE_REGISTRY,
 } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import {
+  SnapshotRestorer,
+  takeSnapshot,
+  time,
+} from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
@@ -23,6 +27,7 @@ describe("AfEth (CvxStrategy)", async function () {
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let crvPool: any;
+  let snapshot: SnapshotRestorer;
 
   const deployContracts = async () => {
     const deployResults = await deployStrategyContract();
@@ -80,12 +85,16 @@ describe("AfEth (CvxStrategy)", async function () {
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
       value: seedAmount,
     });
+
+    snapshot = await takeSnapshot();
   });
+
   it("Should seed CRV Pool", async function () {
     const crvPoolBalance0 = await crvPool.balances(0);
     expect(crvPoolBalance0).gt(0);
     const crvPoolBalance1 = await crvPool.balances(1);
     expect(crvPoolBalance1).gt(0);
+    await snapshot.restore();
   });
   it("Should stake", async function () {
     const accounts = await ethers.getSigners();
@@ -99,18 +108,19 @@ describe("AfEth (CvxStrategy)", async function () {
       cvxStrategy.address
     );
 
-    expect(vlCvxBalance).eq(BigNumber.from("518490293350028363092"));
+    expect(vlCvxBalance).eq(BigNumber.from("508354031579118550620"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3564550021488410689");
-    expect(crvPoolSafEthAmount).eq("3564550021488410689");
+    expect(crvPoolAfEthAmount).eq("3594644016254438484");
+    expect(crvPoolSafEthAmount).eq("3594644016254438484");
 
     // check position struct
-    const positions = await cvxStrategy.positions(1);
-    expect(positions.afEthAmount).eq(BigNumber.from("3494656869731266529"));
-    expect(positions.curveBalance).eq(BigNumber.from("3494621923162569216"));
+    const positions = await cvxStrategy.positions(0);
+    expect(positions.afEthAmount).eq(BigNumber.from("3494656857625841107"));
+    expect(positions.curveBalance).eq(BigNumber.from("3494621911057264848"));
+    await snapshot.restore();
   });
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
@@ -123,8 +133,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool before staking
     const crvPoolAfEthAmountBefore = await crvPool.balances(0);
     const crvPoolSafEthAmountBefore = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountBefore).eq("3564550021488410689");
-    expect(crvPoolSafEthAmountBefore).eq("3564550021488410689");
+    expect(crvPoolAfEthAmountBefore).eq("99987158628597377");
+    expect(crvPoolSafEthAmountBefore).eq("99987158628597377");
 
     const afEthStrategyBalanceBefore = await afEth.balanceOf(
       cvxStrategy.address
@@ -139,11 +149,11 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("7059205484139702311");
-    expect(crvPoolSafEthAmount).eq("7059205484139702311");
+    expect(crvPoolAfEthAmount).eq("3594644016254438484");
+    expect(crvPoolSafEthAmount).eq("3594644016254438484");
 
     // check cvx locked positions
-    let position1 = await cvxStrategy.cvxPositions(1);
+    let position1 = await cvxStrategy.cvxPositions(0);
     let unlockEpoch = position1.unlockEpoch;
     expect(unlockEpoch).eq(0);
 
@@ -153,23 +163,24 @@ describe("AfEth (CvxStrategy)", async function () {
     );
     expect(ethBalanceBefore.sub(ethBalanceDuring)).gt(depositAmount);
 
-    const unstakeTx = await cvxStrategy.unstake(false, 2);
+    const unstakeTx = await cvxStrategy.unstake(false, 0);
     await unstakeTx.wait();
-
-    // check crv liquidity pool after unstaking
-    const crvPoolAfEthAmountAfter = await crvPool.balances(0);
-    const crvPoolSafEthAmountAfter = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountAfter).eq("3564567667859380431");
-    expect(crvPoolSafEthAmountAfter).eq("3564567667859380431");
-
-    // verify no loss in crv pool after unstake
-    expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
-    expect(crvPoolSafEthAmountAfter).gte(crvPoolSafEthAmountAfter);
 
     // verify token balances do not change
     expect(afEthStrategyBalanceBefore).eq(
       await afEth.balanceOf(cvxStrategy.address)
     );
+
+    // check crv liquidity pool after unstaking
+    const crvPoolAfEthAmountAfter = await crvPool.balances(0);
+    const crvPoolSafEthAmountAfter = await crvPool.balances(1);
+    expect(crvPoolAfEthAmountAfter).eq("99988130697611844");
+    expect(crvPoolSafEthAmountAfter).eq("99988130697611844");
+
+    // verify no loss in crv pool after unstake
+    expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
+    expect(crvPoolSafEthAmountAfter).gte(crvPoolSafEthAmountAfter);
+
     expect(safEthStrategyBalanceBefore).eq(
       await safEth.balanceOf(cvxStrategy.address)
     );
@@ -177,7 +188,7 @@ describe("AfEth (CvxStrategy)", async function () {
     const ethBalanceAfter = await ethers.provider.getBalance(
       accounts[0].address
     );
-    position1 = await cvxStrategy.cvxPositions(2);
+    position1 = await cvxStrategy.cvxPositions(0);
 
     // check cvx locked positions to have unlock epoch
     unlockEpoch = position1.unlockEpoch;
@@ -187,28 +198,34 @@ describe("AfEth (CvxStrategy)", async function () {
       ethBalanceAfter.sub(ethBalanceDuring),
       depositAmount.mul(70).div(100)
     ); // 70% AAA ratio is in ETH, 30% will be in CVX
+    await snapshot.restore();
   });
   it("Should unstake everything and still be able to stake", async function () {
     const depositAmount = ethers.utils.parseEther("5");
 
-    const unstakeTx = await cvxStrategy.unstake(false, 1);
+    const tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+
+    const unstakeTx = await cvxStrategy.unstake(false, 0);
     await unstakeTx.wait();
 
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("69894183001573275");
-    expect(crvPoolSafEthAmount).eq("69894183001573275");
+    expect(crvPoolAfEthAmount).eq("99988130697611844");
+    expect(crvPoolSafEthAmount).eq("99988130697611844");
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     crvPoolAfEthAmount = await crvPool.balances(0);
     crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3564551046295112405");
-    expect(crvPoolSafEthAmount).eq("3564551046295112405");
+    expect(crvPoolAfEthAmount).eq("3594644985104398924");
+    expect(crvPoolSafEthAmount).eq("3594644985104398924");
+    await snapshot.restore();
   });
   it("Shouldn't be able to unstake seed amount", async function () {
     await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith("Not owner");
+    await snapshot.restore();
   });
   it("Should fail to unstake if not owner", async function () {
     const accounts = await ethers.getSigners();
@@ -220,6 +237,7 @@ describe("AfEth (CvxStrategy)", async function () {
     await expect(userStrategySigner.unstake(false, 3)).to.be.revertedWith(
       "Not owner"
     );
+    await snapshot.restore();
   });
   it("Should trigger withdrawing of vlCVX rewards", async function () {
     const depositAmount = ethers.utils.parseEther("5");
@@ -247,6 +265,7 @@ describe("AfEth (CvxStrategy)", async function () {
     const endingBalance = await provider.getBalance(cvxStrategy.address);
 
     expect(endingBalance.gt(startingBalance)).eq(true);
+    await snapshot.restore();
   });
   it("Should return correct asym ratio values", async function () {
     // this test always needs to happen on the same block so values are consistent
