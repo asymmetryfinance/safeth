@@ -244,9 +244,9 @@ contract SafEth is
     }
 
     /**
-        @notice - Premints safEth for future users
+        @notice - Claims ETH that was used to acquire preminted safEth
      */
-    function claimEthFromPreMint() external onlyOwner {
+    function withdrawEth() external onlyOwner {
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
         require(sent, "Failed to send Ether");
