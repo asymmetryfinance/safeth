@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "./SafEthStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -24,6 +25,7 @@ contract SafEth is
         uint256 indexed oldMaxAmount,
         uint256 indexed newMaxAmount
     );
+    event MaxPreMintAmount(uint256 indexed amount);
     event StakingPaused(bool indexed paused);
     event UnstakingPaused(bool indexed paused);
     event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
@@ -31,13 +33,19 @@ contract SafEth is
         address indexed recipient,
         uint256 indexed ethIn,
         uint256 indexed totalStakeValue,
-        uint256 price
+        uint256 price,
+        bool usedPremint
     );
     event Unstaked(
         address indexed recipient,
         uint256 indexed ethOut,
         uint256 indexed safEthIn,
         uint256 price
+    );
+    event PreMint(
+        uint256 indexed ethIn,
+        uint256 indexed mintAmount,
+        uint256 newFloorPrice
     );
     event WeightChange(
         uint256 indexed index,
@@ -81,48 +89,91 @@ contract SafEth is
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
-        @param _minOut - minimum amount of safETH to mint
-        @return mintedAmount - amount of safETH minted
+        @param _minOut - Minimum amount of safETH to mint
+        @return mintedAmount - Amount of safETH minted
     */
     function stake(
         uint256 _minOut
-    ) external payable nonReentrant returns (uint256 mintedAmount) {
+    )
+        external
+        payable
+        nonReentrant
+        returns (uint256 mintedAmount, uint256 depositPrice)
+    {
         require(!pauseStaking, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
 
-        uint256 preDepositPrice = approxPrice();
-        uint256 count = derivativeCount;
-        uint256 totalStakeValueEth = 0; // total amount of derivatives staked by user in eth
-        for (uint256 i = 0; i < count; i++) {
-            if (!derivatives[i].enabled) continue;
-            uint256 weight = derivatives[i].weight;
-            if (weight == 0) continue;
-            IDerivative derivative = derivatives[i].derivative;
-            uint256 ethAmount = (msg.value * weight) / totalWeight;
+        depositPrice = approxPrice();
 
-            if (ethAmount > 0) {
-                // This is slightly less than ethAmount because slippage
-                uint256 depositAmount = derivative.deposit{value: ethAmount}();
-                uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative() * depositAmount);
-                totalStakeValueEth += derivativeReceivedEthValue;
+        uint256 preMintPrice = depositPrice < floorPrice
+            ? floorPrice
+            : depositPrice;
+        uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
+        if (
+            amountFromPreMint <= preMintedSupply &&
+            msg.value <= maxPreMintAmount
+        ) {
+            require(
+                amountFromPreMint > _minOut,
+                "preMint amount less than minOut"
+            );
+
+            // Use preminted safeth
+            ethToClaim += msg.value;
+            depositPrice = preMintPrice;
+            preMintedSupply -= amountFromPreMint;
+            IERC20(address(this)).transfer(msg.sender, amountFromPreMint);
+            emit Staked(
+                msg.sender,
+                msg.value,
+                (amountFromPreMint * depositPrice) / 1e18,
+                depositPrice,
+                true
+            );
+        } else {
+            // Mint new safeth
+            uint256 count = derivativeCount;
+            uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+
+            // Loop through each derivative and deposit the correct amount of ETH
+            for (uint256 i = 0; i < count; i++) {
+                if (!derivatives[i].enabled) continue;
+                uint256 weight = derivatives[i].weight;
+                if (weight == 0) continue;
+                IDerivative derivative = derivatives[i].derivative;
+                uint256 ethAmount = (msg.value * weight) / totalWeight;
+
+                if (ethAmount > 0) {
+                    // This is slightly less than ethAmount because slippage
+                    uint256 depositAmount = derivative.deposit{
+                        value: ethAmount
+                    }();
+                    uint256 derivativeReceivedEthValue = (derivative
+                        .ethPerDerivative() * depositAmount);
+                    totalStakeValueEth += derivativeReceivedEthValue;
+                }
             }
+            // MintedAmount represents a percentage of the total assets in the system
+            mintedAmount = (totalStakeValueEth) / depositPrice;
+            require(mintedAmount > _minOut, "mint amount less than minOut");
+            _mint(msg.sender, mintedAmount);
+            emit Staked(
+                msg.sender,
+                msg.value,
+                totalStakeValueEth / 1e18,
+                depositPrice,
+                false
+            );
         }
-        // mintedAmount represents a percentage of the total assets in the system
-        mintedAmount = (totalStakeValueEth) / preDepositPrice;
-        require(mintedAmount > _minOut, "mint amount less than minOut");
-
-        _mint(msg.sender, mintedAmount);
-        emit Staked(msg.sender, msg.value, totalStakeValueEth, preDepositPrice);
     }
 
     /**
         @notice - Unstake your safETH into ETH
-        @dev - unstakes a percentage of safEth based on its total value
-        @param _safEthAmount - amount of safETH to unstake into ETH
-        @param _minOut - minimum amount of ETH to unstake
+        @dev - Unstakes a percentage of safEth based on its total value
+        @param _safEthAmount - Amount of safETH to unstake into ETH
+        @param _minOut - Minimum amount of ETH to unstake
     */
     function unstake(
         uint256 _safEthAmount,
@@ -166,6 +217,40 @@ contract SafEth is
             _safEthAmount,
             approxPrice()
         );
+    }
+
+    /**
+        @notice - Premints safEth for future users
+        @param _minAmount - minimum amount to stake
+        @param _useBalance - should use balance from previous premint's to mint more
+     */
+    function preMint(
+        uint256 _minAmount,
+        bool _useBalance
+    ) external payable onlyOwner returns (uint256) {
+        uint256 amount = msg.value;
+        if (_useBalance) {
+            amount += ethToClaim;
+            ethToClaim = 0;
+        }
+        (uint256 mintedAmount, uint256 depositPrice) = this.stake{
+            value: amount
+        }(_minAmount);
+
+        floorPrice = depositPrice;
+        preMintedSupply += mintedAmount;
+        emit PreMint(amount, mintedAmount, depositPrice);
+        return mintedAmount;
+    }
+
+    /**
+        @notice - Claims ETH that was used to acquire preminted safEth
+     */
+    function withdrawEth() external onlyOwner {
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
+        require(sent, "Failed to send Ether");
+        ethToClaim = 0;
     }
 
     /**
@@ -345,6 +430,17 @@ contract SafEth is
         require(pauseStaking != _pause, "already set");
         pauseStaking = _pause;
         emit StakingPaused(_pause);
+    }
+
+    /**
+        @notice - Sets the maximum amount a user can premint in one transaction
+        @param _amount - amount to set as maximum premint value
+        @dev - This is to prevent a whale from coming in and taking all the preminted funds
+        @dev - A user can stake multiple times and still receive the preminted funds
+    */
+    function setMaxPreMintAmount(uint256 _amount) external onlyOwner {
+        maxPreMintAmount = _amount;
+        emit MaxPreMintAmount(_amount);
     }
 
     /**

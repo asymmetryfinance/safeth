@@ -57,6 +57,7 @@ describe("SafEth", function () {
 
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    await safEthProxy.setMaxPreMintAmount("2000000000000000000");
   });
 
   describe("Large Amounts", function () {
@@ -118,6 +119,159 @@ describe("SafEth", function () {
       await safEthProxy.stake(0, { value: depositAmount });
     });
   });
+  describe("Pre-mint", function () {
+    it("User should receive premint if under max premint amount & has premint funds", async function () {
+      const depositAmount = ethers.utils.parseEther("2");
+      expect(depositAmount).lte(await safEthProxy.maxPreMintAmount());
+
+      // premint eth
+      let tx = await safEthProxy.preMint(0, false, {
+        value: depositAmount,
+      });
+      let receipt = await tx.wait();
+      let event = await receipt?.events?.[receipt?.events?.length - 1];
+      const preMintedAmount = event?.args?.[1];
+      // stake ~2 eth to get preminted safeth
+      // need to use a little less than 2 ETH due to price going up after staking
+      tx = await safEthProxy.stake(0, { value: preMintedAmount });
+      receipt = await tx.wait();
+      event = await receipt?.events?.[receipt?.events?.length - 1];
+      const amountMinted = await receipt?.events?.[0]?.args?.[2];
+
+      expect(event?.args?.[4]).eq(true); // uses preminted safeth
+      expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
+      expect(await safEthProxy.preMintedSupply()).lt(
+        ethers.utils.parseEther(".0000001")
+      );
+    });
+    it("Should mint safEth if under max premint amount but over premint available", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      const preMintSupply = await safEthProxy.preMintedSupply();
+      expect(depositAmount).gt(preMintSupply);
+      expect(preMintSupply).gt(0);
+
+      const tx = await safEthProxy.stake(0, { value: depositAmount });
+      const receipt = await tx.wait();
+      const event = await receipt?.events?.[receipt?.events?.length - 1];
+
+      expect(event?.args?.[4]).eq(false); // mints safeth
+    });
+    it("Shouldn't mint safEth if over max premint amount", async function () {
+      const depositAmount = ethers.utils.parseEther("3");
+      const preMintSupply = await safEthProxy.preMintedSupply();
+
+      expect(depositAmount).gt(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).gt(preMintSupply);
+      expect(preMintSupply).gt(0);
+
+      const tx = await safEthProxy.stake(0, { value: depositAmount });
+      const receipt = await tx.wait();
+      const event = await receipt?.events?.[receipt?.events?.length - 1];
+
+      expect(event?.args?.[4]).eq(false); // mints safeth
+    });
+    it("Should use approx price if approxPrice > floorPrice", async function () {
+      const preMintAmount = ethers.utils.parseEther("2");
+      // premint eth
+      let tx = await safEthProxy.preMint(0, false, {
+        value: preMintAmount,
+      });
+      await tx.wait();
+
+      const depositAmount = ethers.utils.parseEther("1");
+      const preMintSupply = await safEthProxy.preMintedSupply();
+
+      expect(depositAmount).lt(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).lt(preMintSupply);
+
+      tx = await safEthProxy.stake(0, { value: depositAmount });
+      const receipt = await tx.wait();
+      const event = await receipt?.events?.[receipt?.events?.length - 1];
+
+      expect(await safEthProxy.floorPrice()).lt(event?.args?.[3]);
+    });
+    it("Should use floor price if approxPrice <= floorPrice", async function () {
+      // upgrade contract to support mocking floorPrice
+      const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+      await safEth2.deployed();
+
+      const preMintAmount = ethers.utils.parseEther("2");
+
+      // premint eth
+      let tx = await safEth2.preMint(0, false, {
+        value: preMintAmount,
+      });
+      await tx.wait();
+      let floorPrice = await safEth2.floorPrice();
+      const depositAmount = ethers.utils.parseEther("1");
+      const preMintSupply = await safEth2.preMintedSupply();
+
+      expect(depositAmount).lt(await safEth2.maxPreMintAmount());
+      expect(depositAmount).lt(preMintSupply);
+
+      const mockedFloorPrice = floorPrice.mul(2);
+      await safEth2.setMockFloorPrice(mockedFloorPrice);
+
+      floorPrice = await safEth2.floorPrice();
+      const price = await safEth2.approxPrice();
+
+      expect(floorPrice).gt(price);
+
+      tx = await safEth2.stake(0, { value: depositAmount });
+      const receipt = await tx.wait();
+      const event = await receipt?.events?.[receipt?.events?.length - 1];
+
+      expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
+    });
+    it("Owner can withdraw ETH from their preMinted funds", async function () {
+      const ethToClaim = await safEthProxy.ethToClaim();
+      expect(ethToClaim).gt(ethers.utils.parseEther("3"));
+
+      const beforeBalance = await ethers.provider.getBalance(
+        adminAccount.address
+      );
+
+      await safEthProxy.withdrawEth();
+      const afterBalance = await ethers.provider.getBalance(
+        adminAccount.address
+      );
+
+      expect(within1Percent(afterBalance.sub(beforeBalance), ethToClaim)).eq(
+        true
+      );
+    });
+    it("Can't claim funds if not owner", async function () {
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      await expect(nonOwnerSigner.withdrawEth()).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Can't premint if not owner", async function () {
+      const preMintAmount = ethers.utils.parseEther("2");
+
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      await expect(
+        nonOwnerSigner.preMint(0, false, {
+          value: preMintAmount,
+        })
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+    it("Can't change max premint if not owner", async function () {
+      const accounts = await ethers.getSigners();
+      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      await expect(
+        nonOwnerSigner.setMaxPreMintAmount(ethers.utils.parseEther("2.5"))
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+    it("Should change max premint amount", async function () {
+      await safEthProxy.setMaxPreMintAmount(ethers.utils.parseEther("2.5"));
+      expect(await safEthProxy.maxPreMintAmount()).to.eq(
+        ethers.utils.parseEther("2.5")
+      );
+    });
+  });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
       await expect(
@@ -143,9 +297,16 @@ describe("SafEth", function () {
     });
   });
   describe("Min Out", function () {
-    it("Should fail staking with minOut higher than expected safEth output", async function () {
+    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
+      await expect(
+        safEthProxy.stake(minOut, { value: depositAmount })
+      ).to.be.revertedWith("preMint amount less than minOut");
+    });
+    it("Should fail staking with minOut higher than expected safEth output", async function () {
+      const depositAmount = ethers.utils.parseEther("5");
+      const minOut = ethers.utils.parseEther("6");
       await expect(
         safEthProxy.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("mint amount less than minOut");
