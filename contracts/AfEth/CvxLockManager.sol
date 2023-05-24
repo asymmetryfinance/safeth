@@ -13,8 +13,6 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
 
-import "hardhat/console.sol";
-
 contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
@@ -86,6 +84,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
         maxSlippage = 10 ** 16; // 1%
         extraRewardsStream = _extraRewardsStream;
+        firstLock = true;
     }
 
     function setMaxSlippage(uint256 _maxSlippage) public onlyOwner {
@@ -106,9 +105,9 @@ contract CvxLockManager is OwnableUpgradeable {
         IERC20(CVX).approve(vlCVX, cvxAmount);
         ILockedCvx(vlCVX).lock(address(this), cvxAmount, 0);
 
-        if(!firstLock) {
+        if(firstLock) {
             lastEpochFullyClaimed = currentEpoch - 1;
-            firstLock = true;
+            firstLock = false;
         }
     }
 
@@ -173,12 +172,9 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 balanceAfterClaim = address(this).balance;
         uint256 amountClaimed = (balanceAfterClaim - balanceBeforeClaim);
 
-        console.log('amountClaimed', amountClaimed, lastEpochFullyClaimed, currentEpoch);
-        // console.log('block.timestamp', block.timestamp);
 
         // special case if claimRewards is called a second time in same epoch
         if (lastEpochFullyClaimed == currentEpoch - 1) {
-            console.log('already called claimRewards for epoch, adding to leftoverRewards');
             leftoverRewards += amountClaimed;
             return;
         }
@@ -193,22 +189,11 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 timeSinceCurrentEpochStart = block.timestamp -
             currentEpochStartingTime;
 
-        //
         uint256 timeSinceLastClaim = (block.timestamp - firstUnclaimedEpochStartingTime);
-
-        // console.log('remainingTimeInCurrentEpoch', timeSinceCurrentEpochStart);
-        // console.log('timeSincePositionOpen', timeSincePositionOpen);
-
-        // console.log('aps is', amountClaimed / timeSincePositionOpen);
 
         // % of claimed rewards that go to the current (incomplete) epoch
         uint256 currentEpochRewardRatio = (timeSinceCurrentEpochStart * 10 ** 18) /
             timeSinceLastClaim;
-            
-        console.log('timeSinceCurrentEpochStart', timeSinceCurrentEpochStart);
-        console.log('timeSinceLastClaim', timeSinceLastClaim);
-
-        console.log('currentEpochRewardRatio', currentEpochRewardRatio);
 
         // how much of the claimed rewards go to the current (incomplete) epoch
         uint256 currentEpochReward = (currentEpochRewardRatio * amountClaimed) /
@@ -221,21 +206,15 @@ contract CvxLockManager is OwnableUpgradeable {
             lastEpochFullyClaimed -
             1;
 
-        // console.log('completedEpochsRewardsOwed', completedEpochsRewardsOwed);
-        // console.log('unclaimedCompletedEpochCount', unclaimedCompletedEpochCount);
-        // console.log('currentEpochReward', currentEpochReward);
-
         uint256 rewardsPerCompletedEpoch = completedEpochsRewardsOwed /
             unclaimedCompletedEpochCount;
 
         for (uint256 i = lastEpochFullyClaimed + 1; i < currentEpoch; i++) {
-            // console.log('setting claimed at i to', i, rewardsPerCompletedEpoch);
             rewardsClaimed[i] = rewardsPerCompletedEpoch;
         }
 
         lastEpochFullyClaimed = currentEpoch - 1;
         leftoverRewards = currentEpochReward;
-
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
@@ -305,7 +284,6 @@ contract CvxLockManager is OwnableUpgradeable {
 
         // only claim rewards if needed
         if (lastEpochFullyClaimed < currentEpoch - 1) {
-            console.log('withdrawing rewards claim needed');
             claimRewards();
         }
 
@@ -322,23 +300,24 @@ contract CvxLockManager is OwnableUpgradeable {
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
             uint256 distanceFromStart = i - startingEpoch;
 
-            // they were not locked during the epoch in which they relocked.
-            // no rewards owed for relock epoch
-            bool isRelockEpoch = distanceFromStart != 0 && (distanceFromStart % 16) == 0;
-            console.log('i isRelock', i, isRelockEpoch);
-            if(isRelockEpoch) continue;
-
             uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
                 i,
                 address(this)
             );
+
+            // they were not locked during the epoch in which they relocked.
+            // no rewards owed for relock epoch
+            bool isRelockEpoch = distanceFromStart != 0 && ( (distanceFromStart + 1) % 17) == 0;
+            if(isRelockEpoch) continue;
+
             if (balanceAtEpoch == 0) continue;
             uint256 positionLockRatio = (positionAmount * 10 ** 18) /
                 balanceAtEpoch;
 
+
             uint256 claimed = (positionLockRatio * rewardsClaimed[i]) /
                 10 ** 18;
-            console.log('positionLockRatio claimed at i is', i, positionLockRatio, claimed);
+
             totalRewards += claimed;
         }
         // solhint-disable-next-line

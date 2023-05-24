@@ -110,7 +110,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0 // TODO: set minAmount
         );
-        IAfEth(afEth).mint(address(this), mintAmount);
+        IAfEth(afEth).mint(address(this), cvxAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             mintAmount,
@@ -268,7 +268,13 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         require(msg.value > 0, "Must seed pool");
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
-        this.stake{value: msg.value}();
+        uint256 mintAmount = ISafEth(safEth).stake{value: msg.value}(0);
+        IAfEth(afEth).mint(address(this), mintAmount);
+        addAfEthCrvLiquidity(
+            crvPool,
+            IERC20(safEth).balanceOf(address(this)),
+            IERC20(afEth).balanceOf(address(this))
+        );
     }
 
     receive() external payable {}

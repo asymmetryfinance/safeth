@@ -5,12 +5,22 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import { AfEth, CvxStrategy, SafEth } from "../typechain-types";
+import {
+  AfEth,
+  CvxStrategy,
+  ExtraRewardsStream,
+  SafEth,
+} from "../typechain-types";
 import { BigNumber } from "ethers";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { epochDuration, getCurrentEpoch, getCurrentEpochEndTime } from "./helpers/lockManagerHelpers";
+import {
+  epochDuration,
+  getCurrentBlockTime,
+  getCurrentEpoch,
+  getCurrentEpochEndTime,
+} from "./helpers/lockManagerHelpers";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { getDifferenceRatio } from "./helpers/functions";
 
@@ -19,6 +29,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
   let snapshot: SnapshotRestorer;
+  let extraRewardsStream: ExtraRewardsStream;
 
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
@@ -32,7 +43,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     afEth = deployResults.afEth;
     safEth = deployResults.safEth;
     cvxStrategy = deployResults.cvxStrategy;
-
+    extraRewardsStream = deployResults.extraRewardsStream;
     const deployCrv = await crvPoolFactory.deploy_pool(
       "Af Cvx Strategy",
       "afCvxStrat",
@@ -56,7 +67,8 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    const seedAmount = ethers.utils.parseEther("0.1");
+
+    const seedAmount = ethers.utils.parseEther("10");
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
       value: seedAmount,
     });
@@ -304,36 +316,27 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
   });
   it("Should decrease leftoverRewards when claimRewards() is called late in an epoch and then early in the next", async function () {
     let tx;
-    const accounts = await ethers.getSigners();
-    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
+
+    tx = await extraRewardsStream.reset(
+      60 * 60 * 24 * 7 * 16 * 16, // 16 lock periods (256 weeks) plenty of time to streaming rewards during all tests
+      cvxStrategy.address
+    );
+    await tx.wait();
+
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
 
-    const currentEpochData = await vlCvxContract.epochs(
-      await getCurrentEpoch()
-    );
-    const currentEpochStartTime = currentEpochData.date;
-
-    const nextEpochStartTime = BigNumber.from(currentEpochStartTime).add(
-      epochDuration
-    );
-
-    // set to 1 minute before next epoch starts
-    await time.increaseTo(nextEpochStartTime.sub(60));
-    // this is necessary in tests every time we have increased time past a new epoch
-    tx = await vlCvxContract.checkpointEpoch();
-    await tx.wait();
+    // increase to end of next epoch
+    await incrementToBeginningOfNextEpoch();
+    await incrementToEndOfCurrentEpoch();
 
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
     const leftoverRewards0 = await cvxStrategy.leftoverRewards();
 
-    // set to 1 minute after next epoch starts
-    await time.increaseTo(nextEpochStartTime.add(600));
-    // this is necessary in tests every time we have increased time past a new epoch
-    tx = await vlCvxContract.checkpointEpoch();
-    await tx.wait();
+    await incrementToBeginningOfNextEpoch();
+
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
     const leftoverRewards1 = await cvxStrategy.leftoverRewards();
@@ -529,22 +532,23 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(within1Percent(ethReceived0, ethReceived1)).eq(true);
   });
 
-  it.only("Should award roughly twice as much if stakes for twice as long", async function () {
+  it("Should award roughly double the rewards for staking for twice as long", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("1");
+    // this incremements us into a new year (assuming hardhat starts at block 17070569)
+    // we do this to be sure it doesnt change years during the test which
+    // can cause stakes to behave differently because they are using different asym ratios (crv emissions changes)
+    await incrementEpochs(18);
+    tx = await extraRewardsStream.reset(
+      60 * 60 * 24 * 7 * 16 * 16, // 16 lock periods (256 weeks) plenty of time to streaming rewards during all tests
+      cvxStrategy.address
+    );
+    await tx.wait();
 
     const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
-
-    tx = await cvxStrategy1.claimRewards();
-    await tx.wait();
-
     tx = await cvxStrategy1.stake({ value: depositAmount });
-    await tx.wait();
-
-//    await incrementEpochs(17);
-
-    tx = await cvxStrategy1.unstake(false, 1);
+    tx = await cvxStrategy1.unstake(false, 0);
     await tx.wait();
 
     await incrementEpochs(17);
@@ -553,56 +557,94 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
       accounts[1].address
     );
 
-    tx = await cvxStrategy1.withdrawCvxAndRewards(1);
+    tx = await cvxStrategy1.withdrawCvxAndRewards(0);
     const mined1 = await tx.wait();
+
     const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
     const balanceAfter1 = await ethers.provider.getBalance(accounts[1].address);
     const ethReceived1 = balanceAfter1.sub(balanceBefore1).add(networkFee1);
 
-    console.log("ethReceived1", ethReceived1);
+    const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
+    await incrementToBeginningOfNextEpoch();
+    tx = await cvxStrategy2.stake({ value: depositAmount });
+    await tx.wait();
+    await incrementEpochs(17);
+    tx = await cvxStrategy2.unstake(false, 1);
+    await tx.wait();
 
-    // const cvxStrategy2 = cvxStrategy.connect(accounts[2]);
+    await incrementEpochs(17);
 
-    // tx = await cvxStrategy2.stake({ value: depositAmount });
-    // await tx.wait();
+    const balanceBefore2 = await ethers.provider.getBalance(
+      accounts[2].address
+    );
 
-    // // close position (account 2)
-    // tx = await cvxStrategy2.unstake(false, 2);
-    // await tx.wait();
+    tx = await cvxStrategy2.withdrawCvxAndRewards(1);
+    const mined2 = await tx.wait();
+    const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+    const balanceAfter2 = await ethers.provider.getBalance(accounts[2].address);
+    const ethReceived2 = balanceAfter2.sub(balanceBefore2).add(networkFee2);
+    expect(within1Pip(ethReceived1.mul(2), ethReceived2)).eq(true)
+  });
 
-    // await incrementEpochs(17);
-
-    // const balanceBefore2 = await ethers.provider.getBalance(
-    //   accounts[2].address
-    // );
-
-    // tx = await cvxStrategy1.withdrawCvxAndRewards(2);
-    // const mined2 = await tx.wait();
-    // const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
-    // const balanceAfter2 = await ethers.provider.getBalance(accounts[2].address);
-    // const ethReceived2 = balanceAfter2.sub(balanceBefore2).add(networkFee2);
-    // console.log("ethReceived2", ethReceived2);
+  it("Should award the same amount for the same staked amount over the same amount of time even if claimRewards() is called multiple times at different times", async function () {
+    // TODO
   });
   it("Should allow multiple overlapping users to stake & unstake at different times and receive fair rewards", async function () {
-    // TODO now that we have a way to mock rewards, we can test this
+    // TODO
   });
+
+  const within1Pip = (amount1: BigNumber, amount2: BigNumber) => {
+    if (amount1.eq(amount2)) return true;
+    return getDifferenceRatio(amount1, amount2).gt("10000");
+  };
 
   const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
     if (amount1.eq(amount2)) return true;
     return getDifferenceRatio(amount1, amount2).gt("100");
   };
 
+  // incrment time to end of current epoch
+  const incrementToEndOfCurrentEpoch = async () => {
+    const nextEpochStartTime = await getCurrentEpochEndTime();
+    let tx;
+    tx = await cvxStrategy.relockCvx();
+    await tx.wait();
+    await time.increaseTo(nextEpochStartTime.sub(15)); // 15 seconds before end of epoch
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    tx = await vlCvxContract.checkpointEpoch();
+  };
+
+  // incrment time to next epoch start time
+  const incrementToBeginningOfNextEpoch = async () => {
+    const nextEpochStartTime = await getCurrentEpochEndTime();
+    let tx;
+    await time.increaseTo(nextEpochStartTime.add(15)); // 15 seconds after end of epoch
+    const accounts = await ethers.getSigners();
+    const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    tx = await vlCvxContract.checkpointEpoch();
+    await tx.wait();
+    tx = await cvxStrategy.relockCvx();
+    await tx.wait();
+    tx = await cvxStrategy.claimRewards();
+    await tx.wait();
+  };
+
   // incremement by X epochs (weeks) and claim reward each week
   // simulates real world behavior
   const incrementEpochs = async (count: number) => {
+    const block = await ethers.provider.getBlock("latest");
+    const blockTime = block.timestamp;
     for (let i = 0; i < count; i++) {
       const accounts = await ethers.getSigners();
       const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
-      await time.increase(60 * 60 * 24 * 7);
+      await time.increaseTo(blockTime + (i + 1) * epochDuration);
       let tx;
       tx = await vlCvxContract.checkpointEpoch();
       await tx.wait();
       tx = await cvxStrategy.relockCvx();
+      await tx.wait();
+      tx = await cvxStrategy.claimRewards();
       await tx.wait();
     }
   };

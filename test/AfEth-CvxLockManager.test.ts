@@ -454,8 +454,8 @@ describe("AfEth (CvxLockManager)", async function () {
     // open position (1)
     tx = await cvxStrategy.stake({ value: depositAmount });
 
-    // wait 65 weeks (just over 4 lock periods)
-    await time.increase(60 * 60 * 24 * 7 * 68);
+    // wait just over 4 full lock relock periods (17 weeks with the relock week)
+    await time.increase(60 * 60 * 24 * 7 * 17 * 3 + 1);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
@@ -465,25 +465,29 @@ describe("AfEth (CvxLockManager)", async function () {
 
     const position1 = await cvxStrategy.cvxPositions(1);
     const unlockEpoch = position1.unlockEpoch;
-    const currentEpoch = await cvxStrategy.getCurrentEpoch();
+    const currentEpoch = await getCurrentEpoch();
     const startingEpoch = position1.startingEpoch;
-    // unlock epoch should be <= 16 weeks from now
-    expect(unlockEpoch.sub(currentEpoch)).lte(16);
-    const unlockDifference = unlockEpoch.sub(startingEpoch).toNumber();
-    // should be in 16 week intervals from the original starting epoch
-    expect(unlockDifference % 16).eq(0);
-    const startingEpochTime = BigNumber.from(
-      (await vlCvxContract.epochs(startingEpoch)).date
-    );
-    const unlockEpochTime = startingEpochTime.add(
-      unlockDifference * 24 * 60 * 60 * 7
+
+    // unlock epoch should be 17 weeks from now (16 locked weeks + 1)
+    expect(unlockEpoch.sub(currentEpoch)).eq(17);
+
+    const originalUnlockEpoch = startingEpoch.add(16);
+    const epochDifference =
+      BigNumber.from(currentEpoch).sub(originalUnlockEpoch);
+    const extraLockLengths = epochDifference.div(17).add(1);
+    const expectedUnlockEpoch = originalUnlockEpoch.add(
+      extraLockLengths.mul(17)
     );
 
-    // wait until we theoretically can unlock
-    await time.increaseTo(unlockEpochTime);
+    expect(expectedUnlockEpoch).eq(unlockEpoch);
+
+    // wait until we definitely unlock (more than 17 weeks)
+    await time.increase(60 * 60 * 24 * 7 * 19);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
+
+    expect(await getCurrentEpoch()).gte(unlockEpoch);
 
     const position1Before = await cvxStrategy.cvxPositions(1);
     const userCvxBalanceBefore = await cvx.balanceOf(accounts[0].address);
