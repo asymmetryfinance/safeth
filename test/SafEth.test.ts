@@ -231,7 +231,7 @@ describe("SafEth", function () {
         adminAccount.address
       );
 
-      await safEthProxy.claimEthFromPreMint();
+      await safEthProxy.withdrawEth();
       const afterBalance = await ethers.provider.getBalance(
         adminAccount.address
       );
@@ -243,7 +243,7 @@ describe("SafEth", function () {
     it("Can't claim funds if not owner", async function () {
       const accounts = await ethers.getSigners();
       const nonOwnerSigner = safEthProxy.connect(accounts[2]);
-      await expect(nonOwnerSigner.claimEthFromPreMint()).to.be.revertedWith(
+      await expect(nonOwnerSigner.withdrawEth()).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
     });
