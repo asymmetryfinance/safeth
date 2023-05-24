@@ -17,7 +17,6 @@ import { expect } from "chai";
 import { vlCvxAbi } from "./abi/vlCvxAbi";
 import {
   epochDuration,
-  getCurrentBlockTime,
   getCurrentEpoch,
   getCurrentEpochEndTime,
 } from "./helpers/lockManagerHelpers";
