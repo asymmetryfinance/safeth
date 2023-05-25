@@ -35,6 +35,7 @@ export const notifyOnStakeUnstake = async () => {
       const events = await safEth.queryFilter("Staked", 0, "latest");
       const latestEvent = events[events.length - 1];
       if (!latestEvent) {
+        console.log("Failed to get Staked event data");
         return;
       }
       notifyEventChannel(`**Stake Event**  :chart:`);
@@ -48,6 +49,7 @@ export const notifyOnStakeUnstake = async () => {
       const events = await safEth.queryFilter("Unstaked", 0, "latest");
       const latestEvent = events[events.length - 1];
       if (!latestEvent) {
+        console.log("Failed to get Unstaked event data");
         return;
       }
       notifyEventChannel(`**Unstake Event**  :chart_with_downwards_trend:`);
