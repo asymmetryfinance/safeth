@@ -995,6 +995,8 @@ describe("SafEth", function () {
       const networkFee3 = mined3.gasUsed.mul(mined3.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee3);
 
+      await rebalanceToWeights();
+
       const tx5 = await safEthProxy.unstake(
         await safEthProxy.balanceOf(adminAccount.address),
         0
