@@ -282,6 +282,33 @@ contract SafEth is
     }
 
     /**
+     * @notice - Allows owner to deposit ETH into a derivative by buying the underlying token & increasing the true weight of the derrivative
+     * @param _derivativeIndex  - Index of the derivative
+     */
+    function derivativeDeposit(uint256 _derivativeIndex) external payable onlyOwner {
+        require(pauseStaking, "staking is not paused");
+        require(pauseUnstaking, "unstaking is not paused");
+        derivatives[_derivativeIndex].derivative.deposit{value: msg.value}();
+    }
+
+    /**
+     * @notice - Allows owner to withdraw ETH from a derivative by selling the underlying token & decreasing the true weight of the derrivative
+     * @param _derivativeIndex - Index of the derivative
+     * @param _derivativeAmount  - Amount of the underlying derivative to sell
+     */
+    function derivativeWithdraw(uint256 _derivativeIndex, uint256 _derivativeAmount) external onlyOwner {
+        require(pauseStaking, "staking is not paused");
+        require(pauseUnstaking, "unstaking is not paused");
+        uint256 balanceBefore = address(this).balance;
+        derivatives[_derivativeIndex].derivative.withdraw(_derivativeAmount);
+        uint256 balanceAfter = address(this).balance;
+        uint ethReceived = balanceAfter - balanceBefore;
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
+        if(!sent) revert('eth not sent');
+    }
+
+    /**
         @notice - Changes Derivative weight based on derivative index
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
