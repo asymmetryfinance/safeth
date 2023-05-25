@@ -254,6 +254,7 @@ contract SafEth is
     }
 
     /**
+        @notice - This function is deprecated but is here for now so our test suite works.
         @notice - Rebalance each derivative to resemble the weight set for it
         @dev - Withdraws all derivative and re-deposit them to have the correct weights
         @dev - Depending on the balance of the derivative this could cause bad slippage
@@ -282,30 +283,17 @@ contract SafEth is
     }
 
     /**
-     * @notice - Allows owner to deposit ETH into a derivative by buying the underlying token & increasing the true weight of the derrivative
-     * @param _derivativeIndex  - Index of the derivative
+     * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
      */
-    function derivativeDeposit(uint256 _derivativeIndex) external payable onlyOwner {
-        require(pauseStaking, "staking is not paused");
-        require(pauseUnstaking, "unstaking is not paused");
-        derivatives[_derivativeIndex].derivative.deposit{value: msg.value}();
-    }
-
-    /**
-     * @notice - Allows owner to withdraw ETH from a derivative by selling the underlying token & decreasing the true weight of the derrivative
-     * @param _derivativeIndex - Index of the derivative
-     * @param _derivativeAmount  - Amount of the underlying derivative to sell
-     */
-    function derivativeWithdraw(uint256 _derivativeIndex, uint256 _derivativeAmount) external onlyOwner {
-        require(pauseStaking, "staking is not paused");
-        require(pauseUnstaking, "unstaking is not paused");
+    function derivativeRebalance(uint256 _sellDerivativeIndex, uint256 _buyDerivativeIndex, uint256 _sellAmount) external onlyOwner {
+        require(_sellDerivativeIndex < derivativeCount, "derivative index out of bounds");
+        require(_buyDerivativeIndex < derivativeCount, "derivative index out of bounds");
+        require(_sellAmount > 0, "derivative 0 amount is zero");
         uint256 balanceBefore = address(this).balance;
-        derivatives[_derivativeIndex].derivative.withdraw(_derivativeAmount);
+        derivatives[_sellDerivativeIndex].derivative.withdraw(_sellAmount);
         uint256 balanceAfter = address(this).balance;
-        uint ethReceived = balanceAfter - balanceBefore;
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
-        if(!sent) revert('eth not sent');
+        uint256 ethReceived = balanceAfter - balanceBefore;
+        derivatives[_buyDerivativeIndex].derivative.deposit{value: ethReceived}();
     }
 
     /**
