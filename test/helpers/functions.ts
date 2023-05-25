@@ -1,7 +1,4 @@
 import { BigNumber } from "ethers";
-import { SafEth } from "../../typechain-types";
-import { ethers } from "hardhat";
-import { derivativeAbi } from "../abi/derivativeAbi";
 
 export const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;
