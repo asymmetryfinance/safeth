@@ -285,15 +285,27 @@ contract SafEth is
     /**
      * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
      */
-    function derivativeRebalance(uint256 _sellDerivativeIndex, uint256 _buyDerivativeIndex, uint256 _sellAmount) external onlyOwner {
-        require(_sellDerivativeIndex < derivativeCount, "derivative index out of bounds");
-        require(_buyDerivativeIndex < derivativeCount, "derivative index out of bounds");
+    function derivativeRebalance(
+        uint256 _sellDerivativeIndex,
+        uint256 _buyDerivativeIndex,
+        uint256 _sellAmount
+    ) external onlyOwner {
+        require(
+            _sellDerivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            _buyDerivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
         require(_sellAmount > 0, "derivative 0 amount is zero");
         uint256 balanceBefore = address(this).balance;
         derivatives[_sellDerivativeIndex].derivative.withdraw(_sellAmount);
         uint256 balanceAfter = address(this).balance;
         uint256 ethReceived = balanceAfter - balanceBefore;
-        derivatives[_buyDerivativeIndex].derivative.deposit{value: ethReceived}();
+        derivatives[_buyDerivativeIndex].derivative.deposit{
+            value: ethReceived
+        }();
     }
 
     /**
