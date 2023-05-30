@@ -143,7 +143,9 @@ contract SafEth is
                 uint256 weight = derivatives[i].weight;
                 if (weight == 0) continue;
                 IDerivative derivative = derivatives[i].derivative;
-                uint256 ethAmount = (msg.value * weight) / totalWeight;
+                uint256 ethAmount = i == count - 1
+                    ? address(this).balance - ethToClaim
+                    : (msg.value * weight) / totalWeight;
 
                 if (ethAmount > 0) {
                     // This is slightly less than ethAmount because slippage
