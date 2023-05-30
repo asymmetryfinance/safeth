@@ -284,6 +284,9 @@ contract SafEth is
 
     /**
      * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
+     * @param _sellDerivativeIndex - index of the derivative to sell
+     * @param _buyDerivativeIndex - index of the derivative to buy
+     * @param _sellAmount - amount of the derivative to sell
      */
     function derivativeRebalance(
         uint256 _sellDerivativeIndex,
