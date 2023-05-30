@@ -272,6 +272,7 @@ contract SafEth is
             _buyDerivativeIndex < derivativeCount,
             "derivative index out of bounds"
         );
+        require(_sellDerivativeIndex != _buyDerivativeIndex, "same derivative");
         require(_sellAmount > 0, "derivative 0 amount is zero");
         uint256 balanceBefore = address(this).balance;
         derivatives[_sellDerivativeIndex].derivative.withdraw(_sellAmount);
