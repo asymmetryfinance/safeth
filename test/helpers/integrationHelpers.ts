@@ -1,6 +1,7 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { getLatestContract } from "./upgradeHelpers";
+import { expect } from "chai";
 
 let randomSeed = 2;
 export const stakeMinimum = 0.5;
@@ -71,6 +72,10 @@ export const randomStakes = async (
       totalStakedPerAccount[i] = totalStakedPerAccount[i].add(depositAmount);
     }
   }
+  const contractEthBalance = await ethers.provider.getBalance(
+    strategyContractAddress
+  );
+  expect(contractEthBalance).eq(0);
   return totalStaked;
 };
 
@@ -108,5 +113,9 @@ export const randomUnstakes = async (
       // console.log("unstaked ", userAccounts[i].address, amountUnstaked);
     }
   }
+  const contractEthBalance = await ethers.provider.getBalance(
+    strategyContractAddress
+  );
+  expect(contractEthBalance).eq(0);
   return totalUnstaked;
 };

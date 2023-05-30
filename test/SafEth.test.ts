@@ -67,6 +67,12 @@ describe("SafEth", function () {
       const tx1 = await safEthProxy.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+
+      const contractEthBalance = await ethers.provider.getBalance(
+        safEthProxy.address
+      );
+      expect(contractEthBalance).eq(0);
+
       const tx2 = await safEthProxy.unstake(
         await safEthProxy.balanceOf(adminAccount.address),
         0
@@ -220,6 +226,11 @@ describe("SafEth", function () {
       tx = await safEth2.stake(0, { value: depositAmount });
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
+
+      const contractEthBalance = await ethers.provider.getBalance(
+        safEthProxy.address
+      );
+      expect(contractEthBalance.sub(await safEthProxy.ethToClaim())).eq(0);
 
       expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
     });
