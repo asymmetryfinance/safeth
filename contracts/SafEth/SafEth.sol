@@ -254,35 +254,6 @@ contract SafEth is
     }
 
     /**
-        @notice - This function is deprecated but is here for now so our test suite works.
-        @notice - Rebalance each derivative to resemble the weight set for it
-        @dev - Withdraws all derivative and re-deposit them to have the correct weights
-        @dev - Depending on the balance of the derivative this could cause bad slippage
-        @dev - If weights are updated then it will slowly change over time to the correct weight distribution
-        @dev - Probably not going to be used often, if at all
-    */
-    function rebalanceToWeights() external onlyOwner {
-        uint256 count = derivativeCount;
-
-        for (uint256 i = 0; i < count; i++) {
-            uint256 balance = derivatives[i].derivative.balance();
-            if (derivatives[i].enabled && balance > 0)
-                derivatives[i].derivative.withdraw(balance);
-        }
-        uint256 ethAmountToRebalance = address(this).balance;
-        require(ethAmountToRebalance > 0, "no eth to rebalance");
-
-        for (uint256 i = 0; i < count; i++) {
-            if (derivatives[i].weight == 0 || !derivatives[i].enabled) continue;
-            uint256 ethAmount = (ethAmountToRebalance * derivatives[i].weight) /
-                totalWeight;
-            // Price will change due to slippage
-            derivatives[i].derivative.deposit{value: ethAmount}();
-        }
-        emit Rebalanced();
-    }
-
-    /**
      * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
      * @param _sellDerivativeIndex - index of the derivative to sell
      * @param _buyDerivativeIndex - index of the derivative to buy
