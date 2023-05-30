@@ -1013,6 +1013,71 @@ describe("SafEth", function () {
     });
   });
 
+  it("Should stake, sell all of a derivative into another and unstake", async () => {
+    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+
+    const initialWeight = BigNumber.from("1000000000000000000");
+    const initialDeposit = ethers.utils.parseEther("1");
+
+    const balanceBefore = await adminAccount.getBalance();
+
+    let totalNetworkFee = BigNumber.from(0);
+    // set all derivatives to the same weight and stake
+    // if there are 3 derivatives this is 33/33/33
+    for (let i = 0; i < derivativeCount; i++) {
+      const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+      const mined1 = await tx1.wait();
+      const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+      totalNetworkFee = totalNetworkFee.add(networkFee1);
+    }
+    const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
+    const mined2 = await tx2.wait();
+    const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+    totalNetworkFee = totalNetworkFee.add(networkFee2);
+
+    // do rebalance stuff
+
+    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0 = new ethers.Contract(
+      derivative0Address,
+      derivativeAbi,
+      adminAccount
+    );
+    const derivative1Address = (await safEthProxy.derivatives(1)).derivative;
+    const derivative1 = new ethers.Contract(
+      derivative1Address,
+      derivativeAbi,
+      adminAccount
+    );
+
+    const derivative0BalanceBefore = await derivative0.balance();
+    const derivative1BalanceBefore = await derivative1.balance();
+
+    await safEthProxy.derivativeRebalance(0, 1, derivative0BalanceBefore);
+
+    const derivative0BalanceAfter = await derivative0.balance();
+    const derivative1BalanceAfter = await derivative1.balance();
+
+    expect(derivative0BalanceAfter).eq(0);
+    expect(
+      within1Percent(derivative1BalanceBefore.mul(2), derivative1BalanceAfter)
+    ).eq(true);
+
+    const tx5 = await safEthProxy.unstake(
+      await safEthProxy.balanceOf(adminAccount.address),
+      0
+    );
+    const mined5 = await tx5.wait();
+    const networkFee5 = mined5.gasUsed.mul(mined5.effectiveGasPrice);
+    totalNetworkFee = totalNetworkFee.add(networkFee5);
+
+    const balanceAfter = await adminAccount.getBalance();
+
+    expect(within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))).eq(
+      true
+    );
+  });
+
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
