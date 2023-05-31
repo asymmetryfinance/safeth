@@ -97,12 +97,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         initializeLockManager(_rewardsExtraStream);
     }
 
-    function stake() public payable returns (uint256 id) {
+    function stake(uint256 _safEthAmount) public payable returns (uint256 id) {
         require(crvPool != address(0), "Pool not initialized");
 
+        uint256 amount = msg.value;
+        
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
-        uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
-        uint256 ethAmountForSafEth = (msg.value - ethAmountForCvx);
+        uint256 ethAmountForCvx = (amount * ratio) / 1e18;
+        uint256 ethAmountForSafEth = (amount - ethAmountForCvx);
         uint256 cvxAmount = swapCvx(ethAmountForCvx);
         id = positionId;
 
