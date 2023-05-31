@@ -924,8 +924,7 @@ describe("SafEth", function () {
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // this is like 33/33/33 -> 50/25/25 (3 derivatives)
       safEthProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
-      const tx3 = await safEthProxy.rebalanceToWeights();
-      await tx3.wait();
+      await rebalanceToWeights();
 
       const ethBalances = await estimatedDerivativeValues();
 
@@ -1006,10 +1005,8 @@ describe("SafEth", function () {
       const mined3 = await tx3.wait();
       const networkFee3 = mined3.gasUsed.mul(mined3.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee3);
-      const tx4 = await safEthProxy.rebalanceToWeights();
-      const mined4 = await tx4.wait();
-      const networkFee4 = mined4.gasUsed.mul(mined4.effectiveGasPrice);
-      totalNetworkFee = totalNetworkFee.add(networkFee4);
+
+      await rebalanceToWeights();
 
       const tx5 = await safEthProxy.unstake(
         await safEthProxy.balanceOf(adminAccount.address),
@@ -1025,6 +1022,71 @@ describe("SafEth", function () {
         within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))
       ).eq(true);
     });
+  });
+
+  it("Should stake, sell all of a derivative into another and unstake", async () => {
+    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+
+    const initialWeight = BigNumber.from("1000000000000000000");
+    const initialDeposit = ethers.utils.parseEther("1");
+
+    const balanceBefore = await adminAccount.getBalance();
+
+    let totalNetworkFee = BigNumber.from(0);
+    // set all derivatives to the same weight and stake
+    // if there are 3 derivatives this is 33/33/33
+    for (let i = 0; i < derivativeCount; i++) {
+      const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+      const mined1 = await tx1.wait();
+      const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+      totalNetworkFee = totalNetworkFee.add(networkFee1);
+    }
+    const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
+    const mined2 = await tx2.wait();
+    const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
+    totalNetworkFee = totalNetworkFee.add(networkFee2);
+
+    // do rebalance stuff
+
+    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0 = new ethers.Contract(
+      derivative0Address,
+      derivativeAbi,
+      adminAccount
+    );
+    const derivative1Address = (await safEthProxy.derivatives(1)).derivative;
+    const derivative1 = new ethers.Contract(
+      derivative1Address,
+      derivativeAbi,
+      adminAccount
+    );
+
+    const derivative0BalanceBefore = await derivative0.balance();
+    const derivative1BalanceBefore = await derivative1.balance();
+
+    await safEthProxy.derivativeRebalance(0, 1, derivative0BalanceBefore);
+
+    const derivative0BalanceAfter = await derivative0.balance();
+    const derivative1BalanceAfter = await derivative1.balance();
+
+    expect(derivative0BalanceAfter).eq(0);
+    expect(
+      within1Percent(derivative1BalanceBefore.mul(2), derivative1BalanceAfter)
+    ).eq(true);
+
+    const tx5 = await safEthProxy.unstake(
+      await safEthProxy.balanceOf(adminAccount.address),
+      0
+    );
+    const mined5 = await tx5.wait();
+    const networkFee5 = mined5.gasUsed.mul(mined5.effectiveGasPrice);
+    totalNetworkFee = totalNetworkFee.add(networkFee5);
+
+    const balanceAfter = await adminAccount.getBalance();
+
+    expect(within1Percent(balanceBefore, balanceAfter.add(totalNetworkFee))).eq(
+      true
+    );
   });
 
   describe("Price", function () {
@@ -1069,5 +1131,39 @@ describe("SafEth", function () {
       ethBalances.push(ethBalanceEstimate);
     }
     return ethBalances;
+  };
+
+  // function to show safEth.derivativeRebalance() can do everything safEth.rebalanceToWeights() does
+  const rebalanceToWeights = async () => {
+    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    // first sell them all into derivative0
+    for (let i = 1; i < derivativeCount; i++) {
+      const derivativeAddress = (await safEthProxy.derivatives(i)).derivative;
+      const derivative = new ethers.Contract(
+        derivativeAddress,
+        derivativeAbi,
+        adminAccount
+      );
+      const derivativeBalance = await derivative.balance();
+      await safEthProxy.derivativeRebalance(i, 0, derivativeBalance);
+    }
+
+    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0 = new ethers.Contract(
+      derivative0Address,
+      derivativeAbi,
+      adminAccount
+    );
+    const derivative0StartingBalance = await derivative0.balance();
+    const totalWeight = await safEthProxy.totalWeight();
+    // then rebalance to weights
+    for (let i = 1; i < derivativeCount; i++) {
+      const derivativeInfo = await safEthProxy.derivatives(i);
+      const weight = derivativeInfo.weight;
+      const derivative0SellAmount = derivative0StartingBalance
+        .mul(weight)
+        .div(totalWeight);
+      await safEthProxy.derivativeRebalance(0, i, derivative0SellAmount);
+    }
   };
 });
