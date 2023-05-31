@@ -136,6 +136,7 @@ contract SafEth is
             // Mint new safeth
             uint256 count = derivativeCount;
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+            uint256 amountStaked = 0;
 
             // Loop through each derivative and deposit the correct amount of ETH
             for (uint256 i = 0; i < count; i++) {
@@ -143,8 +144,10 @@ contract SafEth is
                 uint256 weight = derivatives[i].weight;
                 if (weight == 0) continue;
                 IDerivative derivative = derivatives[i].derivative;
-                uint256 ethAmount = (msg.value * weight) / totalWeight;
-
+                uint256 ethAmount = i == count - 1
+                    ? msg.value - amountStaked
+                    : (msg.value * weight) / totalWeight;
+                amountStaked += ethAmount;
                 if (ethAmount > 0) {
                     // This is slightly less than ethAmount because slippage
                     uint256 depositAmount = derivative.deposit{
