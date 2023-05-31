@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -149,10 +148,6 @@ contract SafEth is
                     ? msg.value - amountStaked
                     : (msg.value * weight) / totalWeight;
                 amountStaked += ethAmount;
-                if (i == count - 1 && msg.value != amountStaked) {
-                    console.log("msg.value", msg.value);
-                    console.log("AMOUNTSTAKED", amountStaked);
-                }
                 if (ethAmount > 0) {
                     // This is slightly less than ethAmount because slippage
                     uint256 depositAmount = derivative.deposit{
