@@ -254,31 +254,33 @@ contract SafEth is
     }
 
     /**
-        @notice - Rebalance each derivative to resemble the weight set for it
-        @dev - Withdraws all derivative and re-deposit them to have the correct weights
-        @dev - Depending on the balance of the derivative this could cause bad slippage
-        @dev - If weights are updated then it will slowly change over time to the correct weight distribution
-        @dev - Probably not going to be used often, if at all
-    */
-    function rebalanceToWeights() external onlyOwner {
-        uint256 count = derivativeCount;
-
-        for (uint256 i = 0; i < count; i++) {
-            uint256 balance = derivatives[i].derivative.balance();
-            if (derivatives[i].enabled && balance > 0)
-                derivatives[i].derivative.withdraw(balance);
-        }
-        uint256 ethAmountToRebalance = address(this).balance;
-        require(ethAmountToRebalance > 0, "no eth to rebalance");
-
-        for (uint256 i = 0; i < count; i++) {
-            if (derivatives[i].weight == 0 || !derivatives[i].enabled) continue;
-            uint256 ethAmount = (ethAmountToRebalance * derivatives[i].weight) /
-                totalWeight;
-            // Price will change due to slippage
-            derivatives[i].derivative.deposit{value: ethAmount}();
-        }
-        emit Rebalanced();
+     * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
+     * @param _sellDerivativeIndex - index of the derivative to sell
+     * @param _buyDerivativeIndex - index of the derivative to buy
+     * @param _sellAmount - amount of the derivative to sell
+     */
+    function derivativeRebalance(
+        uint256 _sellDerivativeIndex,
+        uint256 _buyDerivativeIndex,
+        uint256 _sellAmount
+    ) external onlyOwner {
+        require(
+            _sellDerivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(
+            _buyDerivativeIndex < derivativeCount,
+            "derivative index out of bounds"
+        );
+        require(_sellDerivativeIndex != _buyDerivativeIndex, "same derivative");
+        require(_sellAmount > 0, "derivative 0 amount is zero");
+        uint256 balanceBefore = address(this).balance;
+        derivatives[_sellDerivativeIndex].derivative.withdraw(_sellAmount);
+        uint256 balanceAfter = address(this).balance;
+        uint256 ethReceived = balanceAfter - balanceBefore;
+        derivatives[_buyDerivativeIndex].derivative.deposit{
+            value: ethReceived
+        }();
     }
 
     /**

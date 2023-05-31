@@ -11,6 +11,7 @@ import {
 import { getLatestContract } from "./helpers/upgradeHelpers";
 import { BigNumber } from "ethers";
 import { within1Percent } from "./helpers/functions";
+import { derivativeAbi } from "./abi/derivativeAbi";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
@@ -119,8 +120,7 @@ describe("SafEth Integration Test", function () {
     await tx1.wait();
     const tx2 = await strategy.adjustWeight(1, "2000000000000000000");
     await tx2.wait();
-    const tx3 = await strategy.rebalanceToWeights();
-    await tx3.wait();
+    await rebalanceToWeights(strategy as SafEth);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
@@ -146,8 +146,7 @@ describe("SafEth Integration Test", function () {
     // this is like going from 0/66/33 -> 40/40/20
     const tx1 = await strategy.adjustWeight(0, "2000000000000000000");
     await tx1.wait();
-    const tx2 = await strategy.rebalanceToWeights();
-    await tx2.wait();
+    await rebalanceToWeights(strategy as SafEth);
   });
 
   it("Should stake a random amount 3 times for each user", async function () {
@@ -203,4 +202,40 @@ describe("SafEth Integration Test", function () {
       expect(within1Percent(staked, stakedMinusSlippage)).eq(true);
     }
   });
+
+  // function to show safEth.derivativeRebalance() can do everything safEth.rebalanceToWeights() does
+  const rebalanceToWeights = async (safEthProxy: SafEth) => {
+    const adminAccount = await getAdminAccount();
+
+    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    // first sell them all into derivative0
+    for (let i = 1; i < derivativeCount; i++) {
+      const derivativeAddress = (await safEthProxy.derivatives(i)).derivative;
+      const derivative = new ethers.Contract(
+        derivativeAddress,
+        derivativeAbi,
+        adminAccount
+      );
+      const derivativeBalance = await derivative.balance();
+      await safEthProxy.derivativeRebalance(i, 0, derivativeBalance);
+    }
+
+    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0 = new ethers.Contract(
+      derivative0Address,
+      derivativeAbi,
+      adminAccount
+    );
+    const derivative0StartingBalance = await derivative0.balance();
+    const totalWeight = await safEthProxy.totalWeight();
+    // then rebalance to weights
+    for (let i = 1; i < derivativeCount; i++) {
+      const derivativeInfo = await safEthProxy.derivatives(i);
+      const weight = derivativeInfo.weight;
+      const derivative0SellAmount = derivative0StartingBalance
+        .mul(weight)
+        .div(totalWeight);
+      await safEthProxy.derivativeRebalance(0, i, derivative0SellAmount);
+    }
+  };
 });
