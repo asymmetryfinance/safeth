@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -136,6 +137,7 @@ contract SafEth is
             // Mint new safeth
             uint256 count = derivativeCount;
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+            uint256 amountStaked = 0;
 
             // Loop through each derivative and deposit the correct amount of ETH
             for (uint256 i = 0; i < count; i++) {
@@ -144,9 +146,13 @@ contract SafEth is
                 if (weight == 0) continue;
                 IDerivative derivative = derivatives[i].derivative;
                 uint256 ethAmount = i == count - 1
-                    ? address(this).balance - ethToClaim
+                    ? msg.value - amountStaked
                     : (msg.value * weight) / totalWeight;
-
+                amountStaked += ethAmount;
+                if (i == count - 1 && msg.value != amountStaked) {
+                    console.log("msg.value", msg.value);
+                    console.log("AMOUNTSTAKED", amountStaked);
+                }
                 if (ethAmount > 0) {
                     // This is slightly less than ethAmount because slippage
                     uint256 depositAmount = derivative.deposit{
@@ -264,6 +270,7 @@ contract SafEth is
     */
     function rebalanceToWeights() external onlyOwner {
         uint256 count = derivativeCount;
+        console.log("PRE RE", address(this).balance);
 
         for (uint256 i = 0; i < count; i++) {
             uint256 balance = derivatives[i].derivative.balance();
@@ -280,6 +287,7 @@ contract SafEth is
             // Price will change due to slippage
             derivatives[i].derivative.deposit{value: ethAmount}();
         }
+        console.log("REBALANCE", address(this).balance);
         emit Rebalanced();
     }
 
