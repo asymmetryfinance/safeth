@@ -40,7 +40,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     }
 
     function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
-        // noop (for now until we fully test and integrate ankr)
+        // noop
     }
 
     /**
@@ -81,6 +81,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 ankrBalancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(
             address(this)
         );
+
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
         uint256 ankrBalancePost = IERC20(ANKR_ETH_ADDRESS).balanceOf(
             address(this)
@@ -92,7 +93,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18); // TODO chainlink needed here maybe????
+        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
     }
 
     /**
