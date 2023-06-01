@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "hardhat/console.sol";
 
 /// @title Derivative contract for swETH
 /// @author Asymmetry Finance
@@ -22,6 +23,8 @@ contract Swell is
         0xf951E335afb289353dc249e82926178EaC7DEd78;
     address private constant W_ETH_ADDRESS =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant AAVE_W_ETH_V3_ADDRESS =
+        0x60D604890feaa0b5460B28A424407c24fe89374a;
 
     IVault public constant balancerVault =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -77,10 +80,11 @@ contract Swell is
         uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
         );
-        uint256 ethPerReth = ethPerDerivative();
-        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) / 1e36;
-        uint256 idealOut = ((ethPerReth * _amount) / 1e18);
-        balancerSwap(idealOut, minOut);
+        uint256 ethPerSweth = ethPerDerivative();
+        uint256 minOut = ((ethPerSweth * _amount) * (1e18 - maxSlippage)) /
+            1e36;
+        uint256 idealOut = ((ethPerSweth * _amount) / 1e18);
+        balancerSwap(idealOut, minOut, false);
         uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -96,12 +100,15 @@ contract Swell is
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        // uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-        //     ethPerDerivative();
+        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
+            ethPerDerivative();
+        console.log("msg.value", msg.value);
         uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
-        ISwellEth(SWETH_ADDRESS).deposit{value: msg.value}();
+        balancerSwap(msg.value, minOut, true);
+
+        // ISwellEth(SWETH_ADDRESS).deposit{value: msg.value}();
         uint256 swethBalanceAfter = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -124,17 +131,36 @@ contract Swell is
         return underlyingBalance;
     }
 
-    function balancerSwap(uint256 _amount, uint256 _minOut) private {
+    function balancerSwap(
+        uint256 _amount,
+        uint256 _minOut,
+        bool _isDeposit
+    ) private {
         if (_amount == 0) {
             return;
         }
-        IVault.SingleSwap memory swap;
+        address[] memory assets = new address[](3);
+        assets[0] = W_ETH_ADDRESS;
+        assets[1] = SWETH_ADDRESS;
+        assets[2] = AAVE_W_ETH_V3_ADDRESS;
+        IVault.BatchSwapStep[] memory swaps = new IVault.BatchSwapStep[](2);
+        IVault.BatchSwapStep memory swap;
         swap
-            .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
-        swap.kind = IVault.SwapKind.GIVEN_IN;
-        swap.assetOut = address(W_ETH_ADDRESS);
-        swap.assetIn = address(SWETH_ADDRESS);
+            .poolId = 0x60d604890feaa0b5460b28a424407c24fe89374a0000000000000000000004fc;
+        swap.assetInIndex = 0;
+        swap.assetOutIndex = 2;
         swap.amount = _amount;
+        swap.userData = "0x";
+
+        IVault.BatchSwapStep memory swap2;
+        swap2
+            .poolId = 0x02d928e68d8f10c0358566152677db51e1e2dc8c00000000000000000000051e;
+        swap2.assetInIndex = 2;
+        swap2.assetOutIndex = 1;
+        swap2.amount = 0;
+        swap2.userData = "0x";
+        swaps[0] = swap;
+        swaps[1] = swap2;
 
         IVault.FundManagement memory fundManagement;
         fundManagement.sender = address(this);
@@ -144,8 +170,21 @@ contract Swell is
 
         IWETH(wETH).deposit{value: _amount}();
         IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
+
+        int256[] memory limits = new int256[](3);
+        limits[0] = int256(0);
+        limits[1] = int256(0);
+        limits[2] = int256(-68171641791044776);
+
         // Execute swap
-        balancerVault.swap(swap, fundManagement, _minOut, block.timestamp);
+        balancerVault.batchSwap(
+            IVault.SwapKind.GIVEN_IN,
+            swaps,
+            assets,
+            fundManagement,
+            limits,
+            block.timestamp + 1000000000
+        );
     }
 
     receive() external payable {}
