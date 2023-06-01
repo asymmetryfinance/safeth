@@ -117,7 +117,6 @@ contract SafEth is
             amountFromPreMint <= preMintedSupply &&
             msg.value <= maxPreMintAmount
         ) {
-            console.log('using premint');
             require(
                 amountFromPreMint > _minOut,
                 "preMint amount less than minOut"
@@ -136,8 +135,6 @@ contract SafEth is
                 true
             );
         } else {
-            console.log('not using premint');
-
             // Mint new safeth
             uint256 count = derivativeCount;
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth

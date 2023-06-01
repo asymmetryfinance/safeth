@@ -21,7 +21,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEthProxy: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -57,7 +57,7 @@ describe.only("SafEth", function () {
 
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
-    await safEthProxy.setMaxPreMintAmount("2000000000000000000");
+    await safEthProxy.setMaxPreMintAmount("3000000000000000000");
   });
 
   describe("Large Amounts", function () {
@@ -125,8 +125,8 @@ describe.only("SafEth", function () {
       await safEthProxy.stake(0, { value: depositAmount });
     });
   });
-  describe.only("Pre-mint", function () {
-    it.only("User should receive premint if under max premint amount & has premint funds", async function () {
+  describe("Pre-mint", function () {
+    it("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("2");
       expect(depositAmount).lte(await safEthProxy.maxPreMintAmount());
 
@@ -144,12 +144,11 @@ describe.only("SafEth", function () {
       event = await receipt?.events?.[receipt?.events?.length - 1];
       const amountMinted = await receipt?.events?.[0]?.args?.[2];
 
-      console.log('event is', event);
       expect(event?.args?.[4]).eq(true); // uses preminted safeth
-      // expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
-      // expect(await safEthProxy.preMintedSupply()).lt(
-      //   ethers.utils.parseEther(".0000001")
-      // );
+      expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
+      expect(await safEthProxy.preMintedSupply()).lt(
+        ethers.utils.parseEther(".0000001")
+      );
     });
     it("Should mint safEth if under max premint amount but over premint available", async function () {
       const depositAmount = ethers.utils.parseEther("1");
@@ -164,7 +163,7 @@ describe.only("SafEth", function () {
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
     it("Shouldn't mint safEth if over max premint amount", async function () {
-      const depositAmount = ethers.utils.parseEther("3");
+      const depositAmount = (await safEthProxy.maxPreMintAmount()).add(1);
       const preMintSupply = await safEthProxy.preMintedSupply();
 
       expect(depositAmount).gt(await safEthProxy.maxPreMintAmount());
