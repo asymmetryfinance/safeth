@@ -39,6 +39,10 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         maxSlippage = (1 * 1e16); // 1%
     }
 
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
+        // noop
+    }
+
     /**
         @notice - Return derivative name
     */

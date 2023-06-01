@@ -48,6 +48,10 @@ contract Swell is
         maxSlippage = (1 * 1e16); // 1%
     }
 
+    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
+        // noop
+    }
+
     /**
         @notice - Return derivative name
     */
@@ -97,7 +101,7 @@ contract Swell is
         uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
-        ISwellEth(SWETH_ADDRESS).deposit{ value: msg.value}();
+        ISwellEth(SWETH_ADDRESS).deposit{value: msg.value}();
         uint256 swethBalanceAfter = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -128,8 +132,8 @@ contract Swell is
         swap
             .poolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
         swap.kind = IVault.SwapKind.GIVEN_IN;
-        swap.assetIn = address(W_ETH_ADDRESS);
-        swap.assetOut = address(SWETH_ADDRESS);
+        swap.assetOut = address(W_ETH_ADDRESS);
+        swap.assetIn = address(SWETH_ADDRESS);
         swap.amount = _amount;
 
         IVault.FundManagement memory fundManagement;

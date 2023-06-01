@@ -532,7 +532,7 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Derivatives", async () => {
+  describe.only("Derivatives", async () => {
     let derivatives = [] as any;
     before(async () => {
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
@@ -543,6 +543,7 @@ describe("SafEth", function () {
       const factory1 = await ethers.getContractFactory("SfrxEth");
       const factory2 = await ethers.getContractFactory("WstEth");
       const factory3 = await ethers.getContractFactory("Ankr");
+      const factory4 = await ethers.getContractFactory("Swell");
 
       const derivative0 = await upgrades.deployProxy(factory0, [
         adminAccount.address,
@@ -567,6 +568,12 @@ describe("SafEth", function () {
       ]);
       await derivative3.deployed();
       derivatives.push(derivative3);
+
+      const derivative4 = await upgrades.deployProxy(factory4, [
+        adminAccount.address,
+      ]);
+      await derivative4.deployed();
+      derivatives.push(derivative4);
       snapshot = await takeSnapshot();
     });
     afterEach(async () => {

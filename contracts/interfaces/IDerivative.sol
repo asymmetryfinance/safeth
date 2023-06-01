@@ -11,6 +11,9 @@ interface IDerivative {
         bool success;
     }
 
+    // only applicable to some derivatives
+    function setChainlinkFeed(address _priceFeedAddress) external;
+
     /// Returns human readable identifier string
     function name() external pure returns (string memory);
 
