@@ -38,6 +38,13 @@ export const deploySafEth = async function () {
   await derivative3.deployed();
   await safEth.addDerivative(derivative3.address, "1000000000000000000");
 
+  const derivativeFactory4 = await ethers.getContractFactory("Stafi");
+  const derivative4 = await upgrades.deployProxy(derivativeFactory4, [
+    safEth.address,
+  ]);
+  await derivative4.deployed();
+  await safEth.addDerivative(derivative4.address, "1000000000000000000");
+
   await safEth.setPauseStaking(false);
   return safEth;
 };

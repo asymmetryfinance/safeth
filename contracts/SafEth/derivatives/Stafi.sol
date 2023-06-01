@@ -18,6 +18,8 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for Stafi
 /// @author Asymmetry Finance
+import "hardhat/console.sol";
+
 contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
 
     address public constant STAFI_TOKEN =
@@ -77,12 +79,15 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         @param _amount - amount of stafi to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
+        console.log('stafi withdraw0', _amount);
         if (_amount == 0) {
             return;
         }
+        console.log('stafi withdraw1');
         underlyingBalance = underlyingBalance - _amount;
         uint256 price = ethPerDerivative();
         uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
+        console.log('stafi withdraw2');
 
         IVault.SingleSwap memory swap;
         swap
@@ -91,6 +96,7 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         swap.assetIn = address(STAFI_TOKEN);
         swap.assetOut = address(0x0000000000000000000000000000000000000000);
         swap.amount = _amount;
+        console.log('stafi withdraw3');
 
         IVault.FundManagement memory fundManagement;
         fundManagement.sender = address(this);
@@ -98,11 +104,14 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
 
-        IWETH(wETH).deposit{value: _amount}();
+        console.log('stafi withdraw3.2');
         IERC20(STAFI_TOKEN).approve(address(balancerVault), _amount);
+        console.log('stafi withdraw33');
 
         uint256 ethBalanceBefore = address(this).balance;
+        console.log('stafi withdraw34');
         balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
+        console.log('stafi withdraw35');
         uint256 ethBalanceAfter = address(this).balance;
 
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;

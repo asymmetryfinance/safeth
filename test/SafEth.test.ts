@@ -21,7 +21,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("SafEth", function () {
+describe.only("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEthProxy: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -60,26 +60,36 @@ describe("SafEth", function () {
     await safEthProxy.setMaxPreMintAmount("2000000000000000000");
   });
 
-  describe("Large Amounts", function () {
-    it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
+  describe.only("Large Amounts", function () {
+    it.only("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
+      console.log('blah1');
       const startingBalance = await adminAccount.getBalance();
+      console.log('blah2');
       const depositAmount = ethers.utils.parseEther("200");
+      console.log('blah3');
       const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      console.log('blah4');
       const mined1 = await tx1.wait();
+      console.log('blah5');
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
+      console.log('blah6');
 
       const contractEthBalance = await ethers.provider.getBalance(
         safEthProxy.address
       );
+      console.log('blah7');
       expect(contractEthBalance).eq(0);
+      console.log('blah7.5');
 
       const tx2 = await safEthProxy.unstake(
         await safEthProxy.balanceOf(adminAccount.address),
         0
       );
+      console.log('blah8');
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
       const finalBalance = await adminAccount.getBalance();
+      console.log('blah9');
 
       expect(
         within1Percent(
