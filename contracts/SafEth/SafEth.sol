@@ -67,6 +67,13 @@ contract SafEth is
         _disableInitializers();
     }
 
+    uint256 mmTokenSupply;
+    mapping(address => uint256) public virtualMMTokenBalance;
+    function mmTokenPrice () public view returns (uint256) {
+        uint256 virtualEthValue = ethToClaim + (preMintedSupply * approxPrice()) / 10e18;
+        return mmTokenSupply / virtualEthValue;
+    }
+
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
@@ -110,7 +117,8 @@ contract SafEth is
         uint256 preMintPrice = depositPrice < floorPrice
             ? floorPrice
             : depositPrice;
-        uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
+
+        uint256 amountFromPreMint = ((msg.value * 1e18) / preMintPrice) * 990000000000000000;
         if (
             amountFromPreMint <= preMintedSupply &&
             msg.value <= maxPreMintAmount
@@ -242,6 +250,7 @@ contract SafEth is
 
         floorPrice = depositPrice;
         preMintedSupply += mintedAmount;
+        virtualMMTokenBalance[msg.sender] += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
     }
@@ -250,10 +259,24 @@ contract SafEth is
         @notice - Claims ETH that was used to acquire preminted safEth
      */
     function withdrawEth() external onlyOwner {
+        uint256 balanceBefore = address(this).balance;
+        this.unstake(preMintedSupply, 0);
+        uint256 balanceAfter = address(this).balance;
+        uint256 ethReceived = balanceAfter - balanceBefore;
+        uint256 allEthDue = (ethToClaim + ethReceived);
+        uint256 userEthDue = allEthDue * (virtualMMTokenBalance[msg.sender] / mmTokenSupply);
+        uint256 leftoverEth = allEthDue - userEthDue;
         // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
+        (bool sent, ) = address(msg.sender).call{value: userEthDue}("");
         require(sent, "Failed to send Ether");
         ethToClaim = 0;
+
+        (uint256 mintedAmount,) = this.stake{
+            value: leftoverEth
+        }(0);
+        preMintedSupply = mintedAmount;
+        mmTokenSupply -= virtualMMTokenBalance[msg.sender];
+        virtualMMTokenBalance[msg.sender] = 0;
     }
 
     /**
