@@ -26,6 +26,8 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         0x9559Aaa82d9649C7A7b220E7c461d2E74c9a3593;
     address public constant STAFI_USER_DEPOSIT =
         0xc12dfb80d80d564DB9b180AbF61a252eE6355058;
+    address private constant W_ETH_ADDRESS =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
@@ -79,15 +81,11 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         @param _amount - amount of stafi to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        console.log('stafi withdraw0', _amount);
         if (_amount == 0) {
             return;
         }
-        console.log('stafi withdraw1');
         underlyingBalance = underlyingBalance - _amount;
-        uint256 price = ethPerDerivative();
-        uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
-        console.log('stafi withdraw2');
+        uint256 minOut = ((ethPerDerivative() * _amount) * (1e18 - maxSlippage)) / 1e36;
 
         IVault.SingleSwap memory swap;
         swap
@@ -96,22 +94,17 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         swap.assetIn = address(STAFI_TOKEN);
         swap.assetOut = address(0x0000000000000000000000000000000000000000);
         swap.amount = _amount;
-        console.log('stafi withdraw3');
 
         IVault.FundManagement memory fundManagement;
         fundManagement.sender = address(this);
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
-
-        console.log('stafi withdraw3.2');
         IERC20(STAFI_TOKEN).approve(address(balancerVault), _amount);
-        console.log('stafi withdraw33');
 
         uint256 ethBalanceBefore = address(this).balance;
-        console.log('stafi withdraw34');
+
         balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
-        console.log('stafi withdraw35');
         uint256 ethBalanceAfter = address(this).balance;
 
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
@@ -120,18 +113,29 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
     }
 
     /**
-        @notice - Deposit into reth derivative
+        @notice - Deposit into stafi derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 stafiBalancePre = IStafi(STAFI_TOKEN).balanceOf(address(this));
-        // solhint-disable-next-line
-        IStafiUserDeposit(STAFI_USER_DEPOSIT).deposit{ value: msg.value}();
+        IVault.SingleSwap memory swap;
+        swap
+            .poolId = 0xb08885e6026bab4333a80024ec25a1a3e1ff2b8a000200000000000000000445;
+        swap.kind = IVault.SwapKind.GIVEN_IN;
+        swap.assetIn = address(W_ETH_ADDRESS);
+        swap.assetOut = address(STAFI_TOKEN);
+        swap.amount = msg.value;
+        IVault.FundManagement memory fundManagement;
+        fundManagement.sender = address(this);
+        fundManagement.recipient = address(this);
+        fundManagement.fromInternalBalance = false;
+        IWETH(wETH).deposit{value: msg.value}();
+        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), msg.value);
+        uint256 minOut = (msg.value * (1e18 - maxSlippage)) / ethPerDerivative();
+        balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
         uint256 stafiBalancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 stafiAmount = stafiBalancePost - stafiBalancePre;
-        require(stafiAmount > 0, "Failed to send Ether");
-
+        require(stafiAmount > 0, "Failed to send Stafi");
         underlyingBalance = underlyingBalance + stafiAmount;
-
         return (stafiAmount);
     }
 
