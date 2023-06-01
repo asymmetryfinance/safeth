@@ -20,8 +20,12 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @author Asymmetry Finance
 import "hardhat/console.sol";
 
-contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
-
+contract Stafi is
+    ERC165Storage,
+    IDerivative,
+    Initializable,
+    OwnableUpgradeable
+{
     address public constant STAFI_TOKEN =
         0x9559Aaa82d9649C7A7b220E7c461d2E74c9a3593;
     address public constant STAFI_USER_DEPOSIT =
@@ -85,7 +89,8 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
             return;
         }
         underlyingBalance = underlyingBalance - _amount;
-        uint256 minOut = ((ethPerDerivative() * _amount) * (1e18 - maxSlippage)) / 1e36;
+        uint256 minOut = ((ethPerDerivative() * _amount) *
+            (1e18 - maxSlippage)) / 1e36;
 
         IVault.SingleSwap memory swap;
         swap
@@ -130,7 +135,8 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         fundManagement.fromInternalBalance = false;
         IWETH(wETH).deposit{value: msg.value}();
         IERC20(W_ETH_ADDRESS).approve(address(balancerVault), msg.value);
-        uint256 minOut = (msg.value * (1e18 - maxSlippage)) / ethPerDerivative();
+        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
+            ethPerDerivative();
         balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
         uint256 stafiBalancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 stafiAmount = stafiBalancePost - stafiBalancePre;
@@ -143,7 +149,7 @@ contract Stafi is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable 
         @notice - Get price of derivative in terms of ETH
      */
     function ethPerDerivative() public view returns (uint256) {
-        return  IStafi(STAFI_TOKEN).getExchangeRate();
+        return IStafi(STAFI_TOKEN).getExchangeRate();
     }
 
     /**

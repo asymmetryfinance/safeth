@@ -15,7 +15,7 @@ import { derivativeAbi } from "./abi/derivativeAbi";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe.skip("SafEth Integration Test", function () {
+describe("SafEth Integration Test", function () {
   let safEthContractAddress: string;
   let strategyContractAddress: string;
 
