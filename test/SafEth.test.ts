@@ -57,7 +57,7 @@ describe("SafEth", function () {
 
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
-    await safEthProxy.setMaxPreMintAmount("2000000000000000000");
+    await safEthProxy.setMaxPreMintAmount("3000000000000000000");
   });
 
   describe("Large Amounts", function () {
@@ -162,8 +162,8 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Shouldn't mint safEth if over max premint amount", async function () {
-      const depositAmount = ethers.utils.parseEther("3");
+    it("Shouldn't premint safEth if over max premint amount", async function () {
+      const depositAmount = (await safEthProxy.maxPreMintAmount()).add(1);
       const preMintSupply = await safEthProxy.preMintedSupply();
 
       expect(depositAmount).gt(await safEthProxy.maxPreMintAmount());

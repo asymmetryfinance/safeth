@@ -64,7 +64,7 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr"];
+    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr", "Stafi"];
     const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {

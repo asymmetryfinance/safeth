@@ -108,18 +108,18 @@ describe("AfEth (CvxStrategy)", async function () {
       cvxStrategy.address
     );
 
-    expect(vlCvxBalance).eq(BigNumber.from("508354031579118550620"));
+    expect(vlCvxBalance).eq(BigNumber.from("606254958530239518597"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3594644016254438486");
-    expect(crvPoolSafEthAmount).eq("3594644016254438486");
+    expect(crvPoolAfEthAmount).eq("3696683114516476471");
+    expect(crvPoolSafEthAmount).eq("3696683114516476471");
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from("3494656857625841109"));
-    expect(positions.curveBalance).eq(BigNumber.from("3494621911057264850"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3596696909737869797"));
+    expect(positions.curveBalance).eq(BigNumber.from("3596660942768772418"));
     await snapshot.restore();
   });
   it("Should unstake", async function () {
@@ -133,8 +133,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool before staking
     const crvPoolAfEthAmountBefore = await crvPool.balances(0);
     const crvPoolSafEthAmountBefore = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountBefore).eq("99987158628597377");
-    expect(crvPoolSafEthAmountBefore).eq("99987158628597377");
+    expect(crvPoolAfEthAmountBefore).eq("99986204778606674");
+    expect(crvPoolSafEthAmountBefore).eq("99986204778606674");
 
     const afEthStrategyBalanceBefore = await afEth.balanceOf(
       cvxStrategy.address
@@ -149,8 +149,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3594644016254438486");
-    expect(crvPoolSafEthAmount).eq("3594644016254438486");
+    expect(crvPoolAfEthAmount).eq("3696683114516476471");
+    expect(crvPoolSafEthAmount).eq("3696683114516476471");
 
     // check cvx locked positions
     let position1 = await cvxStrategy.cvxPositions(0);
@@ -174,8 +174,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool after unstaking
     const crvPoolAfEthAmountAfter = await crvPool.balances(0);
     const crvPoolSafEthAmountAfter = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountAfter).eq("99988130697611844");
-    expect(crvPoolSafEthAmountAfter).eq("99988130697611844");
+    expect(crvPoolAfEthAmountAfter).eq("99987177606305371");
+    expect(crvPoolSafEthAmountAfter).eq("99987177606305371");
 
     // verify no loss in crv pool after unstake
     expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
@@ -211,16 +211,16 @@ describe("AfEth (CvxStrategy)", async function () {
 
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("99988130697611844");
-    expect(crvPoolSafEthAmount).eq("99988130697611844");
+    expect(crvPoolAfEthAmount).eq("99987177606305371");
+    expect(crvPoolSafEthAmount).eq("99987177606305371");
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     crvPoolAfEthAmount = await crvPool.balances(0);
     crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3594644985104398926");
-    expect(crvPoolSafEthAmount).eq("3594644985104398926");
+    expect(crvPoolAfEthAmount).eq("3696683109843566434");
+    expect(crvPoolSafEthAmount).eq("3696683109843566434");
     await snapshot.restore();
   });
   it("Shouldn't be able to unstake seed amount", async function () {
