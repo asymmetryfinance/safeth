@@ -139,8 +139,10 @@ contract Swell is
         if (_amount == 0) {
             return;
         }
+        console.log("kind", uint(IVault.SwapKind.GIVEN_IN));
+
         address[] memory assets = new address[](3);
-        assets[0] = W_ETH_ADDRESS;
+        assets[0] = address(0);
         assets[1] = SWETH_ADDRESS;
         assets[2] = AAVE_W_ETH_V3_ADDRESS;
         IVault.BatchSwapStep[] memory swaps = new IVault.BatchSwapStep[](2);
@@ -168,14 +170,12 @@ contract Swell is
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
 
-        IWETH(wETH).deposit{value: _amount}();
         IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
 
         int256[] memory limits = new int256[](3);
-        limits[0] = int256(0);
+        limits[0] = int256(681716417910447760000000);
         limits[1] = int256(0);
-        limits[2] = int256(-68171641791044776);
-
+        limits[2] = int256(-68171641791044776000000);
         // Execute swap
         balancerVault.batchSwap(
             IVault.SwapKind.GIVEN_IN,
