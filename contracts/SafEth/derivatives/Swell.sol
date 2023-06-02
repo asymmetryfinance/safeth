@@ -97,20 +97,22 @@ contract Swell is
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivative();
         uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
 
+        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
+            ethPerDerivative();
+
         IWETH(WETH_ADDRESS).deposit{value: msg.value}();
         uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
         swapInputSingle(amount, minOut, WETH_ADDRESS, SWETH_ADDRESS);
-
+        // ISwellEth(SWETH_ADDRESS).deposit{value: amount}();
         uint256 swethBalanceAfter = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
         uint256 amountSwapped = swethBalanceAfter - swethBalanceBefore;
+        console.log("Amount swapped: %s", amountSwapped);
         underlyingBalance = underlyingBalance + amountSwapped;
         return amountSwapped;
     }

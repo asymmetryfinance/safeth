@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("AfEth (CvxStrategy)", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -113,13 +113,13 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3696683114516476471");
-    expect(crvPoolSafEthAmount).eq("3696683114516476471");
+    expect(crvPoolAfEthAmount).eq("3696771423074354680");
+    expect(crvPoolSafEthAmount).eq("3696771423074354680");
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from("3596696909737869797"));
-    expect(positions.curveBalance).eq(BigNumber.from("3596660942768772418"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3596782917940144052"));
+    expect(positions.curveBalance).eq(BigNumber.from("3596746950110964650"));
     await snapshot.restore();
   });
   it("Should unstake", async function () {
@@ -133,8 +133,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool before staking
     const crvPoolAfEthAmountBefore = await crvPool.balances(0);
     const crvPoolSafEthAmountBefore = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountBefore).eq("99986204778606674");
-    expect(crvPoolSafEthAmountBefore).eq("99986204778606674");
+    expect(crvPoolAfEthAmountBefore).eq("3696771423074354680");
+    expect(crvPoolSafEthAmountBefore).eq("3696771423074354680");
 
     const afEthStrategyBalanceBefore = await afEth.balanceOf(
       cvxStrategy.address

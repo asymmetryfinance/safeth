@@ -6,6 +6,7 @@ export const supportedDerivatives = [
   "WstEth",
   "Ankr",
   "Stafi",
+  "Swell",
 ];
 
 export const deployDerivatives = async function (owner: string) {
