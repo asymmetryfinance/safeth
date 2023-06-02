@@ -162,7 +162,7 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Shouldn't mint safEth if over max premint amount", async function () {
+    it("Shouldn't premint safEth if over max premint amount", async function () {
       const depositAmount = (await safEthProxy.maxPreMintAmount()).add(1);
       const preMintSupply = await safEthProxy.preMintedSupply();
 
