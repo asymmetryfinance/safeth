@@ -644,7 +644,6 @@ describe("SafEth", function () {
     });
     it("Should test deposit & withdraw on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
-      console.log("derivatives.length", derivatives.length);
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();

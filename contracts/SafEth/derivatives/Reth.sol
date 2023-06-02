@@ -30,7 +30,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_SWAP_ROUTER =
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
-    // Depricated
+    // Deprecated
     AggregatorV3Interface constant chainLinkRethEthFeed =
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
 
@@ -95,29 +95,6 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
                     abi.encodePacked("contract.address", "rocketTokenRETH")
                 )
             );
-    }
-
-    /**
-        @notice - Checks to see if can withdraw from RocketPool
-        @param _amount - amount of rETH to withdraw
-        @return - true if can withdraw, false otherwise
-     */
-    function canWithdrawFromRocketPool(
-        uint256 _amount
-    ) private view returns (bool) {
-        address rocketDepositPoolAddress = RocketStorageInterface(
-            ROCKET_STORAGE_ADDRESS
-        ).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketDepositPool")
-                )
-            );
-        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-                rocketDepositPoolAddress
-            );
-        uint256 _ethAmount = RocketTokenRETHInterface(rethAddress())
-            .getEthValue(_amount);
-        return rocketDepositPool.getExcessBalance() >= _ethAmount;
     }
 
     /**
