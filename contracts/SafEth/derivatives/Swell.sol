@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "hardhat/console.sol";
 
 /// @title Derivative contract for swETH
 /// @author Asymmetry Finance
@@ -94,7 +93,7 @@ contract Swell is
     }
 
     /**
-        @notice - Deposit into reth derivative
+        @notice - Deposit into sweth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
@@ -107,12 +106,13 @@ contract Swell is
         IWETH(WETH_ADDRESS).deposit{value: msg.value}();
         uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
         swapInputSingle(amount, minOut, WETH_ADDRESS, SWETH_ADDRESS);
-        // ISwellEth(SWETH_ADDRESS).deposit{value: amount}();
+
+        // ISwellEth(SWETH_ADDRESS).deposit{value: amount}(); // deposit into sweth
         uint256 swethBalanceAfter = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
         uint256 amountSwapped = swethBalanceAfter - swethBalanceBefore;
-        console.log("Amount swapped: %s", amountSwapped);
+
         underlyingBalance = underlyingBalance + amountSwapped;
         return amountSwapped;
     }

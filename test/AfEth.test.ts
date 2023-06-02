@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe.only("AfEth (CvxStrategy)", async function () {
+describe("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -113,13 +113,13 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3696771423074354680");
-    expect(crvPoolSafEthAmount).eq("3696771423074354680");
+    expect(crvPoolAfEthAmount).eq("3700053728788622014");
+    expect(crvPoolSafEthAmount).eq("3700053728788622014");
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from("3596782917940144052"));
-    expect(positions.curveBalance).eq(BigNumber.from("3596746950110964650"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3599976294837344516"));
+    expect(positions.curveBalance).eq(BigNumber.from("3599940295074396142"));
     await snapshot.restore();
   });
   it("Should unstake", async function () {
@@ -133,8 +133,8 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool before staking
     const crvPoolAfEthAmountBefore = await crvPool.balances(0);
     const crvPoolSafEthAmountBefore = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountBefore).eq("3696771423074354680");
-    expect(crvPoolSafEthAmountBefore).eq("3696771423074354680");
+    expect(crvPoolAfEthAmountBefore).eq("100077433951277498");
+    expect(crvPoolSafEthAmountBefore).eq("100077433951277498");
 
     const afEthStrategyBalanceBefore = await afEth.balanceOf(
       cvxStrategy.address
@@ -149,8 +149,8 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3696683114516476471");
-    expect(crvPoolSafEthAmount).eq("3696683114516476471");
+    expect(crvPoolAfEthAmount).eq("3700053728788622014");
+    expect(crvPoolSafEthAmount).eq("3700053728788622014");
 
     // check cvx locked positions
     let position1 = await cvxStrategy.cvxPositions(0);
@@ -174,8 +174,8 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool after unstaking
     const crvPoolAfEthAmountAfter = await crvPool.balances(0);
     const crvPoolSafEthAmountAfter = await crvPool.balances(1);
-    expect(crvPoolAfEthAmountAfter).eq("99987177606305371");
-    expect(crvPoolSafEthAmountAfter).eq("99987177606305371");
+    expect(crvPoolAfEthAmountAfter).eq("100078407666584446");
+    expect(crvPoolSafEthAmountAfter).eq("100078407666584446");
 
     // verify no loss in crv pool after unstake
     expect(crvPoolAfEthAmountAfter).gte(crvPoolAfEthAmountBefore);
@@ -211,16 +211,16 @@ describe.only("AfEth (CvxStrategy)", async function () {
 
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("99987177606305371");
-    expect(crvPoolSafEthAmount).eq("99987177606305371");
+    expect(crvPoolAfEthAmount).eq("100078407666584446");
+    expect(crvPoolSafEthAmount).eq("100078407666584446");
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     crvPoolAfEthAmount = await crvPool.balances(0);
     crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3696683109843566434");
-    expect(crvPoolSafEthAmount).eq("3696683109843566434");
+    expect(crvPoolAfEthAmount).eq("3700054017955927097");
+    expect(crvPoolSafEthAmount).eq("3700054017955927097");
     await snapshot.restore();
   });
   it("Shouldn't be able to unstake seed amount", async function () {
