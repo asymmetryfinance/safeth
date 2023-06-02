@@ -18,7 +18,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /// @title Derivative contract for Stafi
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract Stafi is
     ERC165Storage,
