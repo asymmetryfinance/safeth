@@ -5,6 +5,7 @@ import "../../interfaces/IDerivative.sol";
 import "../../interfaces/balancer/IVault.sol";
 import "../../interfaces/IWETH.sol";
 import "../../interfaces/swell/ISwellEth.sol";
+import "../../interfaces/uniswap/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
@@ -21,10 +22,10 @@ contract Swell is
 {
     address private constant SWETH_ADDRESS =
         0xf951E335afb289353dc249e82926178EaC7DEd78;
-    address private constant W_ETH_ADDRESS =
+    address private constant WETH_ADDRESS =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant UNISWAP_ROUTER =
-        0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B;
+        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
@@ -73,18 +74,18 @@ contract Swell is
     function withdraw(uint256 _amount) external onlyOwner {
         underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
-        uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
+        uint256 wethBalanceBefore = IERC20(WETH_ADDRESS).balanceOf(
             address(this)
         );
         uint256 ethPerSweth = ethPerDerivative();
         uint256 minOut = ((ethPerSweth * _amount) * (1e18 - maxSlippage)) /
             1e36;
-        uint256 idealOut = ((ethPerSweth * _amount) / 1e18);
-        // balancerSwap(idealOut, minOut, false);
-        uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
+        swapInputSingle(_amount, minOut, SWETH_ADDRESS, WETH_ADDRESS);
+
+        uint256 wethBalanceAfter = IERC20(WETH_ADDRESS).balanceOf(
             address(this)
         );
-        IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
+        IWETH(WETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
@@ -98,18 +99,13 @@ contract Swell is
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
             ethPerDerivative();
-        console.log("msg.value", msg.value);
         uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
         );
-        // balancerSwap(msg.value, minOut, true);
-        // ISwellEth(SWETH_ADDRESS).deposit{value: msg.value}();
 
-        IUniversalRouter(UNISWAP_ROUTER).execute(
-            "0x0b00",
-            "3",
-            block.timestamp
-        );
+        IWETH(WETH_ADDRESS).deposit{value: msg.value}();
+        uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
+        swapInputSingle(amount, minOut, WETH_ADDRESS, SWETH_ADDRESS);
 
         uint256 swethBalanceAfter = IERC20(SWETH_ADDRESS).balanceOf(
             address(this)
@@ -131,6 +127,26 @@ contract Swell is
      */
     function balance() external view returns (uint256) {
         return underlyingBalance;
+    }
+
+    function swapInputSingle(
+        uint256 _amount,
+        uint256 _minOut,
+        address _tokenIn,
+        address _tokenOut
+    ) internal {
+        IERC20(_tokenIn).approve(UNISWAP_ROUTER, _amount);
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: _tokenIn,
+                tokenOut: _tokenOut,
+                fee: 500,
+                recipient: address(this),
+                amountIn: _amount,
+                amountOutMinimum: _minOut,
+                sqrtPriceLimitX96: 0
+            });
+        ISwapRouter(UNISWAP_ROUTER).exactInputSingle(params);
     }
 
     receive() external payable {}
