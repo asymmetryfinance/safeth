@@ -535,7 +535,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("1");
-    // this incremements us into a new year (assuming hardhat starts at block 17070569)
+    // this incremements us into a new year (assuming hardhat starts at block 17387603)
     // we do this to be sure it doesnt change years during the test which
     // can cause stakes to behave differently because they are using different asym ratios (crv emissions changes)
     tx = await extraRewardsStream.reset(
