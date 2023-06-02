@@ -56,6 +56,7 @@ describe("SafEth", function () {
   };
 
   before(async () => {
+    console.log('test')
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
     await safEthProxy.setMaxPreMintAmount("2000000000000000000");
   });
