@@ -8,7 +8,10 @@ import {
   randomStakes,
   randomUnstakes,
 } from "./helpers/integrationHelpers";
-import { getLatestContract } from "./helpers/upgradeHelpers";
+import {
+  getLatestContract,
+  supportedDerivatives,
+} from "./helpers/upgradeHelpers";
 import { BigNumber } from "ethers";
 import { within1Percent } from "./helpers/functions";
 import { derivativeAbi } from "./abi/derivativeAbi";
@@ -64,7 +67,6 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy derivative contracts and add them to the strategy contract with equal weights", async function () {
-    const supportedDerivatives = ["Reth", "SfrxEth", "WstEth", "Ankr", "Stafi"];
     const strategy = await getLatestContract(strategyContractAddress, "SafEth");
 
     for (let i = 0; i < supportedDerivatives.length; i++) {
