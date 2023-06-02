@@ -8,7 +8,10 @@ import {
   randomStakes,
   randomUnstakes,
 } from "./helpers/integrationHelpers";
-import { getLatestContract, supportedDerivatives } from "./helpers/upgradeHelpers";
+import {
+  getLatestContract,
+  supportedDerivatives,
+} from "./helpers/upgradeHelpers";
 import { BigNumber } from "ethers";
 import { within1Percent } from "./helpers/functions";
 import { derivativeAbi } from "./abi/derivativeAbi";
