@@ -9,6 +9,7 @@ import {
   deploySafEth,
   upgrade,
   getLatestContract,
+  deployDerivatives,
 } from "./helpers/upgradeHelpers";
 import {
   SnapshotRestorer,
@@ -538,35 +539,7 @@ describe("SafEth", function () {
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
     });
     beforeEach(async () => {
-      derivatives = [];
-      const factory0 = await ethers.getContractFactory("Reth");
-      const factory1 = await ethers.getContractFactory("SfrxEth");
-      const factory2 = await ethers.getContractFactory("WstEth");
-      const factory3 = await ethers.getContractFactory("Ankr");
-
-      const derivative0 = await upgrades.deployProxy(factory0, [
-        adminAccount.address,
-      ]);
-      await derivative0.deployed();
-      derivatives.push(derivative0);
-
-      const derivative1 = await upgrades.deployProxy(factory1, [
-        adminAccount.address,
-      ]);
-      await derivative1.deployed();
-      derivatives.push(derivative1);
-
-      const derivative2 = await upgrades.deployProxy(factory2, [
-        adminAccount.address,
-      ]);
-      await derivative2.deployed();
-      derivatives.push(derivative2);
-
-      const derivative3 = await upgrades.deployProxy(factory3, [
-        adminAccount.address,
-      ]);
-      await derivative3.deployed();
-      derivatives.push(derivative3);
+      derivatives = await deployDerivatives(adminAccount.address);
       snapshot = await takeSnapshot();
     });
     afterEach(async () => {
@@ -671,6 +644,7 @@ describe("SafEth", function () {
     });
     it("Should test deposit & withdraw on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
+      console.log("derivatives.length", derivatives.length);
       for (let i = 0; i < derivatives.length; i++) {
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
