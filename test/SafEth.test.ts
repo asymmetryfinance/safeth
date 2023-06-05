@@ -642,9 +642,11 @@ describe("SafEth", function () {
       );
       expect(ethBalancePost).eq(0);
     });
-    it("Should test deposit & withdraw on each derivative contract", async () => {
+    it("Should test deposit & withdraw, & getName on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
+        const name = await derivatives[i].name();
+        expect(name.length).gt(0);
         // no balance before deposit
         const preStakeBalance = await derivatives[i].balance();
         expect(preStakeBalance.eq(0)).eq(true);
@@ -728,6 +730,15 @@ describe("SafEth", function () {
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
       ).eq(true);
+    });
+    it("Should successfully call setChainlinkFeed() on all derivatives", async function () {
+      const derivativeCount = await safEthProxy.derivativeCount();
+      for (let i = 0; i < derivativeCount.toNumber(); i++) {
+        await safEthProxy.setChainlinkFeed(
+          i,
+          "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
+        );
+      }
     });
   });
 
