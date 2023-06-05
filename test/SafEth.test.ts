@@ -283,6 +283,17 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
+    it("User be able to call preMint() passing _useBalance as true", async function () {
+      const depositAmount = ethers.utils.parseEther("2");
+      const ethToClaimBefore = await safEthProxy.ethToClaim();
+      const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
+      const tx = await safEthProxy.preMint(0, true, {
+        value: depositAmount,
+      });
+      await tx.wait();
+      const ethToClaimAfter = await safEthProxy.ethToClaim();
+      expect(ethToClaimAfter).eq(expectedEthToClaimAfter)
+    });
   });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
@@ -454,6 +465,26 @@ describe("SafEth", function () {
       );
 
       // dont stay paused
+      await snapshot.restore();
+    });
+
+    it("Should fail to call setPauseStaking() if setting the same value", async function () {
+      snapshot = await takeSnapshot();
+      const tx1 = await safEthProxy.setPauseStaking(true);
+      await expect(safEthProxy.setPauseStaking(true)).to.be.revertedWith(
+        "already set"
+      );
+      await tx1.wait();
+      await snapshot.restore();
+    });
+
+    it("Should fail to call setPauseUnstaking() if setting the same value", async function () {
+      snapshot = await takeSnapshot();
+      const tx1 = await safEthProxy.setPauseUnstaking(true);
+      await expect(safEthProxy.setPauseUnstaking(true)).to.be.revertedWith(
+        "already set"
+      );
+      await tx1.wait();
       await snapshot.restore();
     });
 
@@ -641,6 +672,21 @@ describe("SafEth", function () {
         rEthDerivative.address
       );
       expect(ethBalancePost).eq(0);
+    });
+    it("Should force a reth to revert ethPerDerivative() with a bad chainlink feed", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      const rEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await rEthDerivative.deployed();
+
+      await rEthDerivative.setChainlinkFeed(
+        "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
+      );
+
+      await expect(rEthDerivative.ethPerDerivative()).to.be.revertedWith(
+        "call revert exception"
+      );
     });
     it("Should test deposit & withdraw, & getName on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
