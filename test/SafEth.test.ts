@@ -1054,6 +1054,23 @@ describe("SafEth", function () {
     });
   });
 
+  it("Should revert if totalWeight is 0", async () => {
+    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+
+    const initialDeposit = ethers.utils.parseEther("1");
+
+    // set all derivatives to the same weight and stake
+    // if there are 3 derivatives this is 33/33/33
+    for (let i = 0; i < derivativeCount; i++) {
+      const tx1 = await safEthProxy.adjustWeight(i, 0);
+      await tx1.wait();
+    }
+
+    await expect(
+      safEthProxy.stake(0, { value: initialDeposit })
+    ).to.be.revertedWith("total weight is zero");
+  });
+
   it("Should stake, sell all of a derivative into another and unstake", async () => {
     const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
 
