@@ -292,7 +292,7 @@ describe("SafEth", function () {
       });
       await tx.wait();
       const ethToClaimAfter = await safEthProxy.ethToClaim();
-      expect(ethToClaimAfter).eq(expectedEthToClaimAfter)
+      expect(ethToClaimAfter).eq(expectedEthToClaimAfter);
     });
   });
   describe("Receive Eth", function () {
