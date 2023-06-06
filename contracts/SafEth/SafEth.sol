@@ -212,9 +212,7 @@ contract SafEth is
                     : (msg.value * weight) / totalWeight;
 
                 amountStaked += ethAmount;
-                uint256 depositAmount = derivative.deposit{
-                    value: ethAmount
-                }();
+                uint256 depositAmount = derivative.deposit{value: ethAmount}();
                 // This is slightly less than ethAmount because slippage
                 uint256 derivativeReceivedEthValue = (derivative
                     .ethPerDerivative() * depositAmount);
