@@ -3,6 +3,7 @@ import { BigNumber } from "ethers";
 import hre, { ethers } from "hardhat";
 import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
 import { wstEthAbi } from "../test/abi/WstEthAbi";
+import { safEthAbi } from "./abi/safEth";
 
 const webhookClientPrice = new WebhookClient({
   id: process.env.MONITOR_WEBHOOK_ID ?? "",
@@ -20,12 +21,11 @@ let previousTotalSupply = BigNumber.from(0);
 const failedTransactions: string[] = [];
 
 export const notifyOnStakeUnstake = async () => {
-  const safEth = await ethers.getContractAt(
-    "SafEth",
-    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5"
+  const safEth = new ethers.Contract(
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
+    safEthAbi,
+    ethers.provider
   );
-  await safEth.deployed();
-
   const newTotalSupply = await safEth.totalSupply();
 
   if (!previousTotalSupply.eq(newTotalSupply) && previousTotalSupply.gt(0)) {
@@ -38,8 +38,8 @@ export const notifyOnStakeUnstake = async () => {
         console.log("Failed to get Staked event data");
         return;
       }
-      notifyEventChannel(`**Stake Event**  :chart:`);
-      notifyEventChannel(`${latestEvent.args.recipient}`);
+      notifyEventChannel(`**Stake Event**  :chart_with_upwards_trend:`);
+      notifyEventChannel(`${latestEvent?.args?.recipient}`);
       notifyEventChannel(
         `${ethers.utils.formatEther(
           newTotalSupply.sub(previousTotalSupply)
@@ -53,7 +53,7 @@ export const notifyOnStakeUnstake = async () => {
         return;
       }
       notifyEventChannel(`**Unstake Event**  :chart_with_downwards_trend:`);
-      notifyEventChannel(`${latestEvent.args.recipient}`);
+      notifyEventChannel(`${latestEvent?.args?.recipient}`);
       notifyEventChannel(
         `${ethers.utils.formatEther(
           newTotalSupply.sub(previousTotalSupply)
