@@ -87,9 +87,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
     });
 
     snapshot = await takeSnapshot();
-
-    const blockNumber = await ethers.provider.getBlockNumber();
-    console.log('bockNumber', blockNumber);
   });
 
   it("Should seed CRV Pool", async function () {
@@ -100,6 +97,8 @@ describe.only("AfEth (CvxStrategy)", async function () {
     await snapshot.restore();
   });
   it("Should stake test", async function () {
+    const blockNumber = await ethers.provider.getBlockNumber();
+    console.log('stake blockNumber', blockNumber);
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
