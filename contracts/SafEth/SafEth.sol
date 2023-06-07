@@ -124,7 +124,6 @@ contract SafEth is
         return super.transfer(_recipient, _amount);
     }
 
-    // adding comment to trigger build
     /**
      * @notice sets a recipient address as blacklisted to receive tokens
      * @param _recipient - recipient address to set blacklisted on/off
