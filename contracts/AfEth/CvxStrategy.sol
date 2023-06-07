@@ -250,6 +250,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         IERC20(afEth).approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
+        console.log('block number is', block.number);
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
             0, // TODO: add min mint amount
