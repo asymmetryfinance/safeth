@@ -30,7 +30,6 @@ jobs: # list of things to do
           MNEMONIC: ${{ secrets.MNEMONIC }}
           ETHERNAL_ENABLED: false
           BLOCK_NUMBER: 17387603
-
         run: yarn test
 
       - name: Lint
