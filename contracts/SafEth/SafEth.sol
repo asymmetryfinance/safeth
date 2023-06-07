@@ -11,6 +11,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 
+import "hardhat/console.sol";
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -218,6 +220,9 @@ contract SafEth is
                     .ethPerDerivative() * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
+
+            console.log('1. totalStakeValueEth', totalStakeValueEth);
+            console.log('2. depositPrice', depositPrice);
             // MintedAmount represents a percentage of the total assets in the system
             mintedAmount = (totalStakeValueEth) / depositPrice;
             require(mintedAmount > _minOut, "mint amount less than minOut");
