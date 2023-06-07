@@ -109,12 +109,12 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         id = positionId;
 
         lockCvx(cvxAmount, id, msg.sender);
-        console.log('ethAmountForSafEth', ethAmountForSafEth);
+        console.log("ethAmountForSafEth", ethAmountForSafEth);
         uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0 // TODO: set minAmount
         );
         IAfEth(afEth).mint(address(this), mintAmount);
-        console.log('calling mint from stake', mintAmount);
+        console.log("calling mint from stake", mintAmount);
         uint256 crvLpAmount = addAfEthCrvLiquidity(
             crvPool,
             mintAmount,
@@ -252,13 +252,13 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         IERC20(afEth).approve(_pool, _afEthAmount);
 
         uint256[2] memory _amounts = [_afEthAmount, _safEthAmount];
-        console.log('block number is', block.number);
+        console.log("block number is", block.number);
         uint256 poolTokensMinted = IAfEthPool(_pool).add_liquidity(
             _amounts,
             0, // TODO: add min mint amount
             false
         );
-        console.log('poolTokensMinted', poolTokensMinted);
+        console.log("poolTokensMinted", poolTokensMinted);
         return (poolTokensMinted);
     }
 

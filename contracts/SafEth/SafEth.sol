@@ -541,7 +541,12 @@ contract SafEth is
         for (uint256 i = 0; i < count; i++) {
             if (!derivatives[i].enabled) continue;
             IDerivative derivative = derivatives[i].derivative;
-            console.log('i', i, derivative.ethPerDerivative(), derivative.name());
+            console.log(
+                "i",
+                i,
+                derivative.ethPerDerivative(),
+                derivative.name()
+            );
             underlyingValue += (derivative.ethPerDerivative() *
                 derivative.balance());
         }

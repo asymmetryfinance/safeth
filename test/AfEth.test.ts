@@ -3,7 +3,6 @@ import {
   CRV_POOL_FACTORY,
   CVX_ADDRESS,
   CVX_WHALE,
-  VL_CVX,
   SNAPSHOT_DELEGATE_REGISTRY,
 } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
@@ -16,7 +15,6 @@ import { expect } from "chai";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
 import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
-import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { crvPoolAbi } from "./abi/crvPoolAbi";
 import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
@@ -37,7 +35,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
   };
 
   before(async () => {
-    console.log('process env is', process.env.BLOCK_NUMBER);
     await network.provider.request({
       method: "hardhat_reset",
       params: [
