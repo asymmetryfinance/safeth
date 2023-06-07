@@ -37,6 +37,7 @@ describe.only("AfEth (CvxStrategy)", async function () {
   };
 
   before(async () => {
+    console.log('process env is', process.env.BLOCK_NUMBER);
     await network.provider.request({
       method: "hardhat_reset",
       params: [
