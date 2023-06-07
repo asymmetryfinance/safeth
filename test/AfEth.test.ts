@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("AfEth (CvxStrategy)", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -87,6 +87,9 @@ describe("AfEth (CvxStrategy)", async function () {
     });
 
     snapshot = await takeSnapshot();
+
+    const blockNumber = await ethers.provider.getBlockNumber();
+    console.log('bockNumber', blockNumber);
   });
 
   it("Should seed CRV Pool", async function () {
