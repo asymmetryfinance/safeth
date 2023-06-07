@@ -221,8 +221,6 @@ contract SafEth is
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
 
-            console.log('1. totalStakeValueEth', totalStakeValueEth);
-            console.log('2. depositPrice', depositPrice);
             // MintedAmount represents a percentage of the total assets in the system
             mintedAmount = (totalStakeValueEth) / depositPrice;
             require(mintedAmount > _minOut, "mint amount less than minOut");
@@ -543,12 +541,11 @@ contract SafEth is
         for (uint256 i = 0; i < count; i++) {
             if (!derivatives[i].enabled) continue;
             IDerivative derivative = derivatives[i].derivative;
+            console.log('i', i, derivative.ethPerDerivative(), derivative.balance());
             underlyingValue += (derivative.ethPerDerivative() *
                 derivative.balance());
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
-        console.log('underlyingValue', underlyingValue);
-        console.log('safEthTotalSupply', safEthTotalSupply);
         return (underlyingValue) / safEthTotalSupply;
     }
 
