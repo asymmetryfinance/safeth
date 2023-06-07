@@ -125,6 +125,7 @@ describe("AfEth (CvxStrategy)", async function () {
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
+    console.log("BLOCK NUMBER 1", await ethers.provider.getBlockNumber());
 
     const ethBalanceBefore = await ethers.provider.getBalance(
       accounts[0].address
@@ -208,7 +209,7 @@ describe("AfEth (CvxStrategy)", async function () {
 
     const unstakeTx = await cvxStrategy.unstake(false, 0);
     await unstakeTx.wait();
-    console.log("BLOCK NUMBER", await ethers.provider.getBlockNumber());
+    console.log("BLOCK NUMBER 2", await ethers.provider.getBlockNumber());
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
     expect(crvPoolAfEthAmount).eq("100078407666584446");
