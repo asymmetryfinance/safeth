@@ -109,6 +109,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         id = positionId;
 
         lockCvx(cvxAmount, id, msg.sender);
+        console.log('ethAmountForSafEth', ethAmountForSafEth);
         uint256 mintAmount = ISafEth(safEth).stake{value: ethAmountForSafEth}(
             0 // TODO: set minAmount
         );
