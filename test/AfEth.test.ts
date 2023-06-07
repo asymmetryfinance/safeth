@@ -89,14 +89,14 @@ describe.only("AfEth (CvxStrategy)", async function () {
     snapshot = await takeSnapshot();
   });
 
-  it("Should seed CRV Pool", async function () {
+  it.only("Should seed CRV Pool", async function () {
     const crvPoolBalance0 = await crvPool.balances(0);
     expect(crvPoolBalance0).gt(0);
     const crvPoolBalance1 = await crvPool.balances(1);
     expect(crvPoolBalance1).gt(0);
     await snapshot.restore();
   });
-  it("Should stake test", async function () {
+  it.only("Should stake test", async function () {
     const blockNumber = await ethers.provider.getBlockNumber();
     console.log('stake blockNumber', blockNumber);
     const accounts = await ethers.getSigners();
