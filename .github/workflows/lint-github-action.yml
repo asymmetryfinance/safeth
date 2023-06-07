@@ -1,25 +1,25 @@
 # .github/workflows/lint.yml
 
-name: Lint and Test # name of the action (displayed in the github interface)
+name: Lint and Test
 
-on: [pull_request] # event list
+on: [pull_request]
 
-env: # environment variables (available in any part of the action)
+env:
   NODE_VERSION: 16
 
-jobs: # list of things to do
+jobs:
   linting:
-    name: Run Tests & Lint # job name (unique id)
-    runs-on: ubuntu-latest # on which machine to run
-    steps: # list of steps
+    name: Run Tests & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code Checkout
+        uses: actions/checkout@v2
+
       - name: Install NodeJS
         uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
-
-      - name: Code Checkout
-        uses: actions/checkout@v2
+          cache: "yarn"
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
