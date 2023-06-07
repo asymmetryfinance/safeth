@@ -100,13 +100,16 @@ describe.only("AfEth (CvxStrategy)", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
+    console.log("BLOCK NUMBER 1", await ethers.provider.getBlockNumber());
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
+    console.log("BLOCK NUMBER 2", await ethers.provider.getBlockNumber());
 
     const vlCvxBalance = await vlCvxContract.lockedBalanceOf(
       cvxStrategy.address
     );
+    console.log("BLOCK NUMBER 3", await ethers.provider.getBlockNumber());
 
     expect(vlCvxBalance).eq(BigNumber.from("606254958530239518597"));
 
@@ -125,7 +128,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
   it("Should unstake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
-    console.log("BLOCK NUMBER 1", await ethers.provider.getBlockNumber());
 
     const ethBalanceBefore = await ethers.provider.getBalance(
       accounts[0].address
@@ -147,7 +149,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
-    console.log("BLOCK NUMBER 2", await ethers.provider.getBlockNumber());
 
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
@@ -196,7 +197,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check cvx locked positions to have unlock epoch
     unlockEpoch = position1.unlockEpoch;
     expect(unlockEpoch).gt(0);
-    console.log("BLOCK NUMBER 3", await ethers.provider.getBlockNumber());
 
     within1Percent(
       ethBalanceAfter.sub(ethBalanceDuring),
