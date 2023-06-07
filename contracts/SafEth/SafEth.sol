@@ -547,6 +547,8 @@ contract SafEth is
                 derivative.balance());
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
+        console.log('underlyingValue', underlyingValue);
+        console.log('safEthTotalSupply', safEthTotalSupply);
         return (underlyingValue) / safEthTotalSupply;
     }
 
