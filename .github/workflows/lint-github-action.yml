@@ -19,9 +19,12 @@ jobs: # list of things to do
 
       - name: Code Checkout
         uses: actions/checkout@v2
-      
+
       - name: Install Dependencies
         run: yarn
+
+      - name: Lint
+        run: yarn lint
 
       - name: Run Tests
         env:
@@ -31,6 +34,3 @@ jobs: # list of things to do
           ETHERNAL_ENABLED: false
           BLOCK_NUMBER: 17387603
         run: yarn test
-
-      - name: Lint
-        run: yarn lint
