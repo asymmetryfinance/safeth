@@ -82,9 +82,10 @@ describe.only("AfEth (CvxStrategy)", async function () {
     const afEthCrvPoolAddress = await crvAddress.minter();
     crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     const seedAmount = ethers.utils.parseEther("0.1");
-    await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
+    const tx = await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
       value: seedAmount,
     });
+    await tx.wait();
 
     snapshot = await takeSnapshot();
   });
@@ -97,8 +98,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
     await snapshot.restore();
   });
   it.only("Should stake test", async function () {
-    const blockNumber = await ethers.provider.getBlockNumber();
-    console.log('stake blockNumber', blockNumber);
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
@@ -115,6 +114,9 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
+    const blockNumber = await ethers.provider.getBlockNumber();
+    console.log('stake blockNumber', blockNumber);
+    console.log('provider stuff', await crvPool.provider.getBlockNumber());
     expect(crvPoolAfEthAmount).eq("3700053728788622014");
     expect(crvPoolSafEthAmount).eq("3700053728788622014");
 
