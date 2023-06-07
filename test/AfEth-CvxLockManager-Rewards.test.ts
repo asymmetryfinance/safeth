@@ -531,13 +531,12 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     expect(within1Percent(ethReceived0, ethReceived1)).eq(true);
   });
 
+  // TODO fix this test to work with ANY forked block number
+  // it can be a problem the test starts on a block time such that the crvEmissionYear increases in the middle of the test
   it("Should award roughly double the rewards for staking twice as long", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("1");
-    // this incremements us into a new year (assuming hardhat starts at block 17387603)
-    // we do this to be sure it doesnt change years during the test which
-    // can cause stakes to behave differently because they are using different asym ratios (crv emissions changes)
     tx = await extraRewardsStream.reset(
       60 * 60 * 24 * 7 * 16 * 16, // 16 lock periods (256 weeks) plenty of time to streaming rewards during all tests
       cvxStrategy.address
@@ -581,6 +580,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
     const balanceAfter2 = await ethers.provider.getBalance(accounts[2].address);
     const ethReceived2 = balanceAfter2.sub(balanceBefore2).add(networkFee2);
+
     expect(within1Pip(ethReceived1.mul(2), ethReceived2)).eq(true);
   });
 
