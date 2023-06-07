@@ -116,7 +116,7 @@ describe.only("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    console.log("BLOCK NUMBER 4", await ethers.provider.getBlockNumber());
+    console.log("BLOCK NUMBER 43", await ethers.provider.getBlockNumber());
 
     expect(crvPoolAfEthAmount).eq("3700053728788622014");
     expect(crvPoolSafEthAmount).eq("3700053728788622014");
