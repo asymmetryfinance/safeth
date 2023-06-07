@@ -275,10 +275,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
         uint256 mintAmount = ISafEth(safEth).stake{value: msg.value}(0);
-        console.log('mintAmount', mintAmount);
         IAfEth(afEth).mint(address(this), mintAmount);
-        console.log('IERC20(safEth).balanceOf(address(this))', IERC20(safEth).balanceOf(address(this)));
-        console.log('IERC20(afEth).balanceOf(address(this))', IERC20(afEth).balanceOf(address(this)));
         addAfEthCrvLiquidity(
             crvPool,
             IERC20(safEth).balanceOf(address(this)),
