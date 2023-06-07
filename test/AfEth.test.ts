@@ -149,7 +149,6 @@ describe.only("AfEth (CvxStrategy)", async function () {
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
-
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
