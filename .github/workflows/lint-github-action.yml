@@ -31,7 +31,7 @@ jobs: # list of things to do
           ETHERNAL_ENABLED: false
           BLOCK_NUMBER: 17387603
 
-        run: yarn test -- --maxWorkers=4
+        run: yarn test
 
       - name: Lint
         run: yarn lint
