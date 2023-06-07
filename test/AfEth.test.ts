@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("AfEth (CvxStrategy)", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -147,6 +147,8 @@ describe("AfEth (CvxStrategy)", async function () {
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
+    console.log("BLOCK NUMBER 2", await ethers.provider.getBlockNumber());
+
     // check crv liquidity pool after staking
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
@@ -194,6 +196,7 @@ describe("AfEth (CvxStrategy)", async function () {
     // check cvx locked positions to have unlock epoch
     unlockEpoch = position1.unlockEpoch;
     expect(unlockEpoch).gt(0);
+    console.log("BLOCK NUMBER 3", await ethers.provider.getBlockNumber());
 
     within1Percent(
       ethBalanceAfter.sub(ethBalanceDuring),
@@ -209,7 +212,7 @@ describe("AfEth (CvxStrategy)", async function () {
 
     const unstakeTx = await cvxStrategy.unstake(false, 0);
     await unstakeTx.wait();
-    console.log("BLOCK NUMBER 2", await ethers.provider.getBlockNumber());
+
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
     expect(crvPoolAfEthAmount).eq("100078407666584446");
