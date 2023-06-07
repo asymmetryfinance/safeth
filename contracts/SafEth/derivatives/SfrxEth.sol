@@ -140,7 +140,7 @@ contract SfrxEth is
         // and if its depegged attack probably cant maniulate it back to 1-1
         uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
             .price_oracle();
-        console.log('frax oracle is', oraclePrice);
+        console.log('frax oracle is', oraclePrice, block.number);
         uint256 priceDifference;
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
         else priceDifference = 1e18 - oraclePrice;
