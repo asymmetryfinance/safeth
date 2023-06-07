@@ -59,18 +59,6 @@ const config: HardhatUserConfig = {
         enabled: true, // Set to false to disable forked mainnet mode
       },
     },
-    goerli: {
-      url: process.env.GOERLI_URL || "",
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
-    },
-    rinkeby: {
-      url: process.env.RINKEBY_URL || "",
-      accounts: {
-        mnemonic: process.env.MNEMONIC,
-      },
-    },
     mainnet: {
       url: process.env.MAINNET_URL || "",
       accounts:
