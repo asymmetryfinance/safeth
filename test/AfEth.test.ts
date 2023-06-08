@@ -97,7 +97,7 @@ describe("AfEth (CvxStrategy)", async function () {
     await snapshot.restore();
   });
   it.only("Should stake", async function () {
-    time.increase(15);
+    await time.increase(15);
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
