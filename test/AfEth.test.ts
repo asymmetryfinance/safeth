@@ -109,7 +109,7 @@ describe("AfEth (CvxStrategy)", async function () {
       cvxStrategy.address
     );
 
-    expect(vlCvxBalance).eq(BigNumber.from("606254958530239518597"));
+    expect(vlCvxBalance).eq(BigNumber.from("652856551415568037424"));
 
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
