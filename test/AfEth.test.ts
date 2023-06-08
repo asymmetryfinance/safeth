@@ -4,6 +4,7 @@ import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
 import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
@@ -69,6 +70,7 @@ describe.only("AfEth (CvxStrategy)", async function () {
   it.only("Should stake", async function () {
     const depositAmount = ethers.utils.parseEther("5");
 
+    await time.increase(15);
     console.log(
       "block time 1 is",
       (await ethers.provider.getBlock()).timestamp
