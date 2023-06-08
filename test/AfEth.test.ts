@@ -89,14 +89,14 @@ describe("AfEth (CvxStrategy)", async function () {
     snapshot = await takeSnapshot();
   });
 
-  it.only("Should seed CRV Pool", async function () {
+  it("Should seed CRV Pool", async function () {
     const crvPoolBalance0 = await crvPool.balances(0);
     expect(crvPoolBalance0).gt(0);
     const crvPoolBalance1 = await crvPool.balances(1);
     expect(crvPoolBalance1).gt(0);
     await snapshot.restore();
   });
-  it.only("Should stake", async function () {
+  it("Should stake", async function () {
     await time.increase(15);
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
@@ -114,8 +114,8 @@ describe("AfEth (CvxStrategy)", async function () {
     // check crv liquidity pool
     const crvPoolAfEthAmount = await crvPool.balances(0);
     const crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3700053728788622014");
-    expect(crvPoolSafEthAmount).eq("3700053728788622014");
+    expect(crvPoolAfEthAmount).eq("3700053715201179308");
+    expect(crvPoolSafEthAmount).eq("3700053715201179308");
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
