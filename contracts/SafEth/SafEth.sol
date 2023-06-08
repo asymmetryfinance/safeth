@@ -165,7 +165,7 @@ contract SafEth is
         nonReentrant
         returns (uint256 mintedAmount, uint256 depositPrice)
     {
-        console.log('stake block time is', block.timestamp);
+        console.log("stake block time is", block.timestamp);
         require(!pauseStaking, "staking is paused");
         require(msg.value >= minAmount, "amount too low");
         require(msg.value <= maxAmount, "amount too high");
