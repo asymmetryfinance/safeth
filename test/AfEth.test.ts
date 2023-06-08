@@ -89,14 +89,14 @@ describe("AfEth (CvxStrategy)", async function () {
     snapshot = await takeSnapshot();
   });
 
-  it("Should seed CRV Pool", async function () {
+  it.only("Should seed CRV Pool", async function () {
     const crvPoolBalance0 = await crvPool.balances(0);
     expect(crvPoolBalance0).gt(0);
     const crvPoolBalance1 = await crvPool.balances(1);
     expect(crvPoolBalance1).gt(0);
     await snapshot.restore();
   });
-  it("Should stake", async function () {
+  it.only("Should stake", async function () {
     const accounts = await ethers.getSigners();
     const depositAmount = ethers.utils.parseEther("5");
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
