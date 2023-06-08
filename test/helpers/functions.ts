@@ -4,6 +4,10 @@ export const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;
   return getDifferenceRatio(amount1, amount2).gt("100");
 };
+export const withinHalfPercent = (amount1: BigNumber, amount2: BigNumber) => {
+  if (amount1.eq(amount2)) return true;
+  return getDifferenceRatio(amount1, amount2).gt("200");
+};
 
 // Get ratio between 2 amounts such that % diff = 1/ratio
 // Example: 200 = 0.5%, 100 = 1%, 50 = 2%, 25 = 4%, etc
