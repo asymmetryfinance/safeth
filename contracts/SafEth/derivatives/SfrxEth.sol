@@ -142,7 +142,7 @@ contract SfrxEth is
             .price_oracle();
 
         console.log("sfrx oracle price is: ", oraclePrice);
-        console.log('timestamp', block.timestamp);
+        console.log("timestamp", block.timestamp);
 
         uint256 priceDifference;
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
