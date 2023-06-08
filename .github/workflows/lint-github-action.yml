@@ -28,7 +28,7 @@ jobs: # list of things to do
           ETHERNAL_ENABLED: false
           BLOCK_NUMBER: 17387603
 
-        run: yarn && yarn compile && yarn test
+        run: rm ./openzeppelin/unknown-12234.json && yarn && yarn compile && yarn test
 
       - name: Lint
         run: yarn lint
