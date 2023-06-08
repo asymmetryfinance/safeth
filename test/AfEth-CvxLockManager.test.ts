@@ -320,8 +320,7 @@ describe.only("AfEth (CvxLockManager)", async function () {
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 
-  it.only("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
-    await time.increase(15);
+  it("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
     let tx;
     const accounts = await ethers.getSigners();
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, accounts[0]);
