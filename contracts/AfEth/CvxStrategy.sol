@@ -26,22 +26,27 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     mapping(uint256 => uint256) public crvEmissionsPerYear;
 
-    uint256 positionId;
+    uint256 private positionId;
 
-    AggregatorV3Interface constant chainLinkCvxEthFeed =
-        AggregatorV3Interface(0xC9CbF687f43176B302F03f5e58470b77D07c61c6);
-    AggregatorV3Interface constant chainLinkCrvEthFeed =
-        AggregatorV3Interface(0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e);
+    address public constant CHAINLINK_CRV =
+        0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e;
+    address public constant CHAINLINK_CVX =
+        0xC9CbF687f43176B302F03f5e58470b77D07c61c6;
+    address public constant SWAP_ROUTER =
+        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address private constant VE_CRV =
+        0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    ISwapRouter constant swapRouter =
-        ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+    AggregatorV3Interface private chainLinkCvxEthFeed =
+        AggregatorV3Interface(CHAINLINK_CVX);
+    AggregatorV3Interface private chainLinkCrvEthFeed =
+        AggregatorV3Interface(CHAINLINK_CRV);
+    ISwapRouter private swapRouter = ISwapRouter(SWAP_ROUTER);
 
-    address constant veCRV = 0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
-    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    address afEth;
-    address crvPool;
-    address safEth;
+    address private afEth;
+    address private crvPool;
+    address private safEth;
 
     struct Position {
         address owner; // owner of position
@@ -219,9 +224,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function swapCvx(uint256 amount) private returns (uint256 amountOut) {
-        IWETH(wETH).deposit{value: amount}();
+        IWETH(WETH).deposit{value: amount}();
         uint256 amountSwapped = swapExactInputSingleHop(
-            wETH,
+            WETH,
             CVX,
             10000,
             amount

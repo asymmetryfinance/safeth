@@ -17,8 +17,9 @@ contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
-    address constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    address constant vlCVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
+    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address private constant VL_CVX =
+        0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
 
     address public constant FXS_ETH_CRV_POOL_ADDRESS =
         0x941Eb6F616114e4Ecaa85377945EA306002612FE;
@@ -31,12 +32,15 @@ contract CvxLockManager is OwnableUpgradeable {
     address public constant CVX_ETH_CRV_POOL_ADDRESS =
         0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4;
 
-    address constant cvxClaimZap = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+    address private constant CVX_CLAIM_ZAP =
+        0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
 
-    address constant cvxCrv = 0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
-    address constant fxs = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
-    address constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
-    address constant cvxFxs = 0xFEEf77d3f69374f66429C91d732A244f074bdf74;
+    address private constant CVX_CRV =
+        0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7;
+    address private constant FXS = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address private constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+    address private constant CVX_FXS =
+        0xFEEf77d3f69374f66429C91d732A244f074bdf74;
 
     // last epoch in which relock was called
     uint256 public lastRelockEpoch;
@@ -67,11 +71,9 @@ contract CvxLockManager is OwnableUpgradeable {
     // epoch at which amount should be unlocked
     mapping(uint256 => uint256) public unlockSchedule;
 
-    uint256 maxSlippage;
-
+    uint256 public maxSlippage;
     address public extraRewardsStream;
-
-    bool firstLock;
+    bool private firstLock;
 
     function initializeLockManager(address _extraRewardsStream) internal {
         bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
@@ -80,7 +82,7 @@ contract CvxLockManager is OwnableUpgradeable {
             owner()
         );
 
-        lastRelockEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        lastRelockEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
 
         maxSlippage = 10 ** 16; // 1%
         extraRewardsStream = _extraRewardsStream;
@@ -96,14 +98,14 @@ contract CvxLockManager is OwnableUpgradeable {
         uint256 positionId,
         address owner
     ) internal {
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
         cvxPositions[positionId].cvxAmount = cvxAmount;
         cvxPositions[positionId].open = true;
         cvxPositions[positionId].owner = owner;
         cvxPositions[positionId].startingEpoch = currentEpoch + 1;
 
-        IERC20(CVX).approve(vlCVX, cvxAmount);
-        ILockedCvx(vlCVX).lock(address(this), cvxAmount, 0);
+        IERC20(CVX).approve(VL_CVX, cvxAmount);
+        ILockedCvx(VL_CVX).lock(address(this), cvxAmount, 0);
 
         if (firstLock) {
             lastEpochFullyClaimed = currentEpoch - 1;
@@ -113,16 +115,16 @@ contract CvxLockManager is OwnableUpgradeable {
 
     // at the beginning of each new epoch to process the previous
     function relockCvx() public {
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
         // alredy called for this epoch
         if (lastRelockEpoch == currentEpoch) return;
 
-        (, uint256 unlockable, , ) = ILockedCvx(vlCVX).lockedBalances(
+        (, uint256 unlockable, , ) = ILockedCvx(VL_CVX).lockedBalances(
             address(this)
         );
 
         // unlock all if possible
-        if (unlockable != 0) ILockedCvx(vlCVX).processExpiredLocks(false);
+        if (unlockable != 0) ILockedCvx(VL_CVX).processExpiredLocks(false);
 
         uint256 unlockedCvxBalance = IERC20(CVX).balanceOf(address(this));
 
@@ -146,8 +148,8 @@ contract CvxLockManager is OwnableUpgradeable {
         // nothing to relock
         if (cvxAmountToRelock == 0) return;
 
-        IERC20(CVX).approve(vlCVX, cvxAmountToRelock);
-        ILockedCvx(vlCVX).lock(address(this), cvxAmountToRelock, 0);
+        IERC20(CVX).approve(VL_CVX, cvxAmountToRelock);
+        ILockedCvx(VL_CVX).lock(address(this), cvxAmountToRelock, 0);
         lastRelockEpoch = currentEpoch;
     }
 
@@ -164,7 +166,7 @@ contract CvxLockManager is OwnableUpgradeable {
     // claim vlCvx locker rewards and crv pool rewards
     // convert to eth and set claimed amounts for each epoch so we can what users are owed during withdraw
     function claimRewards() public {
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
 
         uint256 balanceBeforeClaim = address(this).balance;
         sweepRewards();
@@ -177,12 +179,12 @@ contract CvxLockManager is OwnableUpgradeable {
             return;
         }
 
-        (
-            uint256 _unused1,
-            uint256 firstUnclaimedEpochStartingTime
-        ) = ILockedCvx(vlCVX).epochs((lastEpochFullyClaimed + 1));
-        (uint256 _unused2, uint256 currentEpochStartingTime) = ILockedCvx(vlCVX)
-            .epochs(currentEpoch);
+        (, uint256 firstUnclaimedEpochStartingTime) = ILockedCvx(VL_CVX).epochs(
+            (lastEpochFullyClaimed + 1)
+        );
+        (, uint256 currentEpochStartingTime) = ILockedCvx(VL_CVX).epochs(
+            currentEpoch
+        );
 
         uint256 timeSinceCurrentEpochStart = block.timestamp -
             currentEpochStartingTime;
@@ -221,7 +223,7 @@ contract CvxLockManager is OwnableUpgradeable {
         require(cvxPositions[positionId].open == true, "Not open");
         cvxPositions[positionId].open = false;
 
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
 
         uint256 originalUnlockEpoch = cvxPositions[positionId].startingEpoch +
             16;
@@ -251,7 +253,7 @@ contract CvxLockManager is OwnableUpgradeable {
         );
         require(cvxPositions[positionId].open == false, "Not closed");
         require(cvxPositions[positionId].cvxAmount > 0, "No cvx to withdraw");
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
         require(
             currentEpoch >= cvxPositions[positionId].unlockEpoch,
             "Cvx still locked"
@@ -275,11 +277,11 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function getCurrentEpoch() public view returns (uint256) {
-        return ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        return ILockedCvx(VL_CVX).findEpochId(block.timestamp);
     }
 
     function withdrawRewards(uint256 positionId) private {
-        uint256 currentEpoch = ILockedCvx(vlCVX).findEpochId(block.timestamp);
+        uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
 
         // only claim rewards if needed
         if (lastEpochFullyClaimed < currentEpoch - 1) {
@@ -299,7 +301,7 @@ contract CvxLockManager is OwnableUpgradeable {
         for (uint256 i = startingEpoch; i < unlockEpoch; i++) {
             uint256 distanceFromStart = i - startingEpoch;
 
-            uint256 balanceAtEpoch = ILockedCvx(vlCVX).balanceAtEpochOf(
+            uint256 balanceAtEpoch = ILockedCvx(VL_CVX).balanceAtEpochOf(
                 i,
                 address(this)
             );
@@ -330,7 +332,7 @@ contract CvxLockManager is OwnableUpgradeable {
     // claim vlCvx rewards and convert to eth
     function claimvlCvxRewards() private {
         address[] memory emptyArray;
-        IClaimZap(cvxClaimZap).claimRewards(
+        IClaimZap(CVX_CLAIM_ZAP).claimRewards(
             emptyArray,
             emptyArray,
             emptyArray,
@@ -342,14 +344,14 @@ contract CvxLockManager is OwnableUpgradeable {
             8
         );
         // cvxFxs -> fxs
-        uint256 cvxFxsBalance = IERC20(cvxFxs).balanceOf(address(this));
+        uint256 cvxFxsBalance = IERC20(CVX_FXS).balanceOf(address(this));
         if (cvxFxsBalance > 0) {
             uint256 oraclePrice = ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxFxsBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-            IERC20(cvxFxs).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
+            IERC20(CVX_FXS).approve(CVXFXS_FXS_CRV_POOL_ADDRESS, cvxFxsBalance);
             ICvxFxsFxsPool(CVXFXS_FXS_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
@@ -359,7 +361,7 @@ contract CvxLockManager is OwnableUpgradeable {
         }
 
         // fxs -> eth
-        uint256 fxsBalance = IERC20(fxs).balanceOf(address(this));
+        uint256 fxsBalance = IERC20(FXS).balanceOf(address(this));
         if (fxsBalance > 0) {
             uint256 oraclePrice = IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).get_dy(
                 1,
@@ -369,9 +371,9 @@ contract CvxLockManager is OwnableUpgradeable {
             uint256 minOut = (((oraclePrice * fxsBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-            IERC20(fxs).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
+            IERC20(FXS).approve(FXS_ETH_CRV_POOL_ADDRESS, fxsBalance);
 
-            IERC20(fxs).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
+            IERC20(FXS).allowance(address(this), FXS_ETH_CRV_POOL_ADDRESS);
 
             IFxsEthPool(FXS_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
@@ -381,13 +383,13 @@ contract CvxLockManager is OwnableUpgradeable {
             );
         }
         // cvxCrv -> crv
-        uint256 cvxCrvBalance = IERC20(cvxCrv).balanceOf(address(this));
+        uint256 cvxCrvBalance = IERC20(CVX_CRV).balanceOf(address(this));
         if (cvxCrvBalance > 0) {
             uint256 oraclePrice = ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS)
                 .get_dy(1, 0, 10 ** 18);
             uint256 minOut = (((oraclePrice * cvxCrvBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
-            IERC20(cvxCrv).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
+            IERC20(CVX_CRV).approve(CVXCRV_CRV_CRV_POOL_ADDRESS, cvxCrvBalance);
             ICvxCrvCrvPool(CVXCRV_CRV_CRV_POOL_ADDRESS).exchange(
                 1,
                 0,
@@ -397,7 +399,7 @@ contract CvxLockManager is OwnableUpgradeable {
         }
 
         // crv -> eth
-        uint256 crvBalance = IERC20(crv).balanceOf(address(this));
+        uint256 crvBalance = IERC20(CRV).balanceOf(address(this));
         if (crvBalance > 0) {
             uint256 oraclePrice = ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).get_dy(
                 1,
@@ -407,7 +409,7 @@ contract CvxLockManager is OwnableUpgradeable {
             uint256 minOut = (((oraclePrice * crvBalance) / 10 ** 18) *
                 (10 ** 18 - maxSlippage)) / 10 ** 18;
 
-            IERC20(crv).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
+            IERC20(CRV).approve(CRV_ETH_CRV_POOL_ADDRESS, crvBalance);
             ICrvEthPool(CRV_ETH_CRV_POOL_ADDRESS).exchange_underlying(
                 1,
                 0,
