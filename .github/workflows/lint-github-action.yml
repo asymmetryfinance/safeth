@@ -5,7 +5,7 @@ name: Lint and Test # name of the action (displayed in the github interface)
 on: [pull_request] # event list
 
 env: # environment variables (available in any part of the action)
-  NODE_VERSION: 16
+  NODE_VERSION: 16.18.0
 
 jobs: # list of things to do
   linting:
