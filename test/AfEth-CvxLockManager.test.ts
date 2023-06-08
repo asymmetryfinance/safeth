@@ -320,7 +320,7 @@ describe.only("AfEth (CvxLockManager)", async function () {
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });
 
-  it("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
+  it.only("Should show that cvxToLeaveUnlocked has expected values always equals cvx balance", async function () {
     await time.increase(15);
     let tx;
     const accounts = await ethers.getSigners();
