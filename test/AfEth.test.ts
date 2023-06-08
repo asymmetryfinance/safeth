@@ -203,6 +203,7 @@ describe.only("AfEth (CvxStrategy)", async function () {
     await snapshot.restore();
   });
   it("Should unstake everything and still be able to stake", async function () {
+    await time.increase(15);
     const depositAmount = ethers.utils.parseEther("5");
 
     const tx = await cvxStrategy.stake({ value: depositAmount });
@@ -213,16 +214,16 @@ describe.only("AfEth (CvxStrategy)", async function () {
 
     let crvPoolAfEthAmount = await crvPool.balances(0);
     let crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("100078407666584446");
-    expect(crvPoolSafEthAmount).eq("100078407666584446");
+    expect(crvPoolAfEthAmount).eq("100078407666584347");
+    expect(crvPoolSafEthAmount).eq("100078407666584347");
 
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
 
     crvPoolAfEthAmount = await crvPool.balances(0);
     crvPoolSafEthAmount = await crvPool.balances(1);
-    expect(crvPoolAfEthAmount).eq("3700054017955927097");
-    expect(crvPoolSafEthAmount).eq("3700054017955927097");
+    expect(crvPoolAfEthAmount).eq("3700054004368486088");
+    expect(crvPoolSafEthAmount).eq("3700054004368486088");
     await snapshot.restore();
   });
   it("Shouldn't be able to unstake seed amount", async function () {
