@@ -17,7 +17,7 @@ contract CvxLockManager is OwnableUpgradeable {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
-    address private constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address internal constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address private constant VL_CVX =
         0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
 

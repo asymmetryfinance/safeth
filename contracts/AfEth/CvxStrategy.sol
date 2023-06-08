@@ -38,12 +38,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    AggregatorV3Interface private chainLinkCvxEthFeed =
-        AggregatorV3Interface(CHAINLINK_CVX);
-    AggregatorV3Interface private chainLinkCrvEthFeed =
-        AggregatorV3Interface(CHAINLINK_CRV);
-    ISwapRouter private swapRouter = ISwapRouter(SWAP_ROUTER);
-
+    AggregatorV3Interface private chainLinkCvxEthFeed;
+    AggregatorV3Interface private chainLinkCrvEthFeed;
+    ISwapRouter private swapRouter;
     address private afEth;
     address private crvPool;
     address private safEth;
@@ -83,7 +80,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         address _rewardsExtraStream
     ) external initializer {
         _transferOwnership(msg.sender);
-
+        chainLinkCvxEthFeed = AggregatorV3Interface(CHAINLINK_CVX);
+        chainLinkCrvEthFeed = AggregatorV3Interface(CHAINLINK_CRV);
+        swapRouter = ISwapRouter(SWAP_ROUTER);
         safEth = _safEth;
         afEth = _afEth;
 
