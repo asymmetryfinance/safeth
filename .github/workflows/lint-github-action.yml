@@ -5,7 +5,7 @@ name: Lint and Test # name of the action (displayed in the github interface)
 on: [pull_request] # event list
 
 env: # environment variables (available in any part of the action)
-  NODE_VERSION: 16.18.0
+  NODE_VERSION: 16
 
 jobs: # list of things to do
   linting:
@@ -24,11 +24,11 @@ jobs: # list of things to do
         env:
           MAINNET_URL: ${{ secrets.MAINNET_URL }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-          MNEMONIC: ${{ secrets.MNEMONIC }}
+          MNEMONIC: test test test test test test test test test test test junk
           ETHERNAL_ENABLED: false
           BLOCK_NUMBER: 17387603
 
-        run: yarn && yarn compile && yarn test
+        run: yarn clean && yarn && yarn test
 
       - name: Lint
         run: yarn lint
