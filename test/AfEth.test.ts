@@ -69,8 +69,15 @@ describe.only("AfEth (CvxStrategy)", async function () {
   it.only("Should stake", async function () {
     const depositAmount = ethers.utils.parseEther("5");
 
-    console.log("block time is", (await ethers.provider.getBlock()).timestamp);
+    console.log(
+      "block time 1 is",
+      (await ethers.provider.getBlock()).timestamp
+    );
     const stakeTx = await cvxStrategy.stake({ value: depositAmount });
     await stakeTx.wait();
+    console.log(
+      "block time 2 is",
+      (await ethers.provider.getBlock()).timestamp
+    );
   });
 });
