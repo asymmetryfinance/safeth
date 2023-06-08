@@ -15,8 +15,8 @@
     "lint:prettier": "prettier --list-different 'contracts/**/*.sol'",
     "lint:fix": "yarn solhint **/*.sol --fix && yarn eslint '**/*.{js,ts}' --fix",
     "prettier": "prettier '**/*.{json,sol,md}' --write",
-    "clean": "rm -rf node_modules artifacts cache typechain-types deployments && rm ./openzeppelin/unknown-12234.json",
-    "test": "rm ./openzeppelin/unknown-12234.json yarn hardhat test",
+    "clean": "rm -rf node_modules artifacts cache typechain-types deployments && rm .openzeppelin/unknown-1234.json",
+    "test": "rm .openzeppelin/unknown-1234.json && yarn hardhat test",
     "local-node": "dotenv cross-var yarn hardhat node --fork %MAINNET_URL%",
     "local-init": "yarn hardhat run --network localhost scripts/local-init.ts",
     "local-mine": "yarn hardhat run --network localhost scripts/mine-to-next-cycle.ts"
