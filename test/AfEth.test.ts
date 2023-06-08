@@ -1,33 +1,14 @@
-import { ethers, network, waffle } from "hardhat";
-import {
-  CRV_POOL_FACTORY,
-  CVX_ADDRESS,
-  CVX_WHALE,
-  VL_CVX,
-  SNAPSHOT_DELEGATE_REGISTRY,
-} from "./helpers/constants";
-import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import {
-  SnapshotRestorer,
-  takeSnapshot,
-  time,
-} from "@nomicfoundation/hardhat-network-helpers";
-import { expect } from "chai";
+import { ethers, network } from "hardhat";
+import { CRV_POOL_FACTORY } from "./helpers/constants";
 import { crvPoolFactoryAbi } from "./abi/crvPoolFactoryAbi";
 import { BigNumber } from "ethers";
 import { AfEth, SafEth, CvxStrategy } from "../typechain-types";
-import { vlCvxAbi } from "./abi/vlCvxAbi";
-import { crvPoolAbi } from "./abi/crvPoolAbi";
-import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
-import { within1Percent } from "./helpers/functions";
 
 describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
-  let crvPool: any;
-  let snapshot: SnapshotRestorer;
 
   const deployContracts = async () => {
     const deployResults = await deployStrategyContract();
@@ -80,13 +61,10 @@ describe.only("AfEth (CvxStrategy)", async function () {
       accounts[0]
     );
     const afEthCrvPoolAddress = await crvAddress.minter();
-    crvPool = new ethers.Contract(afEthCrvPoolAddress, crvPoolAbi, accounts[0]);
     const seedAmount = ethers.utils.parseEther("0.1");
     await cvxStrategy.updateCrvPool(afEthCrvPoolAddress, {
       value: seedAmount,
     });
-
-    snapshot = await takeSnapshot();
   });
   it.only("Should stake", async function () {
     const depositAmount = ethers.utils.parseEther("5");

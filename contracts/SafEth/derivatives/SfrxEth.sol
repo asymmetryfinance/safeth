@@ -141,7 +141,7 @@ contract SfrxEth is
         uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
             .price_oracle();
 
-        console.log('sfrx oracle price is: ', oraclePrice);
+        console.log("sfrx oracle price is: ", oraclePrice);
 
         uint256 priceDifference;
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
