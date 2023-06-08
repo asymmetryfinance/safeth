@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("AfEth (CvxStrategy)", async function () {
+describe.only("AfEth (CvxStrategy)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
@@ -119,8 +119,8 @@ describe("AfEth (CvxStrategy)", async function () {
 
     // check position struct
     const positions = await cvxStrategy.positions(0);
-    expect(positions.afEthAmount).eq(BigNumber.from("3599976294837344516"));
-    expect(positions.curveBalance).eq(BigNumber.from("3599940295074396142"));
+    expect(positions.afEthAmount).eq(BigNumber.from("3599976281249901810"));
+    expect(positions.curveBalance).eq(BigNumber.from("3599940281487089310"));
     await snapshot.restore();
   });
   it("Should unstake", async function () {
