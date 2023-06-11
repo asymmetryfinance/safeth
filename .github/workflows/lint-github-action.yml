@@ -26,7 +26,7 @@ jobs: # list of things to do
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           MNEMONIC: ${{ secrets.MNEMONIC }}
           ETHERNAL_ENABLED: false
-          BLOCK_NUMBER: 17070569
+          BLOCK_NUMBER: 17457831
 
         run: yarn && yarn compile && yarn test
 
