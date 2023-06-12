@@ -59,7 +59,6 @@ contract Swell is DerivativeBase {
         @param _amount - amount of rETH to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
         uint256 wethBalanceBefore = IERC20(WETH_ADDRESS).balanceOf(
             address(this)
@@ -69,9 +68,8 @@ contract Swell is DerivativeBase {
             address(this)
         );
         IWETH(WETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, ethReceived, false);
+        uint256 ethReceived = address(this).balance - ethBalanceBefore;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, ethReceived, false, underlyingBalance);
     }
 
     /**
@@ -88,8 +86,7 @@ contract Swell is DerivativeBase {
             address(this)
         );
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), received, maxSlippage, received, true);
-        underlyingBalance = underlyingBalance + received;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 

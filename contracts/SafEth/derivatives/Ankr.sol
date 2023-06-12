@@ -56,13 +56,12 @@ contract Ankr is DerivativeBase {
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 _amount) public onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
         uint256 balancePre = address(this).balance;
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, 0);
         uint256 balancePost = address(this).balance;
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, received, false);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
     }
 
     /**
@@ -79,8 +78,7 @@ contract Ankr is DerivativeBase {
             address(this)
         );
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), msg.value, maxSlippage, received, true);
-        underlyingBalance = underlyingBalance + received;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 
@@ -95,6 +93,6 @@ contract Ankr is DerivativeBase {
         @notice - Total derivative balance
      */
     function balance() external view returns (uint256) {
-        return IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
+        return underlyingBalance;
     }
 }

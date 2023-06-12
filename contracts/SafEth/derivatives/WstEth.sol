@@ -64,7 +64,6 @@ contract WstEth is DerivativeBase {
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
         require(stEthAmount > 0, "No stETH to unwrap");
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
@@ -72,7 +71,7 @@ contract WstEth is DerivativeBase {
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, 0);
         uint256 balancePost = address(this).balance;
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, received, false);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
     }
 
     /**
@@ -86,8 +85,7 @@ contract WstEth is DerivativeBase {
         require(sent, "Failed to send Ether to wst contract");
         uint256 balancePost = IWStETH(WST_ETH).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), msg.value, maxSlippage, received, true);
-        underlyingBalance = underlyingBalance + received;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 

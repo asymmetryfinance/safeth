@@ -61,7 +61,6 @@ contract SfrxEth is DerivativeBase {
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 frxEthBalanceBefore = IERC20(FRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -89,7 +88,7 @@ contract SfrxEth is DerivativeBase {
 
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, ethReceived, false);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, ethReceived, false, underlyingBalance);
     }
 
     /**
@@ -108,8 +107,7 @@ contract SfrxEth is DerivativeBase {
             address(this)
         );
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), received, maxSlippage, received, true);
-        underlyingBalance = underlyingBalance + received;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 

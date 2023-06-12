@@ -95,7 +95,6 @@ contract Reth is DerivativeBase {
         @param _amount - amount of rETH to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
         uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
@@ -118,7 +117,7 @@ contract Reth is DerivativeBase {
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 received = ethBalanceAfter - ethBalanceBefore;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, received, false);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
     }
 
     /**
@@ -133,8 +132,7 @@ contract Reth is DerivativeBase {
             address(this)
         );
         uint256 received = balancePost - balancePre;
-        underlyingBalance = underlyingBalance + received;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), received, maxSlippage, received, true);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 

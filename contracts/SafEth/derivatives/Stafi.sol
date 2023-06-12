@@ -70,8 +70,6 @@ contract Stafi is DerivativeBase {
         @param _amount - amount of stafi to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
-
         IVault.SingleSwap memory swap;
         swap
             .poolId = 0xb08885e6026bab4333a80024ec25a1a3e1ff2b8a000200000000000000000445;
@@ -93,7 +91,7 @@ contract Stafi is DerivativeBase {
         uint256 balancePost = address(this).balance;
 
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, received, false);
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
     }
 
     /**
@@ -117,8 +115,7 @@ contract Stafi is DerivativeBase {
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
         uint256 balancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        super.checkSlippageAndWithdraw(ethPerDerivative(true), received, maxSlippage, received, true);
-        underlyingBalance = underlyingBalance + received;
+        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
         return received;
     }
 

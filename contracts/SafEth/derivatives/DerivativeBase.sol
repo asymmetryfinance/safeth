@@ -9,13 +9,15 @@ abstract contract DerivativeBase is ERC165Storage, IDerivative, Initializable, O
         _disableInitializers();
     }
 
-    function checkSlippageAndWithdraw(uint256 _price, uint256 _amount, uint256 _maxSlippage, uint256 _received, bool _isDeposit) internal {
+    function finalChecks(uint256 _price, uint256 _amount, uint256 _maxSlippage, uint256 _received, bool _isDeposit, uint256 underlyingBalance) internal returns (uint256 newUnderlyingBalance) {
         uint256 minOut = _isDeposit ? ((_amount * (1e18 - _maxSlippage)) / _price) : (((_price * _amount) * (1e18 - _maxSlippage)) / 1e36);
         require(_received >= minOut, "Slippage too high");
         if(!_isDeposit) {
             (bool sent, ) = address(msg.sender).call{value: _received}("");
             require(sent, "Failed to send Ether");
+            return underlyingBalance - _amount;
         }
+        return underlyingBalance + _received;
     }
 
     function init(address _owner) public {
