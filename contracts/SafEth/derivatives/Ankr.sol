@@ -74,11 +74,13 @@ contract Ankr is DerivativeBase {
         @dev - Owner is set to SafEth contract
      */
     function deposit() public payable onlyOwner returns (uint256) {
-        uint256 balancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
+        uint256 ankrBalancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
 
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
         uint256 received = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this)) -
-            balancePre;
+            ankrBalancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

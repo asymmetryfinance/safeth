@@ -99,7 +99,7 @@ contract Stafi is DerivativeBase {
         @notice - Deposit into stafi derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 balancePre = IStafi(STAFI_TOKEN).balanceOf(address(this));
+        uint256 stafiBalancePre = IStafi(STAFI_TOKEN).balanceOf(address(this));
         IVault.SingleSwap memory swap;
         swap
             .poolId = 0xb08885e6026bab4333a80024ec25a1a3e1ff2b8a000200000000000000000445;
@@ -115,7 +115,7 @@ contract Stafi is DerivativeBase {
         IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
         uint256 received = IStafi(STAFI_TOKEN).balanceOf(address(this)) -
-            balancePre;
+            stafiBalancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

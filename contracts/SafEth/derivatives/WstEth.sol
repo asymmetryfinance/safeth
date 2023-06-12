@@ -85,12 +85,12 @@ contract WstEth is DerivativeBase {
         @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 balancePre = IWStETH(WST_ETH).balanceOf(address(this));
+        uint256 wstEthBalancePre = IWStETH(WST_ETH).balanceOf(address(this));
         // solhint-disable-next-line
         (bool sent, ) = WST_ETH.call{value: msg.value}("");
         require(sent, "Failed to send Ether to wst contract");
         uint256 received = IWStETH(WST_ETH).balanceOf(address(this)) -
-            balancePre;
+            wstEthBalancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

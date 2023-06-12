@@ -12,7 +12,6 @@ import "./DerivativeBase.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract SfrxEth is DerivativeBase {
     address private constant SFRX_ETH_ADDRESS =
@@ -102,10 +101,12 @@ contract SfrxEth is DerivativeBase {
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(
             FRX_ETH_MINTER_ADDRESS
         );
-        uint256 balancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
+        uint256 sfrxBalancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(
+            address(this)
+        );
         frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
         uint256 received = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this)) -
-            balancePre;
+            sfrxBalancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

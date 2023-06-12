@@ -82,12 +82,14 @@ contract Swell is DerivativeBase {
         @notice - Deposit into sweth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 balancePre = IERC20(SWETH_ADDRESS).balanceOf(address(this));
+        uint256 swethBalanceBefore = IERC20(SWETH_ADDRESS).balanceOf(
+            address(this)
+        );
         IWETH(WETH_ADDRESS).deposit{value: msg.value}();
         uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
         swapInputSingle(amount, WETH_ADDRESS, SWETH_ADDRESS);
         uint256 received = IERC20(SWETH_ADDRESS).balanceOf(address(this)) -
-            balancePre;
+            swethBalanceBefore;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

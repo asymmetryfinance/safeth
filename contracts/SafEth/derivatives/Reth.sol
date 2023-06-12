@@ -128,10 +128,12 @@ contract Reth is DerivativeBase {
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 balancePre = IERC20(rethAddress()).balanceOf(address(this));
+        uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
+            address(this)
+        );
         balancerSwap(msg.value);
         uint256 received = IERC20(rethAddress()).balanceOf(address(this)) -
-            balancePre;
+            rethBalanceBefore;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,
