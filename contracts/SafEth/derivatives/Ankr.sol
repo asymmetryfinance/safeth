@@ -63,7 +63,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function withdraw(uint256 _amount) public onlyOwner {
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
-        uint256 price = ethPerDerivativeValidated();
+        uint256 price = ethPerDerivative(true);
         uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, minOut);
         // solhint-disable-next-line
@@ -92,16 +92,10 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() external view returns (uint256) {
+    function ethPerDerivative(bool) public view returns (uint256) {
         return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
     }
 
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivativeValidated() public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
-    }
     /**
         @notice - Total derivative balance
      */

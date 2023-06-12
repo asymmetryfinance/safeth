@@ -103,7 +103,7 @@ contract Swell is
         );
 
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivativeValidated();
+            ethPerDerivative(true);
 
         IWETH(WETH_ADDRESS).deposit{value: msg.value}();
         uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
@@ -121,15 +121,8 @@ contract Swell is
 
     /**
         @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivativeValidated() public view returns (uint256) {
-        return ISwellEth(SWETH_ADDRESS).swETHToETHRate();
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
     */
-    function ethPerDerivative() external view returns (uint256) {
+    function ethPerDerivative(bool) public view returns (uint256) {
         return ISwellEth(SWETH_ADDRESS).swETHToETHRate();
     }
 

@@ -24,12 +24,7 @@ interface IDerivative {
     function withdraw(uint256 amount) external;
 
     /// Estimated price per derivative when depositing amount
-    function ethPerDerivative() external view returns (uint256);
-
-    /// Estimated price per derivative when depositing amount
-    /// can revert if price is found to be invalid (old oracle price etc)
-    /// to be used internally by stake/unstake and not frontends
-    function ethPerDerivativeValidated() external view returns (uint256);
+    function ethPerDerivative(bool _validate) external view returns (uint256);
 
     /// underlying derivative balance held by this contract
     function balance() external view returns (uint256);
