@@ -151,7 +151,6 @@ contract Stafi is
         return IStafi(STAFI_TOKEN).getExchangeRate();
     }
 
-
     /**
         @notice - Total derivative balance
      */

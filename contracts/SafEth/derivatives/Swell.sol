@@ -126,7 +126,6 @@ contract Swell is
         return ISwellEth(SWETH_ADDRESS).swETHToETHRate();
     }
 
-
     /**
         @notice - Total derivative balance
      */

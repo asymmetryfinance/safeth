@@ -127,19 +127,19 @@ contract WstEth is
             cl.answer = answer;
             cl.updatedAt = updatedAt;
         } catch {
-            if(!_validate) return 0;
+            if (!_validate) return 0;
             cl.success = false;
         }
 
         // verify chainlink response
         if (
             !_validate ||
-            cl.success == true &&
-            cl.roundId != 0 &&
-            cl.answer >= 0 &&
-            cl.updatedAt != 0 &&
-            cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 25 hours
+            (cl.success == true &&
+                cl.roundId != 0 &&
+                cl.answer >= 0 &&
+                cl.updatedAt != 0 &&
+                cl.updatedAt <= block.timestamp &&
+                block.timestamp - cl.updatedAt <= 25 hours)
         ) {
             uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
             if (cl.answer < 0) cl.answer = 0;

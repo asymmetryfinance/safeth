@@ -168,19 +168,19 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             cl.answer = answer;
             cl.updatedAt = updatedAt;
         } catch {
-            if(!_validate) return 0;
+            if (!_validate) return 0;
             cl.success = false;
         }
 
         // verify chainlink response
         if (
             !_validate ||
-            cl.success == true &&
-            cl.roundId != 0 &&
-            cl.answer >= 0 &&
-            cl.updatedAt != 0 &&
-            cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 25 hours
+            (cl.success == true &&
+                cl.roundId != 0 &&
+                cl.answer >= 0 &&
+                cl.updatedAt != 0 &&
+                cl.updatedAt <= block.timestamp &&
+                block.timestamp - cl.updatedAt <= 25 hours)
         ) {
             return uint256(cl.answer);
         } else {
