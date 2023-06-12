@@ -1,6 +1,6 @@
 {
   "name": "@asymmetryfinance/smart-contracts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Participate in curve wars through staked ETH derivatives and CVX",
   "private": false,
   "scripts": {

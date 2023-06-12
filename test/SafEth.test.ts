@@ -1138,7 +1138,7 @@ describe("SafEth", function () {
       // after initial stake price = 1 Eth
       expect(priceAfterStake).eq("1000000000000000000");
 
-      await time.increase(10000);
+      await time.increase(100);
       const priceAfterTimeIncrease = await safEth.approxPrice();
 
       // price has increased after some time
