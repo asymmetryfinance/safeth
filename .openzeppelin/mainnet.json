@@ -29,6 +29,21 @@
       "address": "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad",
       "txHash": "0xadfc0c64c6d1349004527bed39786a59d0340e4f511b694a2ba4f6432ad25fb5",
       "kind": "transparent"
+    },
+    {
+      "address": "0x410EdAf016482c8d3a866f778c24bD872a8797Cf",
+      "txHash": "0xb8a2c2c9b30308d2270f275f8807e6d75ef50f438b93c0b73f842b9a2b82932a",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xdF7205Bd4Aa3985Da5626d588c1215fb37C0c0CD",
+      "txHash": "0x1886314fe5b31c0025b071cd93919205dc5d2fc18d9a46d26008546c02b310de",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xA2f35A80a2F7AB67CF9187A4988129Aa4c7F920C",
+      "txHash": "0xc1c5eebdf3fdbfbdf1c47e8f80125588f63a2f936d8a1b39195eefc66fb51e33",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1644,6 +1659,114 @@
             "type": "t_uint256",
             "contract": "Reth",
             "src": "contracts/SafEth/derivatives/Reth.sol:37"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes4": {
+            "label": "bytes4",
+            "numberOfBytes": "4"
+          },
+          "t_mapping(t_bytes4,t_bool)": {
+            "label": "mapping(bytes4 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "fc736ad4c4d1a15e23cde117365da246d5d7600b739b18191851694963fe5312": {
+      "address": "0x4fB6c0F144790ee49CEE25f62feE0c3Fe5884fe6",
+      "txHash": "0xd0913522897074f436980ac177ec38628a9729a8d03753d82ffebc6d465d4be8",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_supportedInterfaces",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_bytes4,t_bool)",
+            "contract": "ERC165Storage",
+            "src": "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol:18"
+          },
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "1",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "maxSlippage",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_uint256",
+            "contract": "SfrxEth",
+            "src": "contracts/SafEth/derivatives/SfrxEth.sol:30"
+          },
+          {
+            "label": "underlyingBalance",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_uint256",
+            "contract": "SfrxEth",
+            "src": "contracts/SafEth/derivatives/SfrxEth.sol:31"
           }
         ],
         "types": {

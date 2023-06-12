@@ -24,7 +24,7 @@ import { within1Percent } from "./helpers/functions";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
-  let safEthProxy: SafEth;
+  let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
   let snapshot: SnapshotRestorer;
   let initialHardhatBlock: number; // incase we need to reset to where we started
@@ -42,13 +42,13 @@ describe("SafEth", function () {
       ],
     });
 
-    safEthProxy = (await deploySafEth()) as SafEth;
+    safEth = (await deploySafEth()) as SafEth;
 
     const SafEthReentrancyTestFactory = await ethers.getContractFactory(
       "SafEthReentrancyTest"
     );
     safEthReentrancyTest = (await SafEthReentrancyTestFactory.deploy(
-      safEthProxy.address
+      safEth.address
     )) as SafEthReentrancyTest;
     await safEthReentrancyTest.deployed();
 
@@ -58,24 +58,24 @@ describe("SafEth", function () {
 
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
-    await safEthProxy.setMaxPreMintAmount("3000000000000000000");
+    await safEth.setMaxPreMintAmount("3000000000000000000");
   });
 
   describe("Large Amounts", function () {
     it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
       const depositAmount = ethers.utils.parseEther("200");
-      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      const tx1 = await safEth.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
 
       const contractEthBalance = await ethers.provider.getBalance(
-        safEthProxy.address
+        safEth.address
       );
       expect(contractEthBalance).eq(0);
 
-      const tx2 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address),
+      const tx2 = await safEth.unstake(
+        await safEth.balanceOf(adminAccount.address),
         0
       );
       const mined2 = await tx2.wait();
@@ -90,49 +90,47 @@ describe("SafEth", function () {
       ).eq(true);
     });
     it("Should fail unstake on zero safEthAmount", async function () {
-      await expect(safEthProxy.unstake(0, 0)).revertedWith("amount too low");
+      await expect(safEth.unstake(0, 0)).revertedWith("amount too low");
     });
     it("Should fail unstake on invalid safEthAmount", async function () {
-      await expect(safEthProxy.unstake(10, 0)).revertedWith(
-        "insufficient balance"
-      );
+      await expect(safEth.unstake(10, 0)).revertedWith("insufficient balance");
     });
     it("Should fail with wrong min/max", async function () {
       let depositAmount = ethers.utils.parseEther(".002");
       await expect(
-        safEthProxy.stake(0, { value: depositAmount })
+        safEth.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too low");
 
       depositAmount = ethers.utils.parseEther("2050");
       await expect(
-        safEthProxy.stake(0, { value: depositAmount })
+        safEth.stake(0, { value: depositAmount })
       ).to.be.revertedWith("amount too high");
     });
   });
 
   describe("Slippage", function () {
-    it("Should set slippage derivatives via the strategy contract", async function () {
+    it("Should set slippage derivatives via the safEth contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-      const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       for (let i = 0; i < derivativeCount; i++) {
-        await safEthProxy.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
+        await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
       }
-      await safEthProxy.stake(0, { value: depositAmount });
+      await safEth.stake(0, { value: depositAmount });
 
       for (let i = 0; i < derivativeCount; i++) {
-        await safEthProxy.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
+        await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
       }
-      await safEthProxy.stake(0, { value: depositAmount });
+      await safEth.stake(0, { value: depositAmount });
     });
   });
   describe("Pre-mint", function () {
     it("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("2");
-      expect(depositAmount).lte(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).lte(await safEth.maxPreMintAmount());
 
       // premint eth
-      let tx = await safEthProxy.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, {
         value: depositAmount,
       });
       let receipt = await tx.wait();
@@ -140,38 +138,38 @@ describe("SafEth", function () {
       const preMintedAmount = event?.args?.[1];
       // stake ~2 eth to get preminted safeth
       // need to use a little less than 2 ETH due to price going up after staking
-      tx = await safEthProxy.stake(0, { value: preMintedAmount });
+      tx = await safEth.stake(0, { value: preMintedAmount });
       receipt = await tx.wait();
       event = await receipt?.events?.[receipt?.events?.length - 1];
       const amountMinted = await receipt?.events?.[0]?.args?.[2];
 
       expect(event?.args?.[4]).eq(true); // uses preminted safeth
       expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
-      expect(await safEthProxy.preMintedSupply()).lt(
+      expect(await safEth.preMintedSupply()).lt(
         ethers.utils.parseEther(".0000001")
       );
     });
     it("Should mint safEth if under max premint amount but over premint available", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-      const preMintSupply = await safEthProxy.preMintedSupply();
+      const preMintSupply = await safEth.preMintedSupply();
       expect(depositAmount).gt(preMintSupply);
       expect(preMintSupply).gt(0);
 
-      const tx = await safEthProxy.stake(0, { value: depositAmount });
+      const tx = await safEth.stake(0, { value: depositAmount });
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
     it("Shouldn't premint safEth if over max premint amount", async function () {
-      const depositAmount = (await safEthProxy.maxPreMintAmount()).add(1);
-      const preMintSupply = await safEthProxy.preMintedSupply();
+      const depositAmount = (await safEth.maxPreMintAmount()).add(1);
+      const preMintSupply = await safEth.preMintedSupply();
 
-      expect(depositAmount).gt(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).gt(await safEth.maxPreMintAmount());
       expect(depositAmount).gt(preMintSupply);
       expect(preMintSupply).gt(0);
 
-      const tx = await safEthProxy.stake(0, { value: depositAmount });
+      const tx = await safEth.stake(0, { value: depositAmount });
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
@@ -180,26 +178,26 @@ describe("SafEth", function () {
     it("Should use approx price if approxPrice > floorPrice", async function () {
       const preMintAmount = ethers.utils.parseEther("2");
       // premint eth
-      let tx = await safEthProxy.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, {
         value: preMintAmount,
       });
       await tx.wait();
 
       const depositAmount = ethers.utils.parseEther("1");
-      const preMintSupply = await safEthProxy.preMintedSupply();
+      const preMintSupply = await safEth.preMintedSupply();
 
-      expect(depositAmount).lt(await safEthProxy.maxPreMintAmount());
+      expect(depositAmount).lt(await safEth.maxPreMintAmount());
       expect(depositAmount).lt(preMintSupply);
 
-      tx = await safEthProxy.stake(0, { value: depositAmount });
+      tx = await safEth.stake(0, { value: depositAmount });
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
-      expect(await safEthProxy.floorPrice()).lt(event?.args?.[3]);
+      expect(await safEth.floorPrice()).lt(event?.args?.[3]);
     });
     it("Should use floor price if approxPrice <= floorPrice", async function () {
       // upgrade contract to support mocking floorPrice
-      const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+      const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
 
       const preMintAmount = ethers.utils.parseEther("2");
@@ -229,21 +227,21 @@ describe("SafEth", function () {
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
       const contractEthBalance = await ethers.provider.getBalance(
-        safEthProxy.address
+        safEth.address
       );
-      expect(contractEthBalance.sub(await safEthProxy.ethToClaim())).eq(0);
+      expect(contractEthBalance.sub(await safEth.ethToClaim())).eq(0);
 
       expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
     });
     it("Owner can withdraw ETH from their preMinted funds", async function () {
-      const ethToClaim = await safEthProxy.ethToClaim();
+      const ethToClaim = await safEth.ethToClaim();
       expect(ethToClaim).gt(ethers.utils.parseEther("3"));
 
       const beforeBalance = await ethers.provider.getBalance(
         adminAccount.address
       );
 
-      await safEthProxy.withdrawEth();
+      await safEth.withdrawEth();
       const afterBalance = await ethers.provider.getBalance(
         adminAccount.address
       );
@@ -254,7 +252,7 @@ describe("SafEth", function () {
     });
     it("Can't claim funds if not owner", async function () {
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(nonOwnerSigner.withdrawEth()).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
@@ -263,7 +261,7 @@ describe("SafEth", function () {
       const preMintAmount = ethers.utils.parseEther("2");
 
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(
         nonOwnerSigner.preMint(0, false, {
           value: preMintAmount,
@@ -272,26 +270,26 @@ describe("SafEth", function () {
     });
     it("Can't change max premint if not owner", async function () {
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(
         nonOwnerSigner.setMaxPreMintAmount(ethers.utils.parseEther("2.5"))
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
     it("Should change max premint amount", async function () {
-      await safEthProxy.setMaxPreMintAmount(ethers.utils.parseEther("2.5"));
-      expect(await safEthProxy.maxPreMintAmount()).to.eq(
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.5"));
+      expect(await safEth.maxPreMintAmount()).to.eq(
         ethers.utils.parseEther("2.5")
       );
     });
     it("User be able to call preMint() passing _useBalance as true", async function () {
       const depositAmount = ethers.utils.parseEther("2");
-      const ethToClaimBefore = await safEthProxy.ethToClaim();
+      const ethToClaimBefore = await safEth.ethToClaim();
       const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
-      const tx = await safEthProxy.preMint(0, true, {
+      const tx = await safEth.preMint(0, true, {
         value: depositAmount,
       });
       await tx.wait();
-      const ethToClaimAfter = await safEthProxy.ethToClaim();
+      const ethToClaimAfter = await safEth.ethToClaim();
       expect(ethToClaimAfter).eq(expectedEthToClaimAfter);
     });
   });
@@ -299,7 +297,7 @@ describe("SafEth", function () {
     it("Should revert if sent eth by a user", async function () {
       await expect(
         adminAccount.sendTransaction({
-          to: safEthProxy.address,
+          to: safEth.address,
           value: ethers.utils.parseEther("1.0"),
         })
       ).to.be.revertedWith("Not a derivative contract");
@@ -324,14 +322,14 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
       await expect(
-        safEthProxy.stake(minOut, { value: depositAmount })
+        safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("preMint amount less than minOut");
     });
     it("Should fail staking with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("5");
       const minOut = ethers.utils.parseEther("6");
       await expect(
-        safEthProxy.stake(minOut, { value: depositAmount })
+        safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("mint amount less than minOut");
     });
   });
@@ -356,38 +354,38 @@ describe("SafEth", function () {
   });
   describe("Enable / Disable", function () {
     it("Should fail to enable / disable a non-existent derivative", async function () {
-      await expect(safEthProxy.disableDerivative(999)).to.be.revertedWith(
+      await expect(safEth.disableDerivative(999)).to.be.revertedWith(
         "derivative index out of bounds"
       );
-      await expect(safEthProxy.enableDerivative(999)).to.be.revertedWith(
+      await expect(safEth.enableDerivative(999)).to.be.revertedWith(
         "derivative index out of bounds"
       );
     });
     it("Should fail to enable / disable an already enabled / disabled derivative", async function () {
-      await expect(safEthProxy.enableDerivative(0)).to.be.revertedWith(
+      await expect(safEth.enableDerivative(0)).to.be.revertedWith(
         "derivative already enabled"
       );
-      const tx = await safEthProxy.disableDerivative(0);
+      const tx = await safEth.disableDerivative(0);
       await tx.wait();
-      await expect(safEthProxy.disableDerivative(0)).to.be.revertedWith(
+      await expect(safEth.disableDerivative(0)).to.be.revertedWith(
         "derivative not enabled"
       );
       // re enable derivative so other tests behave as expected
-      const tx2 = await safEthProxy.enableDerivative(0);
+      const tx2 = await safEth.enableDerivative(0);
       await tx2.wait();
     });
 
     it("Should lower price for everyone when a derivative is disabled and raise price when enabled", async () => {
       const depositAmount = ethers.utils.parseEther("1");
-      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      const tx1 = await safEth.stake(0, { value: depositAmount });
       await tx1.wait();
-      const priceBefore = await safEthProxy.approxPrice();
-      await safEthProxy.disableDerivative(0);
-      const priceAfter = await safEthProxy.approxPrice();
+      const priceBefore = await safEth.approxPrice();
+      await safEth.disableDerivative(0);
+      const priceAfter = await safEth.approxPrice();
 
-      await safEthProxy.enableDerivative(0);
+      await safEth.enableDerivative(0);
 
-      const priceFinal = await safEthProxy.approxPrice();
+      const priceFinal = await safEth.approxPrice();
 
       expect(priceBefore).gt(priceAfter);
       expect(priceFinal).gt(priceAfter);
@@ -399,68 +397,62 @@ describe("SafEth", function () {
     it("Should allow disabling of a broken derivative so the others still work", async () => {
       const factory = await ethers.getContractFactory("BrokenDerivative");
       const brokenDerivative = await upgrades.deployProxy(factory, [
-        safEthProxy.address,
+        safEth.address,
       ]);
       const broken = await brokenDerivative.deployed();
 
       const depositAmount = ethers.utils.parseEther("1");
 
       // staking works before adding the bad derivative
-      const tx1 = await safEthProxy.stake(0, { value: depositAmount });
+      const tx1 = await safEth.stake(0, { value: depositAmount });
       await tx1.wait();
 
-      await safEthProxy.addDerivative(broken.address, 100);
+      await safEth.addDerivative(broken.address, 100);
 
       // staking is broken after deploying broken derivative
       await expect(
-        safEthProxy.stake(0, { value: depositAmount })
+        safEth.stake(0, { value: depositAmount })
       ).to.be.revertedWith("Broken Derivative");
 
       // unstaking is broken after deploying broken derivative
       await expect(
-        safEthProxy.unstake(
-          await safEthProxy.balanceOf(adminAccount.address),
-          0
-        )
+        safEth.unstake(await safEth.balanceOf(adminAccount.address), 0)
       ).to.be.revertedWith("Broken Derivative");
 
-      const tx2 = await safEthProxy.disableDerivative(
-        (await safEthProxy.derivativeCount()).sub(1)
+      const tx2 = await safEth.disableDerivative(
+        (await safEth.derivativeCount()).sub(1)
       );
       await tx2.wait();
 
       // stake and unstake both work after disabling the problematic derivative
-      await safEthProxy.stake(0, { value: depositAmount });
-      await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address),
-        0
-      );
+      await safEth.stake(0, { value: depositAmount });
+      await safEth.unstake(await safEth.balanceOf(adminAccount.address), 0);
     });
   });
 
   describe("Owner functions", function () {
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
-      const tx1 = await safEthProxy.setPauseStaking(true);
+      const tx1 = await safEth.setPauseStaking(true);
       await tx1.wait();
       const depositAmount = ethers.utils.parseEther("1");
 
-      const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
       const initialWeight = BigNumber.from("1000000000000000000");
 
       for (let i = 0; i < derivativeCount; i++) {
-        if (!(await safEthProxy.derivatives(i)).enabled) continue;
-        const tx2 = await safEthProxy.adjustWeight(i, initialWeight);
+        if (!(await safEth.derivatives(i)).enabled) continue;
+        const tx2 = await safEth.adjustWeight(i, initialWeight);
         await tx2.wait();
       }
       await expect(
-        safEthProxy.stake(0, { value: depositAmount })
+        safEth.stake(0, { value: depositAmount })
       ).to.be.revertedWith("staking is paused");
 
-      const tx3 = await safEthProxy.setPauseUnstaking(true);
+      const tx3 = await safEth.setPauseUnstaking(true);
       await tx3.wait();
 
-      await expect(safEthProxy.unstake(1000, 0)).to.be.revertedWith(
+      await expect(safEth.unstake(1000, 0)).to.be.revertedWith(
         "unstaking is paused"
       );
 
@@ -470,8 +462,8 @@ describe("SafEth", function () {
 
     it("Should fail to call setPauseStaking() if setting the same value", async function () {
       snapshot = await takeSnapshot();
-      const tx1 = await safEthProxy.setPauseStaking(true);
-      await expect(safEthProxy.setPauseStaking(true)).to.be.revertedWith(
+      const tx1 = await safEth.setPauseStaking(true);
+      await expect(safEth.setPauseStaking(true)).to.be.revertedWith(
         "already set"
       );
       await tx1.wait();
@@ -480,8 +472,8 @@ describe("SafEth", function () {
 
     it("Should fail to call setPauseUnstaking() if setting the same value", async function () {
       snapshot = await takeSnapshot();
-      const tx1 = await safEthProxy.setPauseUnstaking(true);
-      await expect(safEthProxy.setPauseUnstaking(true)).to.be.revertedWith(
+      const tx1 = await safEth.setPauseUnstaking(true);
+      await expect(safEth.setPauseUnstaking(true)).to.be.revertedWith(
         "already set"
       );
       await tx1.wait();
@@ -490,7 +482,7 @@ describe("SafEth", function () {
 
     it("Should fail with adding non erc 165 compliant derivative", async function () {
       await expect(
-        safEthProxy.addDerivative(WSTETH_ADDRESS, "1000000000000000000")
+        safEth.addDerivative(WSTETH_ADDRESS, "1000000000000000000")
       ).to.be.revertedWith("invalid contract");
     });
     it("Should fail with adding invalid erc165 derivative", async function () {
@@ -498,16 +490,16 @@ describe("SafEth", function () {
         "InvalidErc165Derivative"
       );
       const derivative0 = await upgrades.deployProxy(derivativeFactory0, [
-        safEthProxy.address,
+        safEth.address,
       ]);
       await derivative0.deployed();
       await expect(
-        safEthProxy.addDerivative(derivative0.address, "1000000000000000000")
+        safEth.addDerivative(derivative0.address, "1000000000000000000")
       ).to.be.revertedWith("invalid derivative");
     });
     it("Should only allow owner to call pausing functions", async function () {
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(nonOwnerSigner.setPauseStaking(true)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
@@ -517,19 +509,19 @@ describe("SafEth", function () {
     });
     it("Should be able to change min/max", async function () {
       snapshot = await takeSnapshot();
-      await safEthProxy.setMinAmount(100);
-      const minAmount = await safEthProxy.minAmount();
+      await safEth.setMinAmount(100);
+      const minAmount = await safEth.minAmount();
       expect(minAmount).eq(100);
 
-      await safEthProxy.setMaxAmount(999);
-      const maxAmount = await safEthProxy.maxAmount();
+      await safEth.setMaxAmount(999);
+      const maxAmount = await safEth.maxAmount();
       expect(maxAmount).eq(999);
 
       await snapshot.restore();
     });
     it("Should only allow owner to call min/max functions", async function () {
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(nonOwnerSigner.setMinAmount(100000000)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
@@ -539,7 +531,7 @@ describe("SafEth", function () {
     });
     it("Should revert if enableDerivative or disableDerivative is called by non-owner", async function () {
       const accounts = await ethers.getSigners();
-      const nonOwnerSigner = safEthProxy.connect(accounts[2]);
+      const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(nonOwnerSigner.enableDerivative(0)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
@@ -549,18 +541,18 @@ describe("SafEth", function () {
     });
     it("Should two step transfer", async function () {
       const accounts = await ethers.getSigners();
-      safEthProxy.transferOwnership(accounts[1].address);
-      await safEthProxy.setPauseStaking(true);
-      expect(await safEthProxy.pauseStaking()).eq(true);
+      safEth.transferOwnership(accounts[1].address);
+      await safEth.setPauseStaking(true);
+      expect(await safEth.pauseStaking()).eq(true);
 
-      const newOwnerSigner = safEthProxy.connect(accounts[1]);
+      const newOwnerSigner = safEth.connect(accounts[1]);
       await expect(newOwnerSigner.setPauseStaking(false)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
 
       await newOwnerSigner.acceptOwnership();
       await newOwnerSigner.setPauseStaking(false);
-      expect(await safEthProxy.pauseStaking()).eq(false);
+      expect(await safEth.pauseStaking()).eq(false);
     });
   });
 
@@ -577,21 +569,18 @@ describe("SafEth", function () {
       await snapshot.restore();
     });
     it("Should not be able to steal funds by sending derivative tokens", async function () {
-      const strategy = await getLatestContract(safEthProxy.address, "SafEth");
       const userAccounts = await getUserAccounts();
 
-      const userStrategySigner = strategy.connect(userAccounts[0]);
-      const userStrategySigner2 = strategy.connect(userAccounts[1]);
+      const userSafEthSigner = safEth.connect(userAccounts[0]);
+      const userSafEthSigner2 = safEth.connect(userAccounts[1]);
       const ethAmount = "100";
       const depositAmount = ethers.utils.parseEther(ethAmount);
 
-      const stakeResult = await userStrategySigner.stake(0, {
+      const stakeResult = await userSafEthSigner.stake(0, {
         value: depositAmount,
       });
 
-      const userSfEthBalance = await strategy.balanceOf(
-        userAccounts[0].address
-      );
+      const userSfEthBalance = await safEth.balanceOf(userAccounts[0].address);
       const userSfWithdraw = userSfEthBalance.sub(1);
 
       await network.provider.request({
@@ -608,7 +597,7 @@ describe("SafEth", function () {
       const derivative = derivatives[2].address;
 
       // remove all but 1 sfToken
-      await userStrategySigner.unstake(userSfWithdraw, 0);
+      await userSafEthSigner.unstake(userSfWithdraw, 0);
 
       const erc20Whale = erc20.connect(whaleSigner);
       const erc20Amount = ethers.utils.parseEther("10");
@@ -620,25 +609,25 @@ describe("SafEth", function () {
       const ethAmount2 = "1.5";
       const depositAmount2 = ethers.utils.parseEther(ethAmount2);
 
-      await userStrategySigner2.stake(0, {
+      await userSafEthSigner2.stake(0, {
         value: depositAmount2,
       });
 
       await stakeResult.wait();
 
-      const userSafEthBalance2 = await strategy.balanceOf(
+      const userSafEthBalance2 = await safEth.balanceOf(
         userAccounts[1].address
       );
       expect(userSafEthBalance2).gt(0);
 
       // attacker has 1 sfToken
-      const attakcerSafEthBalance = await strategy.balanceOf(
+      const attakcerSafEthBalance = await safEth.balanceOf(
         userAccounts[0].address
       );
       expect(attakcerSafEthBalance).eq(1);
 
       // total supply is gt 1.
-      const totalSupply = await strategy.totalSupply();
+      const totalSupply = await safEth.totalSupply();
       expect(totalSupply).gt(1);
     });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
@@ -778,9 +767,9 @@ describe("SafEth", function () {
       ).eq(true);
     });
     it("Should successfully call setChainlinkFeed() on all derivatives", async function () {
-      const derivativeCount = await safEthProxy.derivativeCount();
+      const derivativeCount = await safEth.derivativeCount();
       for (let i = 0; i < derivativeCount.toNumber(); i++) {
-        await safEthProxy.setChainlinkFeed(
+        await safEth.setChainlinkFeed(
           i,
           "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
         );
@@ -797,25 +786,25 @@ describe("SafEth", function () {
     });
 
     it("Should have the same proxy address before and after upgrading", async () => {
-      const addressBefore = safEthProxy.address;
-      const strategy2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
-      await strategy2.deployed();
-      const addressAfter = strategy2.address;
+      const addressBefore = safEth.address;
+      const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
+      await safEth2.deployed();
+      const addressAfter = safEth2.address;
       expect(addressBefore).eq(addressAfter);
     });
     it("Should allow v2 functionality to be used after upgrading", async () => {
-      const strategy2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
-      await strategy2.deployed();
-      expect(await strategy2.newFunctionCalled()).eq(false);
-      const tx = await strategy2.newFunction();
+      const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
+      await safEth2.deployed();
+      expect(await safEth2.newFunctionCalled()).eq(false);
+      const tx = await safEth2.newFunction();
       await tx.wait();
-      expect(await strategy2.newFunctionCalled()).eq(true);
+      expect(await safEth2.newFunctionCalled()).eq(true);
     });
 
     it("Should get latest version of an already upgraded contract and use new functionality", async () => {
-      await upgrade(safEthProxy.address, "SafEthV2Mock");
+      await upgrade(safEth.address, "SafEthV2Mock");
       const latestContract = await getLatestContract(
-        safEthProxy.address,
+        safEth.address,
         "SafEthV2Mock"
       );
       await latestContract.deployed();
@@ -825,10 +814,10 @@ describe("SafEth", function () {
       expect(await latestContract.newFunctionCalled()).eq(true);
     });
 
-    it("Should be able to upgrade both the strategy contract and its derivatives and still function correctly", async () => {
-      const strategy2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+    it("Should be able to upgrade both the safEth contract and its derivatives and still function correctly", async () => {
+      const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
 
-      const derivativeAddressToUpgrade = (await strategy2.derivatives(1))
+      const derivativeAddressToUpgrade = (await safEth2.derivatives(1))
         .derivative;
 
       const upgradedDerivative = await upgrade(
@@ -838,14 +827,14 @@ describe("SafEth", function () {
       await upgradedDerivative.deployed();
 
       const depositAmount = ethers.utils.parseEther("1");
-      const tx1 = await strategy2.stake(0, { value: depositAmount });
+      const tx1 = await safEth2.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
 
       const balanceBeforeWithdraw = await adminAccount.getBalance();
 
-      const tx2 = await strategy2.unstake(
-        await safEthProxy.balanceOf(adminAccount.address),
+      const tx2 = await safEth2.unstake(
+        await safEth.balanceOf(adminAccount.address),
         0
       );
       const mined2 = await tx2.wait();
@@ -864,7 +853,7 @@ describe("SafEth", function () {
     });
 
     it("Should allow owner to use admin features on upgraded contracts", async () => {
-      const safEth2 = await upgrade(safEthProxy.address, "SafEthV2Mock");
+      const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
       const depositAmount = ethers.utils.parseEther("1");
       const tx1 = await safEth2.stake(0, { value: depositAmount });
@@ -937,7 +926,7 @@ describe("SafEth", function () {
     });
 
     it("Should rebalance the underlying values to current weights", async () => {
-      const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000"); // 10^18
       const initialDeposit = ethers.utils.parseEther("1");
@@ -945,15 +934,15 @@ describe("SafEth", function () {
       // set all derivatives to the same weight and stake
       // if there are 3 derivatives this is 33/33/33
       for (let i = 0; i < derivativeCount; i++) {
-        const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+        const tx1 = await safEth.adjustWeight(i, initialWeight);
         await tx1.wait();
       }
-      const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
+      const tx2 = await safEth.stake(0, { value: initialDeposit });
       await tx2.wait();
 
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // this is like 33/33/33 -> 50/25/25 (3 derivatives)
-      safEthProxy.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
+      safEth.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
       await rebalanceToWeights();
 
       const ethBalances = await estimatedDerivativeValues();
@@ -974,7 +963,7 @@ describe("SafEth", function () {
     });
 
     it("Should stake with a weight set to 0", async () => {
-      const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000");
       const initialDeposit = ethers.utils.parseEther("1");
@@ -982,13 +971,13 @@ describe("SafEth", function () {
       // set all derivatives to the same weight and stake
       // if there are 3 derivatives this is 33/33/33
       for (let i = 0; i < derivativeCount; i++) {
-        const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+        const tx1 = await safEth.adjustWeight(i, initialWeight);
         await tx1.wait();
       }
 
-      const tx2 = await safEthProxy.adjustWeight(0, 0);
+      const tx2 = await safEth.adjustWeight(0, 0);
       await tx2.wait();
-      const tx3 = await safEthProxy.stake(0, { value: initialDeposit });
+      const tx3 = await safEth.stake(0, { value: initialDeposit });
       await tx3.wait();
 
       const ethBalances = await estimatedDerivativeValues();
@@ -1008,7 +997,7 @@ describe("SafEth", function () {
     });
 
     it("Should stake, set a weight to 0, rebalance, & unstake", async () => {
-      const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000");
       const initialDeposit = ethers.utils.parseEther("1");
@@ -1019,27 +1008,27 @@ describe("SafEth", function () {
       // set all derivatives to the same weight and stake
       // if there are 3 derivatives this is 33/33/33
       for (let i = 0; i < derivativeCount; i++) {
-        const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+        const tx1 = await safEth.adjustWeight(i, initialWeight);
         const mined1 = await tx1.wait();
         const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
         totalNetworkFee = totalNetworkFee.add(networkFee1);
       }
-      const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
+      const tx2 = await safEth.stake(0, { value: initialDeposit });
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee2);
 
       // set derivative 0 to 0, rebalance and stake
       // This is like 33/33/33 -> 0/50/50
-      const tx3 = await safEthProxy.adjustWeight(0, 0);
+      const tx3 = await safEth.adjustWeight(0, 0);
       const mined3 = await tx3.wait();
       const networkFee3 = mined3.gasUsed.mul(mined3.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee3);
 
       await rebalanceToWeights();
 
-      const tx5 = await safEthProxy.unstake(
-        await safEthProxy.balanceOf(adminAccount.address),
+      const tx5 = await safEth.unstake(
+        await safEth.balanceOf(adminAccount.address),
         0
       );
       const mined5 = await tx5.wait();
@@ -1055,24 +1044,24 @@ describe("SafEth", function () {
   });
 
   it("Should revert if totalWeight is 0", async () => {
-    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
     const initialDeposit = ethers.utils.parseEther("1");
 
     // set all derivatives to the same weight and stake
     // if there are 3 derivatives this is 33/33/33
     for (let i = 0; i < derivativeCount; i++) {
-      const tx1 = await safEthProxy.adjustWeight(i, 0);
+      const tx1 = await safEth.adjustWeight(i, 0);
       await tx1.wait();
     }
 
-    await expect(
-      safEthProxy.stake(0, { value: initialDeposit })
-    ).to.be.revertedWith("total weight is zero");
+    await expect(safEth.stake(0, { value: initialDeposit })).to.be.revertedWith(
+      "total weight is zero"
+    );
   });
 
   it("Should stake, sell all of a derivative into another and unstake", async () => {
-    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
     const initialWeight = BigNumber.from("1000000000000000000");
     const initialDeposit = ethers.utils.parseEther("1");
@@ -1083,25 +1072,25 @@ describe("SafEth", function () {
     // set all derivatives to the same weight and stake
     // if there are 3 derivatives this is 33/33/33
     for (let i = 0; i < derivativeCount; i++) {
-      const tx1 = await safEthProxy.adjustWeight(i, initialWeight);
+      const tx1 = await safEth.adjustWeight(i, initialWeight);
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
       totalNetworkFee = totalNetworkFee.add(networkFee1);
     }
-    const tx2 = await safEthProxy.stake(0, { value: initialDeposit });
+    const tx2 = await safEth.stake(0, { value: initialDeposit });
     const mined2 = await tx2.wait();
     const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
     totalNetworkFee = totalNetworkFee.add(networkFee2);
 
     // do rebalance stuff
 
-    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0Address = (await safEth.derivatives(0)).derivative;
     const derivative0 = new ethers.Contract(
       derivative0Address,
       derivativeAbi,
       adminAccount
     );
-    const derivative1Address = (await safEthProxy.derivatives(1)).derivative;
+    const derivative1Address = (await safEth.derivatives(1)).derivative;
     const derivative1 = new ethers.Contract(
       derivative1Address,
       derivativeAbi,
@@ -1111,7 +1100,7 @@ describe("SafEth", function () {
     const derivative0BalanceBefore = await derivative0.balance();
     const derivative1BalanceBefore = await derivative1.balance();
 
-    await safEthProxy.derivativeRebalance(0, 1, derivative0BalanceBefore);
+    await safEth.derivativeRebalance(0, 1, derivative0BalanceBefore);
 
     const derivative0BalanceAfter = await derivative0.balance();
     const derivative1BalanceAfter = await derivative1.balance();
@@ -1121,8 +1110,8 @@ describe("SafEth", function () {
       within1Percent(derivative1BalanceBefore.mul(2), derivative1BalanceAfter)
     ).eq(true);
 
-    const tx5 = await safEthProxy.unstake(
-      await safEthProxy.balanceOf(adminAccount.address),
+    const tx5 = await safEth.unstake(
+      await safEth.balanceOf(adminAccount.address),
       0
     );
     const mined5 = await tx5.wait();
@@ -1139,18 +1128,18 @@ describe("SafEth", function () {
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-      const startingPrice = await safEthProxy.approxPrice();
+      const startingPrice = await safEth.approxPrice();
       // starting price = 1 Eth
       expect(startingPrice).eq("1000000000000000000");
 
-      await safEthProxy.stake(0, { value: depositAmount });
+      await safEth.stake(0, { value: depositAmount });
 
-      const priceAfterStake = await safEthProxy.approxPrice();
+      const priceAfterStake = await safEth.approxPrice();
       // after initial stake price = 1 Eth
       expect(priceAfterStake).eq("1000000000000000000");
 
-      await time.increase(10000);
-      const priceAfterTimeIncrease = await safEthProxy.approxPrice();
+      await time.increase(100);
+      const priceAfterTimeIncrease = await safEth.approxPrice();
 
       // price has increased after some time
       expect(priceAfterTimeIncrease).gt(priceAfterStake);
@@ -1164,18 +1153,15 @@ describe("SafEth", function () {
 
     before(async () => {
       const accounts = await ethers.getSigners();
-      nonWhitelistedSafEthUser = safEthProxy.connect(accounts[0]);
-      whitelistedSafEthUser = safEthProxy.connect(accounts[1]);
+      nonWhitelistedSafEthUser = safEth.connect(accounts[0]);
+      whitelistedSafEthUser = safEth.connect(accounts[1]);
       blacklistedRecipientAddress = accounts[2].address;
 
-      await safEthProxy.setWhitelistedSender(
+      await safEth.setWhitelistedSender(
         await whitelistedSafEthUser.signer.getAddress(),
         true
       );
-      await safEthProxy.setBlacklistedRecipient(
-        blacklistedRecipientAddress,
-        true
-      );
+      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, true);
     });
 
     it("Should fail transfer() to blacklisted address from a non whitelisted address", async function () {
@@ -1223,28 +1209,22 @@ describe("SafEth", function () {
     });
 
     it("Should allow owner to edit the whitelist and blacklist", async function () {
-      await safEthProxy.setWhitelistedSender(
+      await safEth.setWhitelistedSender(
         await whitelistedSafEthUser.signer.getAddress(),
         false
       );
-      await safEthProxy.setBlacklistedRecipient(
-        blacklistedRecipientAddress,
-        false
-      );
-      await safEthProxy.setWhitelistedSender(
+      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, false);
+      await safEth.setWhitelistedSender(
         await whitelistedSafEthUser.signer.getAddress(),
         true
       );
-      await safEthProxy.setBlacklistedRecipient(
-        blacklistedRecipientAddress,
-        true
-      );
+      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, true);
     });
 
     it("Should fail if non-owner tries to edit the whitelist and blacklist", async function () {
       const accounts = await ethers.getSigners();
       const nonOwner = accounts[1];
-      const nonOwnerSafEthUser = safEthProxy.connect(nonOwner);
+      const nonOwnerSafEthUser = safEth.connect(nonOwner);
       await expect(
         nonOwnerSafEthUser.setWhitelistedSender(
           await nonOwnerSafEthUser.signer.getAddress(),
@@ -1256,11 +1236,11 @@ describe("SafEth", function () {
 
   // get estimated total eth value of each derivative
   const estimatedDerivativeValues = async () => {
-    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
     const ethBalances: BigNumber[] = [];
     for (let i = 0; i < derivativeCount; i++) {
-      const derivativeAddress = (await safEthProxy.derivatives(i)).derivative;
+      const derivativeAddress = (await safEth.derivatives(i)).derivative;
       const derivative = new ethers.Contract(
         derivativeAddress,
         derivativeAbi,
@@ -1277,37 +1257,37 @@ describe("SafEth", function () {
     return ethBalances;
   };
 
-  // function to show safEth.derivativeRebalance() can do everything safEth.rebalanceToWeights() does
+  // function to show safEth.derivativeRebalance() can do everything safEth.rebalanceToWeights() used to do
   const rebalanceToWeights = async () => {
-    const derivativeCount = (await safEthProxy.derivativeCount()).toNumber();
+    const derivativeCount = (await safEth.derivativeCount()).toNumber();
     // first sell them all into derivative0
     for (let i = 1; i < derivativeCount; i++) {
-      const derivativeAddress = (await safEthProxy.derivatives(i)).derivative;
+      const derivativeAddress = (await safEth.derivatives(i)).derivative;
       const derivative = new ethers.Contract(
         derivativeAddress,
         derivativeAbi,
         adminAccount
       );
       const derivativeBalance = await derivative.balance();
-      await safEthProxy.derivativeRebalance(i, 0, derivativeBalance);
+      await safEth.derivativeRebalance(i, 0, derivativeBalance);
     }
 
-    const derivative0Address = (await safEthProxy.derivatives(0)).derivative;
+    const derivative0Address = (await safEth.derivatives(0)).derivative;
     const derivative0 = new ethers.Contract(
       derivative0Address,
       derivativeAbi,
       adminAccount
     );
     const derivative0StartingBalance = await derivative0.balance();
-    const totalWeight = await safEthProxy.totalWeight();
+    const totalWeight = await safEth.totalWeight();
     // then rebalance to weights
     for (let i = 1; i < derivativeCount; i++) {
-      const derivativeInfo = await safEthProxy.derivatives(i);
+      const derivativeInfo = await safEth.derivatives(i);
       const weight = derivativeInfo.weight;
       const derivative0SellAmount = derivative0StartingBalance
         .mul(weight)
         .div(totalWeight);
-      await safEthProxy.derivativeRebalance(0, i, derivative0SellAmount);
+      await safEth.derivativeRebalance(0, i, derivative0SellAmount);
     }
   };
 });
