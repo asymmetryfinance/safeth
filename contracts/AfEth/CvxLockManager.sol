@@ -267,10 +267,7 @@ contract CvxLockManager is OwnableUpgradeable {
 
         cvxToLeaveUnlocked -= cvxAmount;
         require(
-            IERC20(CVX).transfer(
-                cvxPositions[positionId].owner,
-                cvxAmount
-            ),
+            IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxAmount),
             "Couldn't transfer"
         );
         withdrawRewards(positionId, cvxAmount);
