@@ -77,7 +77,6 @@ contract SfrxEth is DerivativeBase {
             FRX_ETH_CRV_POOL_ADDRESS,
             frxEthReceived
         );
-
         uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
             1,
@@ -85,10 +84,14 @@ contract SfrxEth is DerivativeBase {
             frxEthReceived,
             0
         );
-
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, ethReceived, false, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - ethBalanceBefore,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -99,15 +102,18 @@ contract SfrxEth is DerivativeBase {
         IFrxETHMinter frxETHMinterContract = IFrxETHMinter(
             FRX_ETH_MINTER_ADDRESS
         );
-        uint256 balancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(
-            address(this)
-        );
+        uint256 balancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
         frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
-        uint256 balancePost = IERC20(SFRX_ETH_ADDRESS).balanceOf(
-            address(this)
-        );
+        uint256 balancePost = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
         return received;
     }
 

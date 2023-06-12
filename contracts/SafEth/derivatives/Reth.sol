@@ -114,25 +114,32 @@ contract Reth is DerivativeBase {
             address(this)
         );
         IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        // solhint-disable-next-line
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 received = ethBalanceAfter - ethBalanceBefore;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - ethBalanceBefore,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 balancePre = IERC20(rethAddress()).balanceOf(
-            address(this)
-        );
+        uint256 balancePre = IERC20(rethAddress()).balanceOf(address(this));
         balancerSwap(msg.value);
-        uint256 balancePost = IERC20(rethAddress()).balanceOf(
-            address(this)
-        );
+        uint256 balancePost = IERC20(rethAddress()).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
         return received;
     }
 

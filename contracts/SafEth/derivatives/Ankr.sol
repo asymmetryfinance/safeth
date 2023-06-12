@@ -59,9 +59,14 @@ contract Ankr is DerivativeBase {
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
         uint256 balancePre = address(this).balance;
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, 0);
-        uint256 balancePost = address(this).balance;
-        uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
+        super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - balancePre,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -69,16 +74,19 @@ contract Ankr is DerivativeBase {
         @dev - Owner is set to SafEth contract
      */
     function deposit() public payable onlyOwner returns (uint256) {
-        uint256 balancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(
-            address(this)
-        );
+        uint256 balancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
 
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
-        uint256 balancePost = IERC20(ANKR_ETH_ADDRESS).balanceOf(
-            address(this)
-        );
+        uint256 balancePost = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
         return received;
     }
 

@@ -77,21 +77,22 @@ contract Stafi is DerivativeBase {
         swap.assetIn = address(STAFI_TOKEN);
         swap.assetOut = address(0x0000000000000000000000000000000000000000);
         swap.amount = _amount;
-
         IVault.FundManagement memory fundManagement;
         fundManagement.sender = address(this);
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
         IERC20(STAFI_TOKEN).approve(address(BALANCER_VAULT), _amount);
-
         uint256 balancePre = address(this).balance;
-
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
-        uint256 balancePost = address(this).balance;
-
-        uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - balancePre,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -111,11 +112,18 @@ contract Stafi is DerivativeBase {
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
-        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);      
+        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
         uint256 balancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
         return received;
     }
 

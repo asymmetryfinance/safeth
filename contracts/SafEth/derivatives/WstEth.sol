@@ -9,6 +9,7 @@ import "../../interfaces/lido/IWStETH.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./DerivativeBase.sol";
+
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
 contract WstEth is DerivativeBase {
@@ -69,9 +70,14 @@ contract WstEth is DerivativeBase {
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
         uint256 balancePre = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, 0);
-        uint256 balancePost = address(this).balance;
-        uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), _amount, maxSlippage, received, false, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - balancePre,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -85,7 +91,14 @@ contract WstEth is DerivativeBase {
         require(sent, "Failed to send Ether to wst contract");
         uint256 balancePost = IWStETH(WST_ETH).balanceOf(address(this));
         uint256 received = balancePost - balancePre;
-        underlyingBalance = super.finalChecks(ethPerDerivative(true), msg.value, maxSlippage, received, true, underlyingBalance);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
         return received;
     }
 
