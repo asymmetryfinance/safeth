@@ -104,7 +104,8 @@ contract SfrxEth is DerivativeBase {
         );
         uint256 balancePre = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this));
         frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
-        uint256 received = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this)) - balancePre;
+        uint256 received = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this)) -
+            balancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

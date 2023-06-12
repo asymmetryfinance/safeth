@@ -86,7 +86,8 @@ contract Swell is DerivativeBase {
         IWETH(WETH_ADDRESS).deposit{value: msg.value}();
         uint256 amount = IERC20(WETH_ADDRESS).balanceOf(address(this));
         swapInputSingle(amount, WETH_ADDRESS, SWETH_ADDRESS);
-        uint256 received = IERC20(SWETH_ADDRESS).balanceOf(address(this)) - balancePre;
+        uint256 received = IERC20(SWETH_ADDRESS).balanceOf(address(this)) -
+            balancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,

@@ -114,7 +114,8 @@ contract Stafi is DerivativeBase {
         IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
         IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
-        uint256 received = IStafi(STAFI_TOKEN).balanceOf(address(this)) - balancePre;
+        uint256 received = IStafi(STAFI_TOKEN).balanceOf(address(this)) -
+            balancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,
