@@ -15,16 +15,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./DerivativeBase.sol";
 
 /// @title Derivative contract for Stafi
 /// @author Asymmetry Finance
 
-contract Stafi is
-    ERC165Storage,
-    IDerivative,
-    Initializable,
-    OwnableUpgradeable
-{
+contract Stafi is DerivativeBase {
     address public constant STAFI_TOKEN =
         0x9559Aaa82d9649C7A7b220E7c461d2E74c9a3593;
     address public constant STAFI_USER_DEPOSIT =
@@ -40,21 +36,13 @@ contract Stafi is
 
     AggregatorV3Interface public chainlinkFeed;
 
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
-        require(_owner != address(0), "invalid address");
-        _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
     }
 
@@ -82,12 +70,7 @@ contract Stafi is
         @param _amount - amount of stafi to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        if (_amount == 0) {
-            return;
-        }
         underlyingBalance = underlyingBalance - _amount;
-        uint256 minOut = ((ethPerDerivative(true) * _amount) *
-            (1e18 - maxSlippage)) / 1e36;
 
         IVault.SingleSwap memory swap;
         swap
@@ -104,23 +87,20 @@ contract Stafi is
         fundManagement.toInternalBalance = false;
         IERC20(STAFI_TOKEN).approve(address(BALANCER_VAULT), _amount);
 
-        uint256 ethBalanceBefore = address(this).balance;
+        uint256 balancePre = address(this).balance;
 
-        BALANCER_VAULT.swap(swap, fundManagement, minOut, block.timestamp);
-        uint256 ethBalanceAfter = address(this).balance;
+        BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
+        uint256 balancePost = address(this).balance;
 
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
-        require(sent, "Failed to send Ether");
+        uint256 received = balancePost - balancePre;
+        super.checkSlippageAndWithdraw(ethPerDerivative(true), _amount, maxSlippage, received, false);
     }
 
     /**
         @notice - Deposit into stafi derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 stafiBalancePre = IStafi(STAFI_TOKEN).balanceOf(address(this));
+        uint256 balancePre = IStafi(STAFI_TOKEN).balanceOf(address(this));
         IVault.SingleSwap memory swap;
         swap
             .poolId = 0xb08885e6026bab4333a80024ec25a1a3e1ff2b8a000200000000000000000445;
@@ -133,15 +113,13 @@ contract Stafi is
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
-        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);
-        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivative(true);
-        BALANCER_VAULT.swap(swap, fundManagement, minOut, block.timestamp);
-        uint256 stafiBalancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
-        uint256 stafiAmount = stafiBalancePost - stafiBalancePre;
-        require(stafiAmount > 0, "Failed to send Stafi");
-        underlyingBalance = underlyingBalance + stafiAmount;
-        return (stafiAmount);
+        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);      
+        BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
+        uint256 balancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
+        uint256 received = balancePost - balancePre;
+        super.checkSlippageAndWithdraw(ethPerDerivative(true), received, maxSlippage, received, true);
+        underlyingBalance = underlyingBalance + received;
+        return received;
     }
 
     /**
@@ -157,6 +135,4 @@ contract Stafi is
     function balance() external view returns (uint256) {
         return underlyingBalance;
     }
-
-    receive() external payable {}
 }
