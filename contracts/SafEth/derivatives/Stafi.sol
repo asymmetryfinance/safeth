@@ -35,12 +35,10 @@ contract Stafi is
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    IVault public constant balancerVault =
+    IVault public constant BALANCER_VAULT =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    AggregatorV3Interface chainlinkFeed;
+    AggregatorV3Interface public chainlinkFeed;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -104,14 +102,16 @@ contract Stafi is
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
-        IERC20(STAFI_TOKEN).approve(address(balancerVault), _amount);
+        IERC20(STAFI_TOKEN).approve(address(BALANCER_VAULT), _amount);
 
         uint256 ethBalanceBefore = address(this).balance;
 
-        balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
+        BALANCER_VAULT.swap(swap, fundManagement, minOut, block.timestamp);
         uint256 ethBalanceAfter = address(this).balance;
 
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
+
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
@@ -132,11 +132,11 @@ contract Stafi is
         fundManagement.sender = address(this);
         fundManagement.recipient = address(this);
         fundManagement.fromInternalBalance = false;
-        IWETH(wETH).deposit{value: msg.value}();
-        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), msg.value);
+        IWETH(W_ETH_ADDRESS).deposit{value: msg.value}();
+        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), msg.value);
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
             ethPerDerivative();
-        balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
+        BALANCER_VAULT.swap(swap, fundManagement, minOut, block.timestamp);
         uint256 stafiBalancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 stafiAmount = stafiBalancePost - stafiBalancePre;
         require(stafiAmount > 0, "Failed to send Stafi");

@@ -85,9 +85,11 @@ contract Swell is
             address(this)
         );
         IWETH(WETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        // solhint-disable-next-line
+
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
+
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
