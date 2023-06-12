@@ -252,35 +252,35 @@ contract CvxLockManager is OwnableUpgradeable {
             "Invalid positionId"
         );
         require(cvxPositions[positionId].open == false, "Not closed");
-        require(cvxPositions[positionId].cvxAmount > 0, "No cvx to withdraw");
+        uint256 cvxAmount = cvxPositions[positionId].cvxAmount;
+        require(cvxAmount > 0, "No cvx to withdraw");
         uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
         require(
             currentEpoch >= cvxPositions[positionId].unlockEpoch,
             "Cvx still locked"
         );
+        cvxPositions[positionId].cvxAmount = 0;
 
         // relock if havent yet for this epochCount
         // ensures there will be enough unlocked cvx to withdraw
         relockCvx();
 
-        cvxToLeaveUnlocked -= cvxPositions[positionId].cvxAmount;
+        cvxToLeaveUnlocked -= cvxAmount;
         require(
             IERC20(CVX).transfer(
                 cvxPositions[positionId].owner,
-                cvxPositions[positionId].cvxAmount
+                cvxAmount
             ),
             "Couldn't transfer"
         );
-        withdrawRewards(positionId);
-
-        cvxPositions[positionId].cvxAmount = 0;
+        withdrawRewards(positionId, cvxAmount);
     }
 
     function getCurrentEpoch() public view returns (uint256) {
         return ILockedCvx(VL_CVX).findEpochId(block.timestamp);
     }
 
-    function withdrawRewards(uint256 positionId) private {
+    function withdrawRewards(uint256 _positionId, uint256 _cvxAmount) private {
         uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
 
         // only claim rewards if needed
@@ -288,9 +288,9 @@ contract CvxLockManager is OwnableUpgradeable {
             claimRewards();
         }
 
-        uint256 startingEpoch = cvxPositions[positionId].startingEpoch;
-        uint256 positionAmount = cvxPositions[positionId].cvxAmount;
-        uint256 unlockEpoch = cvxPositions[positionId].unlockEpoch;
+        uint256 startingEpoch = cvxPositions[_positionId].startingEpoch;
+        uint256 positionAmount = _cvxAmount;
+        uint256 unlockEpoch = cvxPositions[_positionId].unlockEpoch;
         require(
             unlockEpoch != 0 && currentEpoch >= unlockEpoch,
             "Position still locked"
