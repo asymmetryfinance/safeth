@@ -76,7 +76,7 @@ contract Swell is
         uint256 wethBalanceBefore = IERC20(WETH_ADDRESS).balanceOf(
             address(this)
         );
-        uint256 ethPerSweth = ethPerDerivativeValidated();
+        uint256 ethPerSweth = ethPerDerivative(true);
         uint256 minOut = ((ethPerSweth * _amount) * (1e18 - maxSlippage)) /
             1e36;
         swapInputSingle(_amount, minOut, SWETH_ADDRESS, WETH_ADDRESS);
