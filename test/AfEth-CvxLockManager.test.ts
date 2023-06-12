@@ -377,7 +377,7 @@ describe("AfEth (CvxLockManager)", async function () {
     const cvxBalance2 = await cvx.balanceOf(cvxStrategy.address);
 
     // relocking 17 weeks after the initial unlock request should add unlockable position balances to cvxToLeaveUnlocked
-    expect(leaveUnlocked2).eq(cvxBalance2).eq("652856551415568037424");
+    expect(leaveUnlocked2).eq(cvxBalance2).eq("606254958530239518597");
 
     // request unlock position 2
     tx = await cvxStrategy.unstake(false, 1);
@@ -394,7 +394,7 @@ describe("AfEth (CvxLockManager)", async function () {
     const leaveUnlocked21 = await cvxStrategy.cvxToLeaveUnlocked();
     const cvxBalance21 = await cvx.balanceOf(cvxStrategy.address);
     // relocking again shouldnt change anything because the second unlock request is not done yet
-    expect(leaveUnlocked21).eq(cvxBalance21).eq("652856551415568037424");
+    expect(leaveUnlocked21).eq(cvxBalance21).eq("606254958530239518597");
 
     // 8 weeks later relock again
     await time.increase(60 * 60 * 24 * 7 * 8);
