@@ -677,7 +677,7 @@ describe("SafEth", function () {
         "call revert exception"
       );
     });
-    it("Should test deposit & withdraw, & getName on each derivative contract", async () => {
+    it("Should test deposit & withdraw, ethPerDerivative & getName on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
         const name = await derivatives[i].name();
@@ -687,6 +687,11 @@ describe("SafEth", function () {
         expect(preStakeBalance.eq(0)).eq(true);
 
         const ethPerDerivative = await derivatives[i].ethPerDerivative(true);
+        const ethPerDerivativeNotValidated = await derivatives[
+          i
+        ].ethPerDerivative(false);
+        expect(ethPerDerivative).eq(ethPerDerivativeNotValidated);
+
         const derivativePerEth = BigNumber.from(
           "1000000000000000000000000000000000000"
         ).div(ethPerDerivative);
