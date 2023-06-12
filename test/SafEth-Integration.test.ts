@@ -18,7 +18,7 @@ import { derivativeAbi } from "./abi/derivativeAbi";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe("SafEth Integration Test", function () {
+describe.only("SafEth Integration Test", function () {
   let safEthAddress: string;
 
   let startingBalances: BigNumber[];
@@ -49,6 +49,7 @@ describe("SafEth Integration Test", function () {
   });
 
   it("Should deploy the safEth contract", async function () {
+    console.log("TIME", await ethers.block.timestamp);
     const safEthFactory = await ethers.getContractFactory("SafEth");
     const safEth = (await upgrades.deployProxy(safEthFactory, [
       "Asymmetry Finance ETH",
