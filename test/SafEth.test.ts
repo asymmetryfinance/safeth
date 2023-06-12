@@ -218,7 +218,7 @@ describe("SafEth", function () {
       await safEth2.setMockFloorPrice(mockedFloorPrice);
 
       floorPrice = await safEth2.floorPrice();
-      const price = await safEth2.approxPrice();
+      const price = await safEth2.approxPrice(true);
 
       expect(floorPrice).gt(price);
 
@@ -345,7 +345,7 @@ describe("SafEth", function () {
       ]);
       await sfrxEthDerivative.deployed();
 
-      await expect(sfrxEthDerivative.ethPerDerivative()).to.be.revertedWith(
+      await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "frxEth possibly depegged"
       );
 
@@ -379,13 +379,13 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("1");
       const tx1 = await safEth.stake(0, { value: depositAmount });
       await tx1.wait();
-      const priceBefore = await safEth.approxPrice();
+      const priceBefore = await safEth.approxPrice(true);
       await safEth.disableDerivative(0);
-      const priceAfter = await safEth.approxPrice();
+      const priceAfter = await safEth.approxPrice(true);
 
       await safEth.enableDerivative(0);
 
-      const priceFinal = await safEth.approxPrice();
+      const priceFinal = await safEth.approxPrice(true);
 
       expect(priceBefore).gt(priceAfter);
       expect(priceFinal).gt(priceAfter);
@@ -673,7 +673,7 @@ describe("SafEth", function () {
         "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
       );
 
-      await expect(rEthDerivative.ethPerDerivative()).to.be.revertedWith(
+      await expect(rEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "call revert exception"
       );
     });
@@ -686,7 +686,7 @@ describe("SafEth", function () {
         const preStakeBalance = await derivatives[i].balance();
         expect(preStakeBalance.eq(0)).eq(true);
 
-        const ethPerDerivative = await derivatives[i].ethPerDerivative();
+        const ethPerDerivative = await derivatives[i].ethPerDerivative(true);
         const derivativePerEth = BigNumber.from(
           "1000000000000000000000000000000000000"
         ).div(ethPerDerivative);
@@ -939,7 +939,6 @@ describe("SafEth", function () {
       }
       const tx2 = await safEth.stake(0, { value: initialDeposit });
       await tx2.wait();
-
       // set weight of derivative0 as equal to the sum of the other weights and rebalance
       // this is like 33/33/33 -> 50/25/25 (3 derivatives)
       safEth.adjustWeight(0, initialWeight.mul(derivativeCount - 1));
@@ -1128,18 +1127,18 @@ describe("SafEth", function () {
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
-      const startingPrice = await safEth.approxPrice();
+      const startingPrice = await safEth.approxPrice(true);
       // starting price = 1 Eth
       expect(startingPrice).eq("1000000000000000000");
 
       await safEth.stake(0, { value: depositAmount });
 
-      const priceAfterStake = await safEth.approxPrice();
+      const priceAfterStake = await safEth.approxPrice(true);
       // after initial stake price = 1 Eth
       expect(priceAfterStake).eq("1000000000000000000");
 
       await time.increase(100);
-      const priceAfterTimeIncrease = await safEth.approxPrice();
+      const priceAfterTimeIncrease = await safEth.approxPrice(true);
 
       // price has increased after some time
       expect(priceAfterTimeIncrease).gt(priceAfterStake);
@@ -1246,8 +1245,7 @@ describe("SafEth", function () {
         derivativeAbi,
         adminAccount
       );
-      const ethPerDerivative = await derivative.ethPerDerivative();
-
+      const ethPerDerivative = await derivative.ethPerDerivative(true);
       const ethBalanceEstimate = (await derivative.balance())
         .mul(ethPerDerivative)
         .div("1000000000000000000");
