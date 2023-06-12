@@ -79,7 +79,7 @@ contract BrokenDerivative is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivative(bool) public view returns (uint256) {
         return 1e18;
     }
 

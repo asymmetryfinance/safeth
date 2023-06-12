@@ -82,7 +82,7 @@ contract WstEth is
         require(stEthAmount > 0, "No stETH to unwrap");
 
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
-        uint256 minOut = ((ethPerDerivative() * _amount) *
+        uint256 minOut = ((ethPerDerivative(true) * _amount) *
             (1e18 - maxSlippage)) / 1e36;
 
         uint256 ethBalanceBefore = address(this).balance;
@@ -113,7 +113,7 @@ contract WstEth is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivative(bool _validate) public view returns (uint256) {
         ChainlinkResponse memory cl;
         try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
@@ -127,17 +127,19 @@ contract WstEth is
             cl.answer = answer;
             cl.updatedAt = updatedAt;
         } catch {
+            if (!_validate) return 0;
             cl.success = false;
         }
 
         // verify chainlink response
         if (
-            cl.success == true &&
-            cl.roundId != 0 &&
-            cl.answer >= 0 &&
-            cl.updatedAt != 0 &&
-            cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 25 hours
+            !_validate ||
+            (cl.success == true &&
+                cl.roundId != 0 &&
+                cl.answer >= 0 &&
+                cl.updatedAt != 0 &&
+                cl.updatedAt <= block.timestamp &&
+                block.timestamp - cl.updatedAt <= 25 hours)
         ) {
             uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
             if (cl.answer < 0) cl.answer = 0;

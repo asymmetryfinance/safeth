@@ -50,7 +50,13 @@ export const derivativeAbi = [
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "bool",
+        name: "_validate",
+        type: "bool",
+      },
+    ],
     name: "ethPerDerivative",
     outputs: [
       {
