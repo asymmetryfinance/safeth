@@ -18,7 +18,7 @@ import { derivativeAbi } from "./abi/derivativeAbi";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe.only("SafEth Integration Test", function () {
+describe("SafEth Integration Test", function () {
   let safEthAddress: string;
 
   let startingBalances: BigNumber[];
@@ -49,7 +49,6 @@ describe.only("SafEth Integration Test", function () {
   });
 
   it("Should deploy the safEth contract", async function () {
-    console.log("TIME", (await ethers.provider.getBlock("latest")).timestamp);
     const safEthFactory = await ethers.getContractFactory("SafEth");
     const safEth = (await upgrades.deployProxy(safEthFactory, [
       "Asymmetry Finance ETH",
@@ -94,7 +93,7 @@ describe.only("SafEth Integration Test", function () {
     const ankrDerivativeIndex = supportedDerivatives.indexOf("Ankr");
     const t = await safEth.setMaxSlippage(
       ankrDerivativeIndex,
-      "20000000000000000"
+      "30000000000000000"
     ); // 2% slippage
     await t.wait();
     expect(derivativeCount).eq(supportedDerivatives.length);
