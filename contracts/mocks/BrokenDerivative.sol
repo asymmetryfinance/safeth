@@ -8,7 +8,6 @@ import "../interfaces/IDerivative.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-
 contract BrokenDerivative is
     ERC165Storage,
     IDerivative,
@@ -64,9 +63,8 @@ contract BrokenDerivative is
     /**
         @notice - Owner only function to Convert derivative into ETH
         @dev - Owner is set to SafEth contract
-        @param _amount - Amount to withdraw
      */
-    function withdraw(uint256 _amount) external onlyOwner {
+    function withdraw(uint256 /* _amount */) external onlyOwner {
         revert("Broken Derivative");
     }
 

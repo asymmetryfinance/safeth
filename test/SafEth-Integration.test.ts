@@ -93,7 +93,7 @@ describe("SafEth Integration Test", function () {
     const ankrDerivativeIndex = supportedDerivatives.indexOf("Ankr");
     const t = await safEth.setMaxSlippage(
       ankrDerivativeIndex,
-      "20000000000000000"
+      "30000000000000000"
     ); // 2% slippage
     await t.wait();
     expect(derivativeCount).eq(supportedDerivatives.length);

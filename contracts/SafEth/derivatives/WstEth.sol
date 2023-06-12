@@ -24,14 +24,14 @@ contract WstEth is
     address private constant STETH_TOKEN =
         0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
-    // Depricated
-    AggregatorV3Interface constant chainLinkStEthEthFeed =
+    // Deprecated
+    AggregatorV3Interface internal constant CHAINLINK_STETH_ETH_FEED =
         AggregatorV3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    AggregatorV3Interface chainlinkFeed;
+    AggregatorV3Interface public chainlinkFeed;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor

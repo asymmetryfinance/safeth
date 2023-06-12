@@ -267,7 +267,7 @@ contract SafEth is
         _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
-        require(ethAmountToWithdraw > _minOut);
+        require(ethAmountToWithdraw > _minOut, "amount less than minOut");
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(

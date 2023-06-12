@@ -31,18 +31,18 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
     // Deprecated
-    AggregatorV3Interface constant chainLinkRethEthFeed =
+    AggregatorV3Interface internal constant CHAINLINK_RETH_ETH_FEED =
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    IVault public constant balancerVault =
+    IVault public constant BALANCER_VAULT =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    AggregatorV3Interface chainlinkFeed;
+    AggregatorV3Interface public chainlinkFeed;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -127,6 +127,8 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         // solhint-disable-next-line
         uint256 ethBalanceAfter = address(this).balance;
         uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
+
+        // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
         require(sent, "Failed to send Ether");
     }
@@ -231,10 +233,10 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
 
-        IWETH(wETH).deposit{value: _amount}();
-        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
+        IWETH(W_ETH_ADDRESS).deposit{value: _amount}();
+        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), _amount);
         // Execute swap
-        balancerVault.swap(swap, fundManagement, _minOut, block.timestamp);
+        BALANCER_VAULT.swap(swap, fundManagement, _minOut, block.timestamp);
     }
 
     receive() external payable {}
