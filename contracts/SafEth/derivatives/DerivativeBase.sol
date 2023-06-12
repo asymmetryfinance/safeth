@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
+
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "../../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -27,6 +30,7 @@ abstract contract DerivativeBase is
             : (((_price * _amount) * (1e18 - _maxSlippage)) / 1e36);
         require(_received >= minOut, "Slippage too high");
         if (!_isDeposit) {
+            // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: _received}("");
             require(sent, "Failed to send Ether");
             return _underlyingBalance - _amount;
