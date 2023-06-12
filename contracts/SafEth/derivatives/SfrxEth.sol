@@ -89,7 +89,7 @@ contract SfrxEth is
             frxEthReceived
         );
 
-        uint256 minOut = ((ethPerDerivative() * _amount) *
+        uint256 minOut = ((ethPerDerivativeValidated() * _amount) *
             (1e18 - maxSlippage)) / 1e36;
 
         uint256 ethBalanceBefore = address(this).balance;
@@ -130,7 +130,7 @@ contract SfrxEth is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivativeValidated() public view returns (uint256) {
         // There is no chainlink price fees for frxEth
         // We making the assumption that frxEth is always priced 1-1 with eth
         // revert if the curve oracle price suggests otherwise
@@ -143,6 +143,19 @@ contract SfrxEth is
         else priceDifference = 1e18 - oraclePrice;
         require(priceDifference < 19e14, "frxEth possibly depegged"); // outside of 0.19% we assume depegged
 
+        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
+        return ((frxEthAmount * oraclePrice) / 10 ** 18);
+    }
+
+    /**
+        @notice - Get price of derivative in terms of ETH
+     */
+    function ethPerDerivative() external view returns (uint256) {
+        uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
+            .price_oracle();
+        uint256 priceDifference;
+        if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
+        else priceDifference = 1e18 - oraclePrice;
         uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return ((frxEthAmount * oraclePrice) / 10 ** 18);
     }

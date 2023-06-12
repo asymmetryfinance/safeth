@@ -88,7 +88,7 @@ contract Stafi is
             return;
         }
         underlyingBalance = underlyingBalance - _amount;
-        uint256 minOut = ((ethPerDerivative() * _amount) *
+        uint256 minOut = ((ethPerDerivativeValidated() * _amount) *
             (1e18 - maxSlippage)) / 1e36;
 
         IVault.SingleSwap memory swap;
@@ -135,7 +135,7 @@ contract Stafi is
         IWETH(wETH).deposit{value: msg.value}();
         IERC20(W_ETH_ADDRESS).approve(address(balancerVault), msg.value);
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivative();
+            ethPerDerivativeValidated();
         balancerVault.swap(swap, fundManagement, minOut, block.timestamp);
         uint256 stafiBalancePost = IStafi(STAFI_TOKEN).balanceOf(address(this));
         uint256 stafiAmount = stafiBalancePost - stafiBalancePre;
@@ -147,9 +147,17 @@ contract Stafi is
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivative() external view returns (uint256) {
         return IStafi(STAFI_TOKEN).getExchangeRate();
     }
+
+    /**
+        @notice - Get price of derivative in terms of ETH
+     */
+    function ethPerDerivativeValidated() public view returns (uint256) {
+        return IStafi(STAFI_TOKEN).getExchangeRate();
+    }
+
 
     /**
         @notice - Total derivative balance

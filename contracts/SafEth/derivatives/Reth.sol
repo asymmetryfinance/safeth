@@ -107,7 +107,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
         );
-        uint256 ethPerReth = ethPerDerivative();
+        uint256 ethPerReth = ethPerDerivativeValidated();
         uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) / 1e36;
         uint256 idealOut = ((ethPerReth * _amount) / 1e18);
         IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
@@ -136,7 +136,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function deposit() external payable onlyOwner returns (uint256) {
         uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivative();
+            ethPerDerivativeValidated();
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
@@ -152,7 +152,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivativeValidated() public view returns (uint256) {
         ChainlinkResponse memory cl;
         try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
@@ -182,6 +182,28 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         } else {
             revert("Chainlink Failed Reth");
         }
+    }
+
+        /**
+        @notice - Get price of derivative in terms of ETH
+     */
+    function ethPerDerivative() external view returns (uint256) {
+        ChainlinkResponse memory cl;
+        try chainlinkFeed.latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 /* startedAt */,
+            uint256 updatedAt,
+            uint80 /* answeredInRound */
+        ) {
+            cl.success = true;
+            cl.roundId = roundId;
+            cl.answer = answer;
+            cl.updatedAt = updatedAt;
+        } catch {
+            return 0;
+        }
+        return uint256(cl.answer);
     }
 
     /**

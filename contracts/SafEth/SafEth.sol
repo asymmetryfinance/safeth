@@ -168,7 +168,7 @@ contract SafEth is
         require(msg.value <= maxAmount, "amount too high");
         require(totalWeight > 0, "total weight is zero");
 
-        depositPrice = approxPrice();
+        depositPrice = approxPriceValidated();
 
         uint256 preMintPrice = depositPrice < floorPrice
             ? floorPrice
@@ -215,7 +215,7 @@ contract SafEth is
                 uint256 depositAmount = derivative.deposit{value: ethAmount}();
                 // This is slightly less than ethAmount because slippage
                 uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative() * depositAmount);
+                    .ethPerDerivativeValidated() * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
             // MintedAmount represents a percentage of the total assets in the system
@@ -278,7 +278,7 @@ contract SafEth is
             msg.sender,
             ethAmountToWithdraw,
             _safEthAmount,
-            approxPrice()
+            approxPriceValidated()
         );
     }
 
@@ -523,6 +523,26 @@ contract SafEth is
         address feed
     ) external onlyOwner {
         derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
+    }
+
+    /**
+     * @notice - Get the approx price of safEth.
+     * @dev - This is approximate because of slippage when acquiring / selling the underlying
+     * @return - Approximate price of safEth in wei
+     */
+    function approxPriceValidated() public view returns (uint256) {
+        uint256 safEthTotalSupply = totalSupply();
+        uint256 underlyingValue = 0;
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            IDerivative derivative = derivatives[i].derivative;
+            underlyingValue += (derivative.ethPerDerivativeValidated() *
+                derivative.balance());
+        }
+        if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
+        return (underlyingValue) / safEthTotalSupply;
     }
 
     /**
