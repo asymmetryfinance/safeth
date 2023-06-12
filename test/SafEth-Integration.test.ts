@@ -49,7 +49,7 @@ describe.only("SafEth Integration Test", function () {
   });
 
   it("Should deploy the safEth contract", async function () {
-    console.log("TIME", await ethers.block.timestamp);
+    console.log("TIME", (await ethers.provider.getBlock("latest")).timestamp);
     const safEthFactory = await ethers.getContractFactory("SafEth");
     const safEth = (await upgrades.deployProxy(safEthFactory, [
       "Asymmetry Finance ETH",
