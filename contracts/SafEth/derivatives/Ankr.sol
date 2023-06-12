@@ -77,8 +77,7 @@ contract Ankr is DerivativeBase {
         uint256 balancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
 
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
-        uint256 balancePost = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
-        uint256 received = balancePost - balancePre;
+        uint256 received = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this)) - balancePre;
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             msg.value,
