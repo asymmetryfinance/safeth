@@ -116,12 +116,15 @@ describe("SafEth", function () {
       for (let i = 0; i < derivativeCount; i++) {
         await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
       }
-      await safEth.stake(0, { value: depositAmount });
-
+      let tx;
+      tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
       for (let i = 0; i < derivativeCount; i++) {
-        await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
+        tx = await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
+        await tx.wait();
       }
-      await safEth.stake(0, { value: depositAmount });
+      tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
     });
   });
   describe("Pre-mint", function () {
@@ -424,9 +427,12 @@ describe("SafEth", function () {
       );
       await tx2.wait();
 
+      let tx;
       // stake and unstake both work after disabling the problematic derivative
-      await safEth.stake(0, { value: depositAmount });
-      await safEth.unstake(await safEth.balanceOf(adminAccount.address), 0);
+      tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
+      tx = await safEth.unstake(await safEth.balanceOf(adminAccount.address), 0);
+      await tx.wait();
     });
   });
 
@@ -1136,7 +1142,8 @@ describe("SafEth", function () {
       // starting price = 1 Eth
       expect(startingPrice).eq("1000000000000000000");
 
-      await safEth.stake(0, { value: depositAmount });
+      const tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
 
       const priceAfterStake = await safEth.approxPrice(true);
       // after initial stake price = 1 Eth
