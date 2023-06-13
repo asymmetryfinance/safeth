@@ -737,7 +737,7 @@ describe("SafEth", function () {
       }
     });
 
-    it("Should show derivative deposits revert when slippage is set to 0 and a large deposit", async () => {
+    it("Should show that reth deposit reverts when slippage is set to 0 and a large deposit", async () => {
       const rEthDerivative = derivatives[0];
       const weiDepositAmount = ethers.utils.parseEther("9000");
 
