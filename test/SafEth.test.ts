@@ -728,14 +728,14 @@ describe("SafEth", function () {
       }
     });
 
-    it("Should show that reth deposit reverts when slippage is set to 0 and a large deposit", async () => {
+    it("Should show derivative deposits revert when slippage is set to 0 and a large deposit", async () => {
       const rEthDerivative = derivatives[0];
       const weiDepositAmount = ethers.utils.parseEther("9000");
 
       await rEthDerivative.setMaxSlippage(0);
       await expect(
         rEthDerivative.deposit({ value: weiDepositAmount })
-      ).to.be.revertedWith("BAL#507");
+      ).to.be.revertedWith("Slippage too high");
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {

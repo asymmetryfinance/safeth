@@ -58,17 +58,12 @@ contract Ankr is DerivativeBase {
         @notice - Convert derivative into ETH
      */
     function withdraw(uint256 _amount) public onlyOwner {
-        console.log('withdraewing from ankr', _amount);
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
-        console.log('ankr0');
         uint256 balancePre = address(this).balance;
-        console.log('ankr1', balancePre);
         uint256 price = ethPerDerivative(true);
         uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
-        console.log('minOut is' , price, _amount, minOut);
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, minOut);
-        console.log('ankr2', address(this).balance);
-        super.finalChecks(
+        underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             _amount,
             maxSlippage,
@@ -76,7 +71,6 @@ contract Ankr is DerivativeBase {
             false,
             underlyingBalance
         );
-        console.log('ankr3');
     }
 
     /**
@@ -87,7 +81,6 @@ contract Ankr is DerivativeBase {
         uint256 ankrBalancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(
             address(this)
         );
-
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
         uint256 received = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this)) -
             ankrBalancePre;
@@ -99,7 +92,6 @@ contract Ankr is DerivativeBase {
             true,
             underlyingBalance
         );
-        console.log('deposit received is', received);
         return received;
     }
 
