@@ -431,7 +431,10 @@ describe("SafEth", function () {
       // stake and unstake both work after disabling the problematic derivative
       tx = await safEth.stake(0, { value: depositAmount });
       await tx.wait();
-      tx = await safEth.unstake(await safEth.balanceOf(adminAccount.address), 0);
+      tx = await safEth.unstake(
+        await safEth.balanceOf(adminAccount.address),
+        0
+      );
       await tx.wait();
     });
   });
