@@ -36,14 +36,14 @@ abstract contract DerivativeBase is
         if (!_isDeposit) {
             // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: _received}("");
-            if(!sent) revert FailedToSend();
+            if (!sent) revert FailedToSend();
             return _underlyingBalance - _amount;
         }
         return _underlyingBalance + _received;
     }
 
     function init(address _owner) public {
-        if(_owner == address(0)) revert InvalidAddress();
+        if (_owner == address(0)) revert InvalidAddress();
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
     }
