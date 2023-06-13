@@ -50,9 +50,8 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         address _rewardsExtraStream
     ) external initializer {
         _transferOwnership(msg.sender);
-        chainLinkCvxEthFeed = AggregatorV3Interface(0xC9CbF687f43176B302F03f5e58470b77D07c61c6);
-        chainLinkCrvEthFeed = AggregatorV3Interface(0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e);
-        swapRouter = ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+        chainLinkCvxEthFeed = AggregatorV3Interface(CHAINLINK_CVX);
+        chainLinkCrvEthFeed = AggregatorV3Interface(CHAINLINK_CRV);
         safEth = _safEth;
         afEth = _afEth;
 
@@ -194,7 +193,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
                 amountOutMinimum: 1, // TODO: fix slippage
                 sqrtPriceLimitX96: 0
             });
-        amountOut = swapRouter.exactInputSingle(params);
+        amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
     }
 
     function swapCvx(uint256 amount) private returns (uint256 amountOut) {

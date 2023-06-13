@@ -22,8 +22,6 @@ contract CvxStrategyStorage {
     AggregatorV3Interface internal chainLinkCvxEthFeed;
     AggregatorV3Interface internal chainLinkCrvEthFeed;
 
-    ISwapRouter internal swapRouter;
-
     address internal afEth;
     address internal crvPool;
     address internal safEth;
@@ -42,6 +40,13 @@ contract CvxStrategyStorage {
     address lpTokenAddress;
     address lpRewardPoolAddress;
     address lpBoosterAddress;
+
+    address public constant CHAINLINK_CRV =
+        0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e;
+    address public constant CHAINLINK_CVX =
+        0xC9CbF687f43176B302F03f5e58470b77D07c61c6;
+    address public constant SWAP_ROUTER =
+        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
