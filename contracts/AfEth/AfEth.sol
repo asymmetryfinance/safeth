@@ -8,11 +8,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract AfEth is ERC20, Ownable {
     address public minter;
 
+    error NotMinter();
+    error ZeroAddress();
+    error AlreadyInitialized();
+
     /**
      * @dev Throws if called by any account other than the minter.
      */
     modifier onlyMinter() {
-        require(minter == msg.sender, "caller is not the minter");
+        if (minter != msg.sender) revert NotMinter();
         _;
     }
 
@@ -22,8 +26,9 @@ contract AfEth is ERC20, Ownable {
     ) ERC20(_name, _symbol) {}
 
     function setMinter(address _newMinter) public onlyOwner {
-        require(minter == address(0), "Already initialized");
-        require(_newMinter != address(0), "Need valid address");
+        if (minter != address(0)) revert AlreadyInitialized();
+        if (_newMinter == address(0)) revert ZeroAddress();
+
         minter = _newMinter;
     }
 
