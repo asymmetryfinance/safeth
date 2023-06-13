@@ -88,7 +88,7 @@ contract WstEth is DerivativeBase {
         uint256 wstEthBalancePre = IWStETH(WST_ETH).balanceOf(address(this));
         // solhint-disable-next-line
         (bool sent, ) = WST_ETH.call{value: msg.value}("");
-        require(sent, "Failed to send Ether to wst contract");
+        require(sent, "failed send eth to wst");
         uint256 received = IWStETH(WST_ETH).balanceOf(address(this)) -
             wstEthBalancePre;
         underlyingBalance = super.finalChecks(

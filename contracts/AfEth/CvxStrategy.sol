@@ -18,6 +18,8 @@ import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
 
+import "hardhat/console.sol";
+
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
@@ -135,11 +137,13 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
+        console.log('unstake0');
         uint256 id = _id;
         Position storage position = positions[id];
         require(position.claimed == false, "position claimed");
         require(position.owner == msg.sender, "Not owner");
         position.claimed = true;
+        console.log('unstake1');
         if (_instantWithdraw) {
             // TODO: add instant withdraw function
             // fees: 119 days - 1% per day to max 12% fee: 88 days to min fee
@@ -151,27 +155,35 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             // transfer ETH to user minus fee for unlock
             // fee schedule:
         } else {
+            console.log('unstake2');
             requestUnlockCvx(id, msg.sender);
         }
+        console.log('unstake3');
         uint256 ethBalanceBefore = address(this).balance;
+        console.log('unstake4');
         uint256 afEthBalanceBefore = IERC20(afEth).balanceOf(address(this));
         uint256 safEthBalanceBefore = IERC20(safEth).balanceOf(address(this));
+        console.log('unstake5');
 
         withdrawCrvPool(crvPool, position.curveBalance);
+        console.log('unstake6');
         IAfEth(afEth).burn(
             address(this),
             IERC20(afEth).balanceOf(address(this)) - afEthBalanceBefore
         );
+        console.log('unstake7');
         ISafEth(safEth).unstake(
             IERC20(safEth).balanceOf(address(this)) - safEthBalanceBefore,
             0
         ); // TODO: add minOut ~.5% slippage
+        console.log('unstake8');
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{
             value: address(this).balance - ethBalanceBefore
         }("");
         require(sent, "Failed to send Ether");
+        console.log('unstake9');
 
         emit Unstaked(id, msg.sender);
     }

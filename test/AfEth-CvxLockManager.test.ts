@@ -280,17 +280,20 @@ describe("AfEth (CvxLockManager)", async function () {
     expect(lockedPositionAmount).eq(cvxBalanceAfter.sub(cvxBalanceBefore));
   });
 
-  it("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+  it.only("Should cost less gas to withdraw if relockCvx() has been called in the same epoch before withdrawCvx()", async function () {
+    console.log('fuck0');
     let tx;
     const accounts = await ethers.getSigners();
     const vlCvxContract = new ethers.Contract(VL_CVX, vlCvxAbi, accounts[0]);
     const depositAmount = ethers.utils.parseEther("5");
+    console.log('fuck1');
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
+    console.log('fuck2');
     // wait 10 more lock durations
     await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
@@ -299,23 +302,29 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.withdrawCvxAndRewards(0);
     const mined = await tx.wait();
     const gasUsedWithoutRelock = mined.gasUsed;
+    console.log('fuck3');
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
+    console.log('fuck3.1');
     // close position
     tx = await cvxStrategy.unstake(false, 1);
     await tx.wait();
+    console.log('fuck4');
 
     // wait 10 more lock durations
     await time.increase((await vlCvxContract.lockDuration()) * 10);
     // this is necessary in tests every time we have increased time past a new epoch
     tx = await vlCvxContract.checkpointEpoch();
     await tx.wait();
+    console.log('fuck5');
 
     await cvxStrategy.relockCvx();
     tx = await cvxStrategy.withdrawCvxAndRewards(1);
     const mined2 = await tx.wait();
     const gasUsedWithRelock = mined2.gasUsed;
+    console.log('fuck6');
 
     expect(gasUsedWithRelock).lt(gasUsedWithoutRelock);
   });

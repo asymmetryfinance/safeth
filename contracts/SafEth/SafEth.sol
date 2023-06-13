@@ -11,6 +11,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 
+import "hardhat/console.sol";
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -242,37 +244,49 @@ contract SafEth is
         uint256 _safEthAmount,
         uint256 _minOut
     ) external nonReentrant {
+        console.log('safeth unstake 0');
         require(!pauseUnstaking, "unstaking is paused");
         require(_safEthAmount > 0, "amount too low");
         require(_safEthAmount <= balanceOf(msg.sender), "insufficient balance");
+        console.log('safeth unstake 1');
 
         uint256 safEthTotalSupply = totalSupply();
         uint256 ethAmountBefore = address(this).balance;
         uint256 count = derivativeCount;
+        console.log('safeth unstake 2');
 
         for (uint256 i = 0; i < count; i++) {
+            console.log('safeth unstake 2.1', i, count);
             if (!derivatives[i].enabled) continue;
+            console.log('in loop 0');
             // withdraw a percentage of each asset based on the amount of safETH
             uint256 derivativeAmount = (derivatives[i].derivative.balance() *
                 _safEthAmount) / safEthTotalSupply;
+            console.log('in loop 1');
             if (derivativeAmount == 0) continue; // if derivative empty ignore
             // Add check for a zero Ether received
             uint256 ethBefore = address(this).balance;
+            console.log('in loop 2 about to withdraw', derivativeAmount);
             derivatives[i].derivative.withdraw(derivativeAmount);
+            console.log('in loop 3');
             require(
                 address(this).balance - ethBefore != 0,
                 "Received zero Ether"
             );
         }
+        console.log('safeth unstake 3');
         _burn(msg.sender, _safEthAmount);
         uint256 ethAmountAfter = address(this).balance;
         uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        console.log('safeth unstake 4');
         require(ethAmountToWithdraw > _minOut, "amount less than minOut");
 
         // solhint-disable-next-line
+        console.log('safeth unstake 5');
         (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
             ""
         );
+        console.log('safeth unstake 6');
         require(sent, "Failed to send Ether");
         emit Unstaked(
             msg.sender,
