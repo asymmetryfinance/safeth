@@ -194,7 +194,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint24 poolFee,
         uint256 amountIn
     ) private returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(swapRouter), amountIn);
+        IERC20(tokenIn).approve(SWAP_ROUTER, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
