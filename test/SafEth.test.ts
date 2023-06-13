@@ -90,21 +90,21 @@ describe("SafEth", function () {
       ).eq(true);
     });
     it("Should fail unstake on zero safEthAmount", async function () {
-      await expect(safEth.unstake(0, 0)).revertedWith("amount too low");
+      await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
     });
     it("Should fail unstake on invalid safEthAmount", async function () {
-      await expect(safEth.unstake(10, 0)).revertedWith("insufficient balance");
+      await expect(safEth.unstake(10, 0)).revertedWith("InsufficientBalance");
     });
     it("Should fail with wrong min/max", async function () {
       let depositAmount = ethers.utils.parseEther(".002");
       await expect(
         safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("amount too low");
+      ).to.be.revertedWith("AmountTooLow");
 
       depositAmount = ethers.utils.parseEther("2050");
       await expect(
         safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("amount too high");
+      ).to.be.revertedWith("AmountTooHigh");
     });
   });
 
@@ -303,7 +303,7 @@ describe("SafEth", function () {
           to: safEth.address,
           value: ethers.utils.parseEther("1.0"),
         })
-      ).to.be.revertedWith("Not a derivative contract");
+      ).to.be.revertedWith("InvalidDerivative");
     });
   });
   describe("Re-entrancy", function () {
@@ -316,7 +316,7 @@ describe("SafEth", function () {
       safEthReentrancyTest.testUnstake();
 
       await expect(safEthReentrancyTest.testUnstake()).to.be.revertedWith(
-        "Failed to send Ether"
+        "FailedToSend"
       );
     });
   });
@@ -326,14 +326,14 @@ describe("SafEth", function () {
       const minOut = ethers.utils.parseEther("2");
       await expect(
         safEth.stake(minOut, { value: depositAmount })
-      ).to.be.revertedWith("preMint amount less than minOut");
+      ).to.be.revertedWith("PremintTooLow");
     });
     it("Should fail staking with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("5");
       const minOut = ethers.utils.parseEther("6");
       await expect(
         safEth.stake(minOut, { value: depositAmount })
-      ).to.be.revertedWith("mint amount less than minOut");
+      ).to.be.revertedWith("MintedAmountTooLow");
     });
   });
 
@@ -349,7 +349,7 @@ describe("SafEth", function () {
       await sfrxEthDerivative.deployed();
 
       await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
-        "frxEth possibly depegged"
+        "FrxDepegged"
       );
 
       await resetToBlock(initialHardhatBlock);
@@ -358,20 +358,20 @@ describe("SafEth", function () {
   describe("Enable / Disable", function () {
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEth.disableDerivative(999)).to.be.revertedWith(
-        "derivative index out of bounds"
+        "IndexOutOfBounds"
       );
       await expect(safEth.enableDerivative(999)).to.be.revertedWith(
-        "derivative index out of bounds"
+        "IndexOutOfBounds"
       );
     });
     it("Should fail to enable / disable an already enabled / disabled derivative", async function () {
       await expect(safEth.enableDerivative(0)).to.be.revertedWith(
-        "derivative already enabled"
+        "AlreadyEnabled"
       );
       const tx = await safEth.disableDerivative(0);
       await tx.wait();
       await expect(safEth.disableDerivative(0)).to.be.revertedWith(
-        "derivative not enabled"
+        "NotEnabled"
       );
       // re enable derivative so other tests behave as expected
       const tx2 = await safEth.enableDerivative(0);
@@ -415,12 +415,12 @@ describe("SafEth", function () {
       // staking is broken after deploying broken derivative
       await expect(
         safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("Broken Derivative");
+      ).to.be.revertedWith("BrokenDerivativeError");
 
       // unstaking is broken after deploying broken derivative
       await expect(
         safEth.unstake(await safEth.balanceOf(adminAccount.address), 0)
-      ).to.be.revertedWith("Broken Derivative");
+      ).to.be.revertedWith("BrokenDerivativeError");
 
       const tx2 = await safEth.disableDerivative(
         (await safEth.derivativeCount()).sub(1)
@@ -456,13 +456,13 @@ describe("SafEth", function () {
       }
       await expect(
         safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("staking is paused");
+      ).to.be.revertedWith("StakingPausedError");
 
       const tx3 = await safEth.setPauseUnstaking(true);
       await tx3.wait();
 
       await expect(safEth.unstake(1000, 0)).to.be.revertedWith(
-        "unstaking is paused"
+        "UnstakingPausedError"
       );
 
       // dont stay paused
@@ -473,7 +473,7 @@ describe("SafEth", function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEth.setPauseStaking(true);
       await expect(safEth.setPauseStaking(true)).to.be.revertedWith(
-        "already set"
+        "AlreadySet"
       );
       await tx1.wait();
       await snapshot.restore();
@@ -483,7 +483,7 @@ describe("SafEth", function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEth.setPauseUnstaking(true);
       await expect(safEth.setPauseUnstaking(true)).to.be.revertedWith(
-        "already set"
+        "AlreadySet"
       );
       await tx1.wait();
       await snapshot.restore();
@@ -492,7 +492,7 @@ describe("SafEth", function () {
     it("Should fail with adding non erc 165 compliant derivative", async function () {
       await expect(
         safEth.addDerivative(WSTETH_ADDRESS, "1000000000000000000")
-      ).to.be.revertedWith("invalid contract");
+      ).to.be.revertedWith("InvalidDerivative");
     });
     it("Should fail with adding invalid erc165 derivative", async function () {
       const derivativeFactory0 = await ethers.getContractFactory(
@@ -504,7 +504,7 @@ describe("SafEth", function () {
       await derivative0.deployed();
       await expect(
         safEth.addDerivative(derivative0.address, "1000000000000000000")
-      ).to.be.revertedWith("invalid derivative");
+      ).to.be.revertedWith("InvalidDerivative");
     });
     it("Should only allow owner to call pausing functions", async function () {
       const accounts = await ethers.getSigners();
@@ -744,7 +744,7 @@ describe("SafEth", function () {
       await rEthDerivative.setMaxSlippage(0);
       await expect(
         rEthDerivative.deposit({ value: weiDepositAmount })
-      ).to.be.revertedWith("Slippage too high");
+      ).to.be.revertedWith("SlippageTooHigh");
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {
@@ -1069,7 +1069,7 @@ describe("SafEth", function () {
     }
 
     await expect(safEth.stake(0, { value: initialDeposit })).to.be.revertedWith(
-      "total weight is zero"
+      "TotalWeightZero"
     );
   });
 
@@ -1183,7 +1183,7 @@ describe("SafEth", function () {
       await nonWhitelistedSafEthUser.stake(0, { value: depositAmount });
       await expect(
         nonWhitelistedSafEthUser.transfer(blacklistedRecipientAddress, 1)
-      ).to.be.revertedWith("blacklisted address");
+      ).to.be.revertedWith("BlacklistedAddress");
     });
 
     it("Should fail transferFrom() to blacklisted address from a non whitelisted address", async function () {
@@ -1199,7 +1199,7 @@ describe("SafEth", function () {
           blacklistedRecipientAddress,
           1
         )
-      ).to.be.revertedWith("blacklisted address");
+      ).to.be.revertedWith("BlacklistedAddress");
     });
 
     it("Should successfilly transfer() from a whitelisted address to blacklisted address", async function () {

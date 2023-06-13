@@ -24,6 +24,7 @@ contract BrokenDerivative is
         0xbAFA44EFE7901E04E39Dad13167D089C559c1138;
 
     uint256 public maxSlippage;
+    error BrokenDerivativeError();
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -64,8 +65,8 @@ contract BrokenDerivative is
         @notice - Owner only function to Convert derivative into ETH
         @dev - Owner is set to SafEth contract
      */
-    function withdraw(uint256 /* _amount */) external onlyOwner {
-        revert("Broken Derivative");
+    function withdraw(uint256 /* _amount */) external view onlyOwner {
+        revert BrokenDerivativeError();
     }
 
     /**
@@ -73,20 +74,20 @@ contract BrokenDerivative is
         @dev - Owner is set to SafEth contract
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        revert("Broken Derivative");
+        revert BrokenDerivativeError();
     }
 
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative(bool) public view returns (uint256) {
+    function ethPerDerivative(bool) public pure returns (uint256) {
         return 1e18;
     }
 
     /**
         @notice - Total derivative balance
      */
-    function balance() public view returns (uint256) {
+    function balance() public pure returns (uint256) {
         return 1e18;
     }
 

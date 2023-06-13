@@ -47,6 +47,6 @@ contract DerivativeMock is SfrxEth {
         (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
             ""
         );
-        require(sent, "Failed to send Ether");
+        if (!sent) revert FailedToSend();
     }
 }

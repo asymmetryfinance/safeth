@@ -29,6 +29,8 @@ contract WstEth is DerivativeBase {
 
     AggregatorV3Interface public chainlinkFeed;
 
+    error NoStethToUnwrap();
+
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
@@ -66,7 +68,8 @@ contract WstEth is DerivativeBase {
      */
     function withdraw(uint256 _amount) external onlyOwner {
         uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
-        require(stEthAmount > 0, "No stETH to unwrap");
+        if (stEthAmount == 0) revert NoStethToUnwrap();
+
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
         uint256 balancePre = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, 0);
@@ -88,7 +91,8 @@ contract WstEth is DerivativeBase {
         uint256 wstEthBalancePre = IWStETH(WST_ETH).balanceOf(address(this));
         // solhint-disable-next-line
         (bool sent, ) = WST_ETH.call{value: msg.value}("");
-        require(sent, "failed send eth to wst");
+        if (!sent) revert FailedToSend();
+
         uint256 received = IWStETH(WST_ETH).balanceOf(address(this)) -
             wstEthBalancePre;
         underlyingBalance = super.finalChecks(
@@ -138,7 +142,7 @@ contract WstEth is DerivativeBase {
             uint256 ethPerWstEth = (stPerWst * uint256(cl.answer)) / 1e18;
             return ethPerWstEth;
         } else {
-            revert("Chainlink Failed Wst");
+            revert ChainlinkFailed("Wst");
         }
     }
 

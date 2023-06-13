@@ -11,6 +11,10 @@ abstract contract DerivativeBase is
     Initializable,
     OwnableUpgradeable
 {
+    error SlippageTooHigh();
+    error FailedToSend();
+    error InvalidAddress();
+
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,18 +32,18 @@ abstract contract DerivativeBase is
         uint256 minOut = _isDeposit
             ? ((_amount * (1e18 - _maxSlippage)) / _price)
             : (((_price * _amount) * (1e18 - _maxSlippage)) / 1e36);
-        require(_received >= minOut, "Slippage too high");
+        if (_received < minOut) revert SlippageTooHigh();
         if (!_isDeposit) {
             // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: _received}("");
-            require(sent, "Failed to send Ether");
+            if (!sent) revert FailedToSend();
             return _underlyingBalance - _amount;
         }
         return _underlyingBalance + _received;
     }
 
     function init(address _owner) public {
-        require(_owner != address(0), "invalid address");
+        if (_owner == address(0)) revert InvalidAddress();
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
     }
