@@ -12,7 +12,6 @@ import "./DerivativeBase.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
 
 contract Ankr is DerivativeBase {
     address public constant ANKR_ETH_ADDRESS =
