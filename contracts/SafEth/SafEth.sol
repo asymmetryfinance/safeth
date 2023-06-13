@@ -266,7 +266,7 @@ contract SafEth is
             if (derivativeAmount == 0) continue; // if derivative empty ignore
             // Add check for a zero Ether received
             uint256 ethBefore = address(this).balance;
-            console.log('in loop 2 about to withdraw', derivativeAmount);
+            console.log('in loop 2 about to withdraw', derivativeAmount, derivatives[i].derivative.balance());
             derivatives[i].derivative.withdraw(derivativeAmount);
             console.log('in loop 3');
             require(

@@ -290,6 +290,7 @@ describe("AfEth (CvxLockManager)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
