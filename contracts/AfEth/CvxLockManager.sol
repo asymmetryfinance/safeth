@@ -12,8 +12,10 @@ import "../interfaces/curve/ICrvEthPool.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/IExtraRewardsStream.sol";
 import "./ExtraRewardsStream.sol";
+import "../interfaces/convex/IConvexRewardPool.sol";
+import "./CvxStrategyStorage.sol";
 
-contract CvxLockManager is OwnableUpgradeable {
+contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
     address public constant SNAPSHOT_DELEGATE_REGISTRY =
         0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
 
@@ -154,8 +156,13 @@ contract CvxLockManager is OwnableUpgradeable {
     }
 
     function sweepRewards() private {
-        // claimCrvRewards();
+        // uncomment and fix tests when we have mainnet curve & convex pool to claim from
+        // claimLpRewards();
         // claimvlCvxRewards();
+        // exchangeRewardTokensForEth();
+
+        // This was added for testing & development
+        // Will no longer be needed when we have mainnet curve & convex pools to claim rewards from
         claimExtraRewards();
     }
 
@@ -323,8 +330,10 @@ contract CvxLockManager is OwnableUpgradeable {
         require(sent, "Failed to send Ether");
     }
 
-    // TODO implement
-    function claimCrvRewards() private {}
+    function claimLpRewards() private {
+        IConvexRewardPool cvxLpRewardPool = IConvexRewardPool(lpRewardPoolAddress);
+        cvxLpRewardPool.getReward(address(this), true);
+    }
 
     // claim vlCvx rewards and convert to eth
     function claimvlCvxRewards() private {
@@ -340,6 +349,10 @@ contract CvxLockManager is OwnableUpgradeable {
             0,
             8
         );
+    }
+
+    //swaps any reward tokens we might have from claiming rewards into eth
+    function exchangeRewardTokensForEth() private {
         // cvxFxs -> fxs
         uint256 cvxFxsBalance = IERC20(CVX_FXS).balanceOf(address(this));
         if (cvxFxsBalance > 0) {
@@ -415,6 +428,25 @@ contract CvxLockManager is OwnableUpgradeable {
             );
         }
 
-        return;
+        // cvx -> eth
+        uint256 cvxBalance = IERC20(CVX).balanceOf(address(this));
+        if (cvxBalance > 0) {
+            uint256 oraclePrice = ICrvEthPool(CVX_ETH_CRV_POOL_ADDRESS).get_dy(
+                1,
+                0,
+                10 ** 18
+            );
+            uint256 minOut = (((oraclePrice * cvxBalance) / 10 ** 18) *
+                (10 ** 18 - maxSlippage)) / 10 ** 18;
+
+            IERC20(CVX).approve(CVX_ETH_CRV_POOL_ADDRESS, cvxBalance);
+            ICrvEthPool(CVX_ETH_CRV_POOL_ADDRESS).exchange_underlying(
+                1,
+                0,
+                cvxBalance,
+                minOut
+            );
+        }
+
     }
 }
