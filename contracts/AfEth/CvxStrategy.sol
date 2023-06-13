@@ -19,6 +19,7 @@ import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
 import "./CvxStrategyStorage.sol";
 import "../interfaces/convex/IConvexRewardPool.sol";
+import "../interfaces/convex/IConvexBooster.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
@@ -68,6 +69,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         crvEmissionsPerYear[10] = 57772796;
 
         initializeLockManager(_rewardsExtraStream);
+
+        // I THINK this is the booster for all convex pools and wont change
+        lpBoosterAddress = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
+
+        // TODO set this to our pool lp token when mainnet launched
+        lpTokenAddress = 0x0000000000000000000000000000000000000000;
+        // TODO set this to the convex reward pool for our LP token when mainnet launched
+        lpRewardPoolAddress = 0x0000000000000000000000000000000000000000;
     }
 
     function stake() public payable returns (uint256 id) {
@@ -105,7 +114,10 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
 
     /// stake lp token into convex
     function stakeLpToken() private {
-        IConvexRewardPool cvxLpRewardPool = IConvexRewardPool(lpRewardPoolAddress);
+        // TODO set this to our pool id once launched
+        uint256 poolId = 0;
+        IERC20(crvPool).approve(address(lpBoosterAddress), type(uint256).max);
+        IConvexBooster(lpBoosterAddress).depositAll(poolId, false);
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
