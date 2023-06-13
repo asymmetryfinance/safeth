@@ -111,6 +111,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
     // wait some time for rewards to acrue
     await time.increase(60 * 60 * 24 * 7 * 4);
     // this is necessary in tests every time we have increased time past a new epoch
@@ -131,7 +132,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-
+    await tx.wait();
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
@@ -148,7 +149,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-
+    await tx.wait();
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
@@ -172,7 +173,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-
+    await tx.wait();
     // close position
     tx = await cvxStrategy.unstake(false, 0);
     await tx.wait();
@@ -288,6 +289,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
     // wait some time for rewards to acrue but not a full epoch
     await time.increase(60 * 60 * 24 * 3);
     // this is necessary in tests every time we have increased time past a new epoch
@@ -325,7 +327,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-
+    await tx.wait();
     // increase to end of next epoch
     await incrementToBeginningOfNextEpoch();
     await incrementToEndOfCurrentEpoch();
@@ -349,7 +351,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
     const depositAmount = ethers.utils.parseEther("5");
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
-
+    await tx.wait();
     const currentEpochData = await vlCvxContract.epochs(
       await getCurrentEpoch()
     );
@@ -478,6 +480,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     // open position
     tx = await cvxStrategy.stake({ value: depositAmount });
+    await tx.wait();
     tx = await cvxStrategy.claimRewards();
     await tx.wait();
     tx = await cvxStrategy.claimRewards();
@@ -545,6 +548,7 @@ describe("AfEth (CvxLockManager Rewards)", async function () {
 
     const cvxStrategy1 = cvxStrategy.connect(accounts[1]);
     tx = await cvxStrategy1.stake({ value: depositAmount });
+    await tx.wait();
     tx = await cvxStrategy1.unstake(false, 0);
     await tx.wait();
 

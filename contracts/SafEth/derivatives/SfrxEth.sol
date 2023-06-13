@@ -8,15 +8,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/curve/IFrxEthEthPool.sol";
 import "../../interfaces/frax/IFrxETHMinter.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
+import "./DerivativeBase.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-contract SfrxEth is
-    ERC165Storage,
-    IDerivative,
-    Initializable,
-    OwnableUpgradeable
-{
+
+contract SfrxEth is DerivativeBase {
     address private constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
     address private constant FRX_ETH_ADDRESS =
@@ -29,21 +26,13 @@ contract SfrxEth is
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
-        require(_owner != address(0), "invalid address");
-        _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
     }
 
@@ -71,7 +60,6 @@ contract SfrxEth is
         @param _amount - Amount to withdraw
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 frxEthBalanceBefore = IERC20(FRX_ETH_ADDRESS).balanceOf(
             address(this)
         );
@@ -88,23 +76,21 @@ contract SfrxEth is
             FRX_ETH_CRV_POOL_ADDRESS,
             frxEthReceived
         );
-
-        uint256 minOut = ((ethPerDerivative(true) * _amount) *
-            (1e18 - maxSlippage)) / 1e36;
-
         uint256 ethBalanceBefore = address(this).balance;
         IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS).exchange(
             1,
             0,
             frxEthReceived,
-            minOut
+            0
         );
-
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
-        require(sent, "Failed to send Ether");
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - ethBalanceBefore,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -119,12 +105,17 @@ contract SfrxEth is
             address(this)
         );
         frxETHMinterContract.submitAndDeposit{value: msg.value}(address(this));
-        uint256 sfrxBalancePost = IERC20(SFRX_ETH_ADDRESS).balanceOf(
-            address(this)
+        uint256 received = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this)) -
+            sfrxBalancePre;
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
         );
-        uint256 updatedBalance = sfrxBalancePost - sfrxBalancePre;
-        underlyingBalance = underlyingBalance + updatedBalance;
-        return updatedBalance;
+        return received;
     }
 
     /**
@@ -156,6 +147,4 @@ contract SfrxEth is
     function balance() public view returns (uint256) {
         return underlyingBalance;
     }
-
-    receive() external payable {}
 }

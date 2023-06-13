@@ -8,10 +8,12 @@ import "../../interfaces/ankr/AnkrStaker.sol";
 import "../../interfaces/ankr/AnkrEth.sol";
 import "../../interfaces/curve/IAnkrEthEthPool.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
+import "./DerivativeBase.sol";
 
 /// @title Derivative contract for ankr
 /// @author Asymmetry Finance
-contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
+
+contract Ankr is DerivativeBase {
     address public constant ANKR_ETH_ADDRESS =
         0xE95A203B1a91a908F9B9CE46459d101078c2c3cb;
     address public constant ANKR_STAKER_ADDRESS =
@@ -20,12 +22,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         0xA96A65c051bF88B4095Ee1f2451C2A9d43F53Ae2;
 
     uint256 public maxSlippage;
-
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    uint256 public underlyingBalance;
 
     /**
         @notice - Function to initialize values for the contracts
@@ -33,9 +30,7 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) public initializer {
-        require(_owner != address(0), "invalid address");
-        _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
     }
 
@@ -63,14 +58,16 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
      */
     function withdraw(uint256 _amount) public onlyOwner {
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
-        uint256 price = ethPerDerivative(true);
-        uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
-        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, minOut);
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: address(this).balance}(
-            ""
+        uint256 balancePre = address(this).balance;
+        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, 0);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - balancePre,
+            false,
+            underlyingBalance
         );
-        require(sent, "Failed to send Ether");
     }
 
     /**
@@ -81,12 +78,18 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         uint256 ankrBalancePre = IERC20(ANKR_ETH_ADDRESS).balanceOf(
             address(this)
         );
-
         AnkrStaker(ANKR_STAKER_ADDRESS).stakeAndClaimAethC{value: msg.value}();
-        uint256 ankrBalancePost = IERC20(ANKR_ETH_ADDRESS).balanceOf(
-            address(this)
+        uint256 received = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this)) -
+            ankrBalancePre;
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
         );
-        return ankrBalancePost - ankrBalancePre;
+        return received;
     }
 
     /**
@@ -100,8 +103,6 @@ contract Ankr is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Total derivative balance
      */
     function balance() external view returns (uint256) {
-        return IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this));
+        return underlyingBalance;
     }
-
-    receive() external payable {}
 }

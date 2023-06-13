@@ -8,15 +8,11 @@ import "../../interfaces/curve/IStEthEthPool.sol";
 import "../../interfaces/lido/IWStETH.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./DerivativeBase.sol";
 
 /// @title Derivative contract for wstETH
 /// @author Asymmetry Finance
-contract WstEth is
-    ERC165Storage,
-    IDerivative,
-    Initializable,
-    OwnableUpgradeable
-{
+contract WstEth is DerivativeBase {
     address private constant WST_ETH =
         0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address private constant LIDO_CRV_POOL =
@@ -33,21 +29,13 @@ contract WstEth is
 
     AggregatorV3Interface public chainlinkFeed;
 
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
         @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
-        require(_owner != address(0), "invalid address");
-        _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
         chainlinkFeed = AggregatorV3Interface(
             0x86392dC19c0b719886221c78AB11eb8Cf5c52812
@@ -77,21 +65,19 @@ contract WstEth is
         @dev - Owner is set to SafEth contract
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 stEthAmount = IWStETH(WST_ETH).unwrap(_amount);
         require(stEthAmount > 0, "No stETH to unwrap");
-
         IERC20(STETH_TOKEN).approve(LIDO_CRV_POOL, stEthAmount);
-        uint256 minOut = ((ethPerDerivative(true) * _amount) *
-            (1e18 - maxSlippage)) / 1e36;
-
-        uint256 ethBalanceBefore = address(this).balance;
-        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, minOut);
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
-        require(sent, "Failed to send Ether");
+        uint256 balancePre = address(this).balance;
+        IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, 0);
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - balancePre,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
@@ -102,12 +88,18 @@ contract WstEth is
         uint256 wstEthBalancePre = IWStETH(WST_ETH).balanceOf(address(this));
         // solhint-disable-next-line
         (bool sent, ) = WST_ETH.call{value: msg.value}("");
-        require(sent, "Failed to send Ether");
-        uint256 wstEthBalancePost = IWStETH(WST_ETH).balanceOf(address(this));
-        uint256 wstEthAmount = wstEthBalancePost - wstEthBalancePre;
-        underlyingBalance = underlyingBalance + wstEthAmount;
-
-        return (wstEthAmount);
+        require(sent, "failed send eth to wst");
+        uint256 received = IWStETH(WST_ETH).balanceOf(address(this)) -
+            wstEthBalancePre;
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
+        );
+        return received;
     }
 
     /**
@@ -156,6 +148,4 @@ contract WstEth is
     function balance() external view returns (uint256) {
         return underlyingBalance;
     }
-
-    receive() external payable {}
 }
