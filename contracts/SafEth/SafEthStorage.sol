@@ -74,7 +74,7 @@ contract SafEthStorage {
     error AlreadyEnabled();
     error InvalidDerivative();
     error AlreadySet();
-    
+
     struct Derivatives {
         IDerivative derivative;
         uint256 weight;
