@@ -18,68 +18,6 @@ contract SafEth is
     SafEthStorage,
     ReentrancyGuardUpgradeable
 {
-    event ChangeMinAmount(
-        uint256 indexed oldMinAmount,
-        uint256 indexed newMinAmount
-    );
-    event ChangeMaxAmount(
-        uint256 indexed oldMaxAmount,
-        uint256 indexed newMaxAmount
-    );
-    event MaxPreMintAmount(uint256 indexed amount);
-    event StakingPaused(bool indexed paused);
-    event UnstakingPaused(bool indexed paused);
-    event SetMaxSlippage(uint256 indexed index, uint256 indexed slippage);
-    event Staked(
-        address indexed recipient,
-        uint256 indexed ethIn,
-        uint256 indexed totalStakeValue,
-        uint256 price,
-        bool usedPremint
-    );
-    event Unstaked(
-        address indexed recipient,
-        uint256 indexed ethOut,
-        uint256 indexed safEthIn,
-        uint256 price
-    );
-    event PreMint(
-        uint256 indexed ethIn,
-        uint256 indexed mintAmount,
-        uint256 newFloorPrice
-    );
-    event WeightChange(
-        uint256 indexed index,
-        uint256 indexed weight,
-        uint256 indexed totalWeight
-    );
-    event DerivativeAdded(
-        address indexed contractAddress,
-        uint256 indexed weight,
-        uint256 indexed index
-    );
-    event Rebalanced();
-    event DerivativeDisabled(uint256 indexed index);
-    event DerivativeEnabled(uint256 indexed index);
-
-    error BlacklistedAddress();
-    error StakingPausedError();
-    error UnstakingPausedError();
-    error PremintTooLow();
-    error AmountTooLow();
-    error AmountTooHigh();
-    error TotalWeightZero();
-    error MintedAmountTooLow();
-    error InsufficientBalance();
-    error FailedToSend();
-    error ReceivedZeroAmount();
-    error IndexOutOfBounds();
-    error SameDerivative();
-    error NotEnabled();
-    error AlreadyEnabled();
-    error InvalidDerivative();
-    error AlreadySet();
-
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
