@@ -59,9 +59,7 @@ contract Ankr is DerivativeBase {
     function withdraw(uint256 _amount) public onlyOwner {
         IERC20(ANKR_ETH_ADDRESS).approve(ANKR_ETH_POOL, _amount);
         uint256 balancePre = address(this).balance;
-        uint256 price = ethPerDerivative(true);
-        uint256 minOut = ((price * _amount) * (1e18 - maxSlippage)) / 1e36;
-        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, minOut);
+        IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, 0);
         underlyingBalance = super.finalChecks(
             ethPerDerivative(true),
             _amount,
