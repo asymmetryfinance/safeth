@@ -99,6 +99,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             mintAmount
         );
 
+        // TODO uncomment this line when stakeLpTokens() works with our mainnet contracts
+        // stakeLpTokens();
+
         // storage of individual balances associated w/ user deposit
         positions[id] = Position({
             owner: msg.sender,
@@ -112,8 +115,8 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         emit Staked(id, msg.sender);
     }
 
-    /// stake lp token into convex
-    function stakeLpToken() private {
+    /// stake lp tokens into convex
+    function stakeLpTokens() private {
         // TODO set this to our pool id once launched
         uint256 poolId = 0;
         IERC20(crvPool).approve(address(lpBoosterAddress), type(uint256).max);
