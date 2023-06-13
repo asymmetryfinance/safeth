@@ -22,7 +22,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -349,7 +349,7 @@ describe.only("SafEth", function () {
       await sfrxEthDerivative.deployed();
 
       await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
-        "frxEth possibly depegged"
+        "FrxDepegged"
       );
 
       await resetToBlock(initialHardhatBlock);
@@ -744,7 +744,7 @@ describe.only("SafEth", function () {
       await rEthDerivative.setMaxSlippage(0);
       await expect(
         rEthDerivative.deposit({ value: weiDepositAmount })
-      ).to.be.revertedWith("Slippage too high");
+      ).to.be.revertedWith("SlippageTooHigh");
     });
 
     it("Should upgrade a derivative contract, stake and unstake with the new functionality", async () => {

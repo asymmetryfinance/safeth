@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 interface IDerivative {
-    error ChainlinkFailed();
+    error ChainlinkFailed(string derivativeName);
 
     // Represents a Chainlink oracle response.
     // only applicable to some derivatives
