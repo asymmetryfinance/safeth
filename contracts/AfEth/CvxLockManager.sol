@@ -331,7 +331,9 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
     }
 
     function claimLpRewards() private {
-        IConvexRewardPool cvxLpRewardPool = IConvexRewardPool(lpRewardPoolAddress);
+        IConvexRewardPool cvxLpRewardPool = IConvexRewardPool(
+            lpRewardPoolAddress
+        );
         cvxLpRewardPool.getReward(address(this), true);
     }
 
@@ -447,6 +449,5 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
                 minOut
             );
         }
-
     }
 }
