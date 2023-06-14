@@ -17,44 +17,15 @@ import "../interfaces/curve/IAfEthPool.sol";
 import "../interfaces/ISafEth.sol";
 import "../interfaces/IAfEth.sol";
 import "./CvxLockManager.sol";
+import "./CvxStrategyStorage.sol";
+import "../interfaces/convex/IConvexRewardPool.sol";
+import "../interfaces/convex/IConvexBooster.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
     event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
     event Staked(uint256 indexed position, address indexed user);
     event Unstaked(uint256 indexed position, address indexed user);
-
-    mapping(uint256 => uint256) public crvEmissionsPerYear;
-
-    uint256 private positionId;
-
-    address public constant CHAINLINK_CRV =
-        0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e;
-    address public constant CHAINLINK_CVX =
-        0xC9CbF687f43176B302F03f5e58470b77D07c61c6;
-    address public constant SWAP_ROUTER =
-        0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
-    address private constant VE_CRV =
-        0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2;
-    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    AggregatorV3Interface private chainLinkCvxEthFeed;
-    AggregatorV3Interface private chainLinkCrvEthFeed;
-    ISwapRouter private swapRouter;
-    address private afEth;
-    address private crvPool;
-    address private safEth;
-
-    struct Position {
-        address owner; // owner of position
-        uint256 curveBalance; // crv Pool LP amount
-        uint256 afEthAmount; // afEth amount minted
-        uint256 safEthAmount; // safEth amount minted
-        uint256 createdAt; // block.timestamp
-        bool claimed; // user has unstaked position
-    }
-
-    mapping(uint256 => Position) public positions;
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -82,7 +53,6 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         _transferOwnership(msg.sender);
         chainLinkCvxEthFeed = AggregatorV3Interface(CHAINLINK_CVX);
         chainLinkCrvEthFeed = AggregatorV3Interface(CHAINLINK_CRV);
-        swapRouter = ISwapRouter(SWAP_ROUTER);
         safEth = _safEth;
         afEth = _afEth;
 
@@ -99,6 +69,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         crvEmissionsPerYear[10] = 57772796;
 
         initializeLockManager(_rewardsExtraStream);
+
+        // I THINK this is the booster for all convex pools and wont change
+        lpBoosterAddress = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
+
+        // TODO set this to our pool lp token when mainnet launched
+        lpTokenAddress = 0x0000000000000000000000000000000000000000;
+        // TODO set this to the convex reward pool for our LP token when mainnet launched
+        lpRewardPoolAddress = 0x0000000000000000000000000000000000000000;
     }
 
     function stake() public payable returns (uint256 id) {
@@ -121,6 +99,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             mintAmount
         );
 
+        // TODO uncomment this line when stakeLpTokens() works with our mainnet contracts
+        // stakeLpTokens();
+
         // storage of individual balances associated w/ user deposit
         positions[id] = Position({
             owner: msg.sender,
@@ -132,6 +113,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         });
         positionId++;
         emit Staked(id, msg.sender);
+    }
+
+    /// stake lp tokens into convex
+    function stakeLpTokens() private {
+        // TODO set this to our pool id once launched
+        uint256 poolId = 0;
+        IERC20(crvPool).approve(address(lpBoosterAddress), type(uint256).max);
+        IConvexBooster(lpBoosterAddress).depositAll(poolId, false);
     }
 
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
@@ -208,7 +197,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint24 poolFee,
         uint256 amountIn
     ) private returns (uint256 amountOut) {
-        IERC20(tokenIn).approve(address(swapRouter), amountIn);
+        IERC20(tokenIn).approve(SWAP_ROUTER, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -219,10 +208,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
                 amountOutMinimum: 1, // TODO: fix slippage
                 sqrtPriceLimitX96: 0
             });
-        amountOut = swapRouter.exactInputSingle(params);
+        amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
     }
 
     function swapCvx(uint256 amount) private returns (uint256 amountOut) {
+        address WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         IWETH(WETH).deposit{value: amount}();
         uint256 amountSwapped = swapExactInputSingleHop(
             WETH,
