@@ -22,11 +22,6 @@ import "../interfaces/convex/IConvexRewardPool.sol";
 import "../interfaces/convex/IConvexBooster.sol";
 
 contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
-    event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
-    event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
-    event Staked(uint256 indexed position, address indexed user);
-    event Unstaked(uint256 indexed position, address indexed user);
-
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -80,7 +75,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function stake() public payable returns (uint256 id) {
-        require(crvPool != address(0), "Pool not initialized");
+        if (crvPool == address(0)) revert NotInitialized();
 
         uint256 ratio = getAsymmetryRatio(150000000000000000); // TODO: make apr changeable
         uint256 ethAmountForCvx = (msg.value * ratio) / 1e18;
@@ -126,8 +121,9 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     function unstake(bool _instantWithdraw, uint256 _id) external payable {
         uint256 id = _id;
         Position storage position = positions[id];
-        require(position.claimed == false, "position claimed");
-        require(position.owner == msg.sender, "Not owner");
+        if (position.claimed) revert PositionClaimed();
+        if (position.owner != msg.sender) revert NotOwner();
+
         position.claimed = true;
         if (_instantWithdraw) {
             // TODO: add instant withdraw function
@@ -160,7 +156,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         (bool sent, ) = address(msg.sender).call{
             value: address(this).balance - ethBalanceBefore
         }("");
-        require(sent, "Failed to send Ether");
+        if (!sent) revert FailedToSend();
 
         emit Unstaked(id, msg.sender);
     }
@@ -229,14 +225,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 _safEthAmount,
         uint256 _afEthAmount
     ) private returns (uint256 mintAmount) {
-        require(
-            _safEthAmount <= IERC20(safEth).balanceOf(address(this)),
-            "Not Enough safETH"
-        );
-        require(
-            _afEthAmount <= IERC20(afEth).balanceOf(address(this)),
-            "Not Enough afETH"
-        );
+        if (_safEthAmount > IERC20(safEth).balanceOf(address(this)))
+            revert NotEnough("safEth");
+
+        if (_afEthAmount > IERC20(afEth).balanceOf(address(this)))
+            revert NotEnough("afEth");
 
         IERC20(safEth).approve(_pool, _safEthAmount);
         IERC20(afEth).approve(_pool, _afEthAmount);
@@ -259,7 +252,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
     }
 
     function updateCrvPool(address _crvPool) external payable onlyOwner {
-        require(msg.value > 0, "Must seed pool");
+        if (msg.value == 0) revert MustSeedPool();
         emit UpdateCrvPool(_crvPool, crvPool);
         crvPool = _crvPool;
         uint256 mintAmount = ISafEth(safEth).stake{value: msg.value}(0);

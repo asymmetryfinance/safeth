@@ -226,8 +226,8 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
-        require(cvxPositions[positionId].owner == owner, "Not owner");
-        require(cvxPositions[positionId].open == true, "Not open");
+        if (cvxPositions[positionId].owner == owner) revert NotOwner();
+        if (!cvxPositions[positionId].open) revert NotOpen();
         cvxPositions[positionId].open = false;
 
         uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
@@ -254,18 +254,15 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
 
     // Try to withdraw cvx from a closed position
     function withdrawCvxAndRewards(uint256 positionId) public {
-        require(
-            cvxPositions[positionId].startingEpoch > 0,
-            "Invalid positionId"
-        );
-        require(cvxPositions[positionId].open == false, "Not closed");
+        if (cvxPositions[positionId].startingEpoch == 0)
+            revert InvalidPositionId();
+        if (cvxPositions[positionId].open) revert NotClosed();
         uint256 cvxAmount = cvxPositions[positionId].cvxAmount;
-        require(cvxAmount > 0, "No cvx to withdraw");
+        if (cvxAmount == 0) revert NothingToWithdraw();
         uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
-        require(
-            currentEpoch >= cvxPositions[positionId].unlockEpoch,
-            "Cvx still locked"
-        );
+        if (currentEpoch >= cvxPositions[positionId].unlockEpoch)
+            revert StillLocked();
+
         cvxPositions[positionId].cvxAmount = 0;
 
         // relock if havent yet for this epochCount
@@ -273,10 +270,9 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         relockCvx();
 
         cvxToLeaveUnlocked -= cvxAmount;
-        require(
-            IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxAmount),
-            "Couldn't transfer"
-        );
+        if (IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxAmount))
+            revert TransferFailed();
+
         withdrawRewards(positionId, cvxAmount);
     }
 
@@ -295,10 +291,8 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         uint256 startingEpoch = cvxPositions[_positionId].startingEpoch;
         uint256 positionAmount = _cvxAmount;
         uint256 unlockEpoch = cvxPositions[_positionId].unlockEpoch;
-        require(
-            unlockEpoch != 0 && currentEpoch >= unlockEpoch,
-            "Position still locked"
-        );
+        if (unlockEpoch != 0 && currentEpoch >= unlockEpoch)
+            revert StillLocked();
 
         uint256 totalRewards = 0;
         // add up total rewards for a position up until unlock epoch -1
@@ -327,7 +321,7 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         }
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: totalRewards}("");
-        require(sent, "Failed to send Ether");
+        if (!sent) revert FailedToSend();
     }
 
     function claimLpRewards() private {
