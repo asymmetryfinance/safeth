@@ -278,5 +278,11 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         );
     }
 
+    function withdrawHarvestedRewards() external onlyOwner {
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: harvestedEthRewards}("");
+        require(sent, "Failed to send Ether");
+    }
+
     receive() external payable {}
 }
