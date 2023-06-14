@@ -226,7 +226,7 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
     }
 
     function requestUnlockCvx(uint256 positionId, address owner) internal {
-        if (cvxPositions[positionId].owner == owner) revert NotOwner();
+        if (cvxPositions[positionId].owner != owner) revert NotOwner();
         if (!cvxPositions[positionId].open) revert NotOpen();
         cvxPositions[positionId].open = false;
 
@@ -260,7 +260,7 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         uint256 cvxAmount = cvxPositions[positionId].cvxAmount;
         if (cvxAmount == 0) revert NothingToWithdraw();
         uint256 currentEpoch = ILockedCvx(VL_CVX).findEpochId(block.timestamp);
-        if (currentEpoch >= cvxPositions[positionId].unlockEpoch)
+        if (currentEpoch < cvxPositions[positionId].unlockEpoch)
             revert StillLocked();
 
         cvxPositions[positionId].cvxAmount = 0;
@@ -270,7 +270,7 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         relockCvx();
 
         cvxToLeaveUnlocked -= cvxAmount;
-        if (IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxAmount))
+        if (!IERC20(CVX).transfer(cvxPositions[positionId].owner, cvxAmount))
             revert TransferFailed();
 
         withdrawRewards(positionId, cvxAmount);
@@ -291,7 +291,7 @@ contract CvxLockManager is OwnableUpgradeable, CvxStrategyStorage {
         uint256 startingEpoch = cvxPositions[_positionId].startingEpoch;
         uint256 positionAmount = _cvxAmount;
         uint256 unlockEpoch = cvxPositions[_positionId].unlockEpoch;
-        if (unlockEpoch != 0 && currentEpoch >= unlockEpoch)
+        if (unlockEpoch == 0 || currentEpoch < unlockEpoch)
             revert StillLocked();
 
         uint256 totalRewards = 0;

@@ -89,7 +89,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
-      "Not closed"
+      "NotClosed"
     );
   });
 
@@ -103,7 +103,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
-      "Cvx still locked"
+      "StillLocked"
     );
     await tx.wait();
   });
@@ -117,9 +117,7 @@ describe("AfEth (CvxLockManager)", async function () {
     const tx = await cvxStrategy0.stake({ value: depositAmount });
     await tx.wait();
 
-    await expect(cvxStrategy1.unstake(false, 1)).to.be.revertedWith(
-      "Not owner"
-    );
+    await expect(cvxStrategy1.unstake(false, 1)).to.be.revertedWith("NotOwner");
   });
 
   it("Should fail to close an already closed position", async function () {
@@ -133,7 +131,7 @@ describe("AfEth (CvxLockManager)", async function () {
     await tx.wait();
 
     await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith(
-      "position claimed"
+      "PositionClaimed"
     );
   });
 
@@ -160,7 +158,7 @@ describe("AfEth (CvxLockManager)", async function () {
     tx = await cvxStrategy.withdrawCvxAndRewards(0);
     await tx.wait();
     await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
-      "No cvx to withdraw"
+      "NothingToWithdraw"
     );
   });
 
@@ -184,7 +182,7 @@ describe("AfEth (CvxLockManager)", async function () {
 
     await tx.wait();
     await expect(cvxStrategy.withdrawCvxAndRewards(1)).to.be.revertedWith(
-      "Invalid positionId"
+      "InvalidPositionId"
     );
   });
 
@@ -258,7 +256,7 @@ describe("AfEth (CvxLockManager)", async function () {
     // expect it to fail because not yet unlocked
 
     await expect(cvxStrategy.withdrawCvxAndRewards(0)).to.be.revertedWith(
-      "Cvx still locked"
+      "StillLocked"
     );
 
     // 1 minute after unlock epoch has started

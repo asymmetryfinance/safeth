@@ -55,9 +55,9 @@ contract CvxStrategyStorage {
 
     mapping(uint256 => Position) public positions;
 
-    address private lpTokenAddress;
-    address private lpRewardPoolAddress;
-    address private lpBoosterAddress;
+    address internal lpTokenAddress;
+    address internal lpRewardPoolAddress;
+    address internal lpBoosterAddress;
 
     address public constant CHAINLINK_CRV =
         0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e;
