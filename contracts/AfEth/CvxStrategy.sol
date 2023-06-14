@@ -109,7 +109,8 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             afEthAmount: mintAmount,
             safEthAmount: mintAmount,
             createdAt: block.timestamp,
-            claimed: false
+            claimed: false,
+            ethAmountForSafEth: ethAmountForSafEth
         });
         positionId++;
         emit Staked(id, msg.sender);
@@ -156,9 +157,15 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             0
         ); // TODO: add minOut ~.5% slippage
 
+        uint256 ethUnstaked = address(this).balance - ethBalanceBefore;
+        uint256 safEthRewards = position.ethAmountForSafEth < ethUnstaked
+            ? ethUnstaked - position.ethAmountForSafEth
+            : 0;
+        harvestedEthRewards += safEthRewards;
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{
-            value: address(this).balance - ethBalanceBefore
+            value: ethUnstaked - safEthRewards
         }("");
         require(sent, "Failed to send Ether");
 
@@ -269,6 +276,14 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
             IERC20(safEth).balanceOf(address(this)),
             IERC20(afEth).balanceOf(address(this))
         );
+    }
+
+    function withdrawHarvestedRewards() external onlyOwner {
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: harvestedEthRewards}(
+            ""
+        );
+        require(sent, "Failed to send Ether");
     }
 
     receive() external payable {}
