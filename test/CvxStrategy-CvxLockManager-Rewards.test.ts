@@ -23,7 +23,7 @@ import {
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { getDifferenceRatio } from "./helpers/functions";
 
-describe("AfEth (CvxLockManager Rewards)", async function () {
+describe("CvxStrategy (CvxLockManager Rewards)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
