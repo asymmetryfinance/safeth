@@ -49,7 +49,7 @@ contract CvxStrategyStorage {
     address public constant SWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
 
-    uint256 harvestedEthRewards; // eth rewards owned by protocol. increases on unstaking
+    uint256 public harvestedEthRewards; // eth rewards owned by protocol. increases on unstaking
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
