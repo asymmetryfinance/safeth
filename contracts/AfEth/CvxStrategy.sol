@@ -161,7 +161,7 @@ contract CvxStrategy is Initializable, OwnableUpgradeable, CvxLockManager {
         uint256 safEthRewards = position.ethAmountForSafEth < ethUnstaked
             ? ethUnstaked - position.ethAmountForSafEth
             : 0;
-        ownedSafEthRewards += safEthRewards;
+        harvestedEthRewards += safEthRewards;
 
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{
