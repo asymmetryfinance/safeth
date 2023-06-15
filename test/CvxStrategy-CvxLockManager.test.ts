@@ -14,7 +14,7 @@ import { vlCvxAbi } from "./abi/vlCvxAbi";
 import { getCurrentEpoch } from "./helpers/lockManagerHelpers";
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 
-describe("AfEth (CvxLockManager)", async function () {
+describe("CvxStrategy (CvxLockManager)", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;

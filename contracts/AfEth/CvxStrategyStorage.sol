@@ -51,6 +51,7 @@ contract CvxStrategyStorage {
         uint256 safEthAmount; // safEth amount minted
         uint256 createdAt; // block.timestamp
         bool claimed; // user has unstaked position
+        uint256 ethAmountForSafEth; // eth amount used to mint safEth
     }
 
     mapping(uint256 => Position) public positions;
@@ -65,6 +66,8 @@ contract CvxStrategyStorage {
         0xC9CbF687f43176B302F03f5e58470b77D07c61c6;
     address public constant SWAP_ROUTER =
         0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+
+    uint256 public harvestedEthRewards; // eth rewards owned by protocol. increases on unstaking
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
