@@ -225,7 +225,7 @@ describe("CvxStrategy", async function () {
     await snapshot.restore();
   });
   it("Shouldn't be able to unstake seed amount", async function () {
-    await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith("Not owner");
+    await expect(cvxStrategy.unstake(false, 0)).to.be.revertedWith("NotOwner");
     await snapshot.restore();
   });
   it("Should fail to unstake if not owner", async function () {
@@ -236,7 +236,7 @@ describe("CvxStrategy", async function () {
     const userStrategySigner = cvxStrategy.connect(accounts[1]);
 
     await expect(userStrategySigner.unstake(false, 3)).to.be.revertedWith(
-      "Not owner"
+      "NotOwner"
     );
     await snapshot.restore();
   });

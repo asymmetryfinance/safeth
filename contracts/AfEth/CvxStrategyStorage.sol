@@ -15,6 +15,24 @@ import "../interfaces/uniswap/ISwapRouter.sol";
         Constant values CAN be modified on upgrade
 */
 contract CvxStrategyStorage {
+    event UpdateCrvPool(address indexed newCrvPool, address oldCrvPool);
+    event SetEmissionsPerYear(uint256 indexed year, uint256 emissions);
+    event Staked(uint256 indexed position, address indexed user);
+    event Unstaked(uint256 indexed position, address indexed user);
+
+    error NotInitialized();
+    error PositionClaimed();
+    error NotOwner();
+    error NotClosed();
+    error NotOpen();
+    error StillLocked();
+    error NothingToWithdraw();
+    error FailedToSend();
+    error TransferFailed();
+    error MustSeedPool();
+    error InvalidPositionId();
+    error NotEnough(string token);
+
     mapping(uint256 => uint256) public crvEmissionsPerYear;
 
     uint256 internal positionId;
@@ -38,9 +56,9 @@ contract CvxStrategyStorage {
 
     mapping(uint256 => Position) public positions;
 
-    address lpTokenAddress;
-    address lpRewardPoolAddress;
-    address lpBoosterAddress;
+    address internal lpTokenAddress;
+    address internal lpRewardPoolAddress;
+    address internal lpBoosterAddress;
 
     address public constant CHAINLINK_CRV =
         0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e;
