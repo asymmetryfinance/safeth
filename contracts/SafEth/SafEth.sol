@@ -11,6 +11,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 
+import "hardhat/console.sol";
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -122,7 +124,8 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-
+        
+        getTrueWeights();
         depositPrice = approxPrice(true);
 
         uint256 preMintPrice = depositPrice < floorPrice
@@ -473,6 +476,21 @@ contract SafEth is
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
         return (underlyingValue) / safEthTotalSupply;
+    }
+
+    function getTrueWeights() public view returns (uint256[] memory) {
+        uint256[] memory trueWeights = new uint256[](derivativeCount);
+        uint256 count = derivativeCount;
+
+        uint256 tvlEth = totalSupply() * approxPrice(false);
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            trueWeights[i] = (IDerivative(derivatives[i].derivative).balance() * IDerivative(derivatives[i].derivative).ethPerDerivative(false)) / tvlEth;
+        }
+        console.log('count is', count);
+        console.log('trueWeights is', trueWeights[0]);
+        return trueWeights;
     }
 
     /**
