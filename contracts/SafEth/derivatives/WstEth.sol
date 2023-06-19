@@ -44,7 +44,11 @@ contract WstEth is DerivativeBase {
         );
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
+    /**
+        @notice - Sets the address for the chainlink feed
+        @param _priceFeedAddress - address of the chainlink feed
+    */
+    function setChainlinkFeed(address _priceFeedAddress) public onlyManager {
         chainlinkFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
@@ -58,7 +62,7 @@ contract WstEth is DerivativeBase {
     /**
         @notice - Owner only function to set max slippage for derivative
     */
-    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyManager {
         maxSlippage = _slippage;
     }
 

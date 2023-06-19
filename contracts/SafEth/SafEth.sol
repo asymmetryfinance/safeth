@@ -385,21 +385,6 @@ contract SafEth is
     }
 
     /**
-        @notice - Sets the max slippage for a certain derivative index
-        @param _derivativeIndex - index of the derivative you want to update the slippage
-        @param _slippage - new slippage amount in wei
-    */
-    function setMaxSlippage(
-        uint256 _derivativeIndex,
-        uint256 _slippage
-    ) external onlyOwner {
-        if (_derivativeIndex >= derivativeCount) revert IndexOutOfBounds();
-
-        derivatives[_derivativeIndex].derivative.setMaxSlippage(_slippage);
-        emit SetMaxSlippage(_derivativeIndex, _slippage);
-    }
-
-    /**
         @notice - Sets the minimum amount a user is allowed to stake
         @param _minAmount - amount to set as minimum stake value
     */
@@ -446,13 +431,6 @@ contract SafEth is
         if (pauseUnstaking == _pause) revert AlreadySet();
         pauseUnstaking = _pause;
         emit UnstakingPaused(_pause);
-    }
-
-    function setChainlinkFeed(
-        uint256 derivativeIndex,
-        address feed
-    ) external onlyOwner {
-        derivatives[derivativeIndex].derivative.setChainlinkFeed(feed);
     }
 
     /**

@@ -40,10 +40,6 @@ contract SfrxEth is DerivativeBase {
         maxSlippage = (1 * 1e16); // 1%
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public onlyManager {
-        // noop
-    }
-
     /**
         @notice - Return derivative name
     */
@@ -54,7 +50,7 @@ contract SfrxEth is DerivativeBase {
     /**
         @notice - Owner only function to set max slippage for derivative
     */
-    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyManager {
         maxSlippage = _slippage;
     }
 

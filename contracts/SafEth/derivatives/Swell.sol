@@ -35,10 +35,6 @@ contract Swell is DerivativeBase {
         maxSlippage = (1 * 1e16); // 1%
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
-        // noop
-    }
-
     /**
         @notice - Return derivative name
     */
@@ -50,7 +46,7 @@ contract Swell is DerivativeBase {
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - new slippage amount in wei
     */
-    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyManager {
         maxSlippage = _slippage;
     }
 

@@ -33,7 +33,7 @@ abstract contract DerivativeBase is
     }
 
     /**
-        @notice - Function to initialize values for the contracts
+        @notice - Sets the manager address for the derivative
     */
     function initializeV2() external {
         if (manager != address(0)) revert AlreadyInitialized();
