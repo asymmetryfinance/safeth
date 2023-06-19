@@ -5,6 +5,8 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/convex/ILockedCvx.sol";
 
 contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
+    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
