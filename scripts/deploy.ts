@@ -49,6 +49,7 @@ async function main() {
     address: wst.address,
   });
   await safEth.setPauseStaking(false);
+  console.log('diff')
 }
 
 main()
