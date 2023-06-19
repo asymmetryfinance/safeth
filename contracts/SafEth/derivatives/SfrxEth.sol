@@ -135,8 +135,8 @@ contract SfrxEth is DerivativeBase {
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
         else priceDifference = 1e18 - oraclePrice;
 
-        if (_validate && priceDifference > 19e14) revert FrxDepegged();
-        // outside of 0.19% we assume depegged
+        if (_validate && priceDifference > 4e15) revert FrxDepegged();
+        // outside of 0.4% we assume depegged
 
         uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return ((frxEthAmount * oraclePrice) / 10 ** 18);
