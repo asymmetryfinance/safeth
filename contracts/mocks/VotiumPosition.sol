@@ -16,10 +16,10 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     }
 
     function setDelegate() external onlyOwner {
-        bytes32 vlCvxVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
+        bytes32 VotiumVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
         address DelegationRegistry = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
         ISnapshotDelegationRegistry(DelegationRegistry).setDelegate(
-            vlCvxVoteDelegationId,
+            VotiumVoteDelegationId,
             owner()
         );
     }
