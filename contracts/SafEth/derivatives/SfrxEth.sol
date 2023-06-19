@@ -25,8 +25,10 @@ contract SfrxEth is DerivativeBase {
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
+    uint256 public depegSlippage;
 
     error FrxDepegged();
+    event DepegSlippageSet(uint256 depegSlippage);
 
     /**
         @notice - Function to initialize values for the contracts
@@ -38,7 +40,7 @@ contract SfrxEth is DerivativeBase {
         maxSlippage = (1 * 1e16); // 1%
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
+    function setChainlinkFeed(address _priceFeedAddress) public onlyManager {
         // noop
     }
 
@@ -148,4 +150,15 @@ contract SfrxEth is DerivativeBase {
     function balance() public view returns (uint256) {
         return underlyingBalance;
     }
+
+    /**
+        @notice - Set depeg slippage
+        @dev - This will revert if crv pool is depegged past the slippage amount
+        @param _depegSlippage - Slippage amount to revert at
+     */
+    function setDepegSlippage(uint256 _depegSlippage) external onlyManager {
+        depegSlippage = _depegSlippage;
+        emit DepegSlippageSet(_depegSlippage);
+    }
+
 }

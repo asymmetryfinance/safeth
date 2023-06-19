@@ -14,11 +14,30 @@ abstract contract DerivativeBase is
     error SlippageTooHigh();
     error FailedToSend();
     error InvalidAddress();
+    error AlreadyInitialized();
+    error Unauthorized();
+
+    address public manager;
+
+    uint256[50] private __gap;
+
+    modifier onlyManager() {
+        if (msg.sender != manager) revert Unauthorized();
+        _;
+    }
 
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    /**
+        @notice - Function to initialize values for the contracts
+    */
+    function initializeV2() external {
+        if (manager != address(0)) revert AlreadyInitialized();
+        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
     }
 
     function finalChecks(
