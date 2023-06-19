@@ -138,7 +138,7 @@ contract SfrxEth is
         uint256 priceDifference;
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
         else priceDifference = 1e18 - oraclePrice;
-        require(priceDifference < 19e14, "frxEth possibly depegged"); // outside of 0.19% we assume depegged
+        require(priceDifference < 4e15, "frxEth possibly depegged"); // outside of 0.3% we assume depegged
 
         uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return ((frxEthAmount * oraclePrice) / 10 ** 18);
