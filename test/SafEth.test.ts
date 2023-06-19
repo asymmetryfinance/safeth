@@ -303,6 +303,13 @@ describe("SafEth", function () {
       const ethToClaimAfter = await safEth.ethToClaim();
       expect(ethToClaimAfter).eq(expectedEthToClaimAfter);
     });
+    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      const minOut = ethers.utils.parseEther("2");
+      await expect(
+        safEth.stake(minOut, { value: depositAmount })
+      ).to.be.revertedWith("PremintTooLow");
+    });
   });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
@@ -329,13 +336,6 @@ describe("SafEth", function () {
     });
   });
   describe("Min Out", function () {
-    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      const minOut = ethers.utils.parseEther("2");
-      await expect(
-        safEth.stake(minOut, { value: depositAmount })
-      ).to.be.revertedWith("PremintTooLow");
-    });
     it("Should fail staking with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("5");
       const minOut = ethers.utils.parseEther("6");
