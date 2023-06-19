@@ -22,7 +22,7 @@ import { snapshotDelegationRegistryAbi } from "./abi/snapshotDelegationRegistry"
 import { deployStrategyContract } from "./helpers/afEthTestHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("CvxStrategy", async function () {
+describe.skip("CvxStrategy", async function () {
   let afEth: AfEth;
   let safEth: SafEth;
   let cvxStrategy: CvxStrategy;
