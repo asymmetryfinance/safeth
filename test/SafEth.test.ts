@@ -22,7 +22,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
