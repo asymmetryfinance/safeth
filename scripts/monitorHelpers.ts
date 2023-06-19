@@ -32,7 +32,7 @@ export const notifyOnStakeUnstake = async () => {
     console.log("previousTotalSupply is", previousTotalSupply);
     if (newTotalSupply.gt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Staked", 0, "latest");
-      console.log({ events });
+
       const latestEvent = events[events.length - 1];
       if (!latestEvent) {
         console.log("Failed to get Staked event data");
