@@ -2,8 +2,11 @@ import { WebhookClient } from "discord.js";
 import { BigNumber } from "ethers";
 import hre, { ethers } from "hardhat";
 import { chainlinkFeedAbi } from "../test/abi/chainlinkFeedAbi";
-import { wstEthAbi } from "../test/abi/WstEthAbi";
+import { wstEthAbi as lidoAbi } from "../test/abi/WstEthAbi";
+import { wstEthAbi } from "./abi/wstEth";
 import { safEthAbi } from "./abi/safEth";
+import { rEthAbi } from "./abi/rEth";
+import { sfrxEthAbi } from "./abi/sfrxEth";
 
 const webhookClientPrice = new WebhookClient({
   id: process.env.MONITOR_WEBHOOK_ID ?? "",
@@ -21,11 +24,7 @@ let previousTotalSupply = BigNumber.from(0);
 const failedTransactions: string[] = [];
 
 export const notifyOnStakeUnstake = async () => {
-  const safEth = new ethers.Contract(
-    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
-    safEthAbi,
-    ethers.provider
-  );
+  const { safEth } = await getContracts();
   const newTotalSupply = await safEth.totalSupply();
 
   if (!previousTotalSupply.eq(newTotalSupply) && previousTotalSupply.gt(0)) {
@@ -33,6 +32,7 @@ export const notifyOnStakeUnstake = async () => {
     console.log("previousTotalSupply is", previousTotalSupply);
     if (newTotalSupply.gt(previousTotalSupply)) {
       const events = await safEth.queryFilter("Staked", 0, "latest");
+
       const latestEvent = events[events.length - 1];
       if (!latestEvent) {
         console.log("Failed to get Staked event data");
@@ -121,21 +121,25 @@ export const notfiyOnFailedTx = async (
 };
 
 export const getContracts = async () => {
-  const safEth = await ethers.getContractAt(
-    "SafEth",
-    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5"
+  const safEth = new ethers.Contract(
+    "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
+    safEthAbi,
+    ethers.provider
   );
-  const wstEthDerivative = await ethers.getContractAt(
-    "WstEth",
-    "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad"
+  const wstEthDerivative = new ethers.Contract(
+    "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad",
+    wstEthAbi,
+    ethers.provider
   );
-  const rethDerivative = await ethers.getContractAt(
-    "Reth",
-    "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3"
+  const rethDerivative = new ethers.Contract(
+    "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3",
+    rEthAbi,
+    ethers.provider
   );
-  const sfrxEthDerivative = await ethers.getContractAt(
-    "SfrxEth",
-    "0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A"
+  const sfrxEthDerivative = new ethers.Contract(
+    "0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A",
+    sfrxEthAbi,
+    ethers.provider
   );
 
   const chainLinkStEthEthFeed = new ethers.Contract(
@@ -146,7 +150,7 @@ export const getContracts = async () => {
 
   const wstEth = new ethers.Contract(
     "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-    wstEthAbi,
+    lidoAbi,
     ethers.provider
   );
 
