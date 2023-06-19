@@ -1,4 +1,4 @@
-import hre, { upgrades, ethers } from "hardhat";
+import { upgrades, ethers } from "hardhat";
 
 async function main() {
   // const SafEthDeployment = await ethers.getContractFactory("SafEth");
