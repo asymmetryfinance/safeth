@@ -1145,7 +1145,7 @@ describe("SafEth", function () {
     );
   });
 
-  describe.skip("Price", function () {
+  describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const startingPrice = await safEth.approxPrice(true);
