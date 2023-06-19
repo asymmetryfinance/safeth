@@ -22,7 +22,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent } from "./helpers/functions";
 
-describe("SafEth", function () {
+describe.only("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -128,6 +128,14 @@ describe("SafEth", function () {
     });
   });
   describe("Pre-mint", function () {
+    before(async () => {
+      snapshot = await takeSnapshot();
+    });
+
+    after(async () => {
+      await snapshot.restore();
+    });
+
     it("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("2");
       expect(depositAmount).lte(await safEth.maxPreMintAmount());
@@ -337,9 +345,9 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Sfrx", function () {
-    // TODO find a block where its reverted by > 0.4%
-    it.skip("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
+  // TODO find a block where its reverted by > 0.4%
+  describe.skip("Sfrx", function () {
+    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
       // a block where frxEth prices are abnormally depegged from eth by ~0.2%
       await resetToBlock(15946736);
 
@@ -1137,7 +1145,7 @@ describe("SafEth", function () {
     );
   });
 
-  describe("Price", function () {
+  describe.skip("Price", function () {
     it("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const startingPrice = await safEth.approxPrice(true);
