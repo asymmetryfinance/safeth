@@ -13,6 +13,7 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
 
     function initialize() external initializer {
         Ownable2StepUpgradeable.__Ownable2Step_init();
+        _transferOwnership(msg.sender);
     }
 
     function setDelegate() external onlyOwner {

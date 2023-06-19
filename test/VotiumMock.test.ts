@@ -2,6 +2,7 @@ import { ethers, network, upgrades } from "hardhat";
 import { VotiumPosition } from "../typechain-types";
 import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { expect } from "chai";
 
 describe("VotiumPosition", async function () {
   let votiumMock: VotiumPosition;
@@ -36,5 +37,10 @@ describe("VotiumPosition", async function () {
 
     await votiumMock.setDelegate();
     await votiumMock.lockCvx(cvxAmount);
+  });
+  it("Should have owner be admin account", async function () {
+    const accounts = await ethers.getSigners();
+    const owner = await votiumMock.owner();
+    expect(owner).to.equal(accounts[0].address);
   });
 });
