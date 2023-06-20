@@ -67,7 +67,7 @@ abstract contract DerivativeBase is
         _transferOwnership(_owner);
     }
 
-    function updateManager(address _manager) public onlyManager {
+    function updateManager(address _manager) external onlyManager {
         if (_manager == address(0)) revert InvalidAddress();
         manager = _manager;
         emit ManagerUpdated(_manager);
