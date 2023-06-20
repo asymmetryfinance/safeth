@@ -935,6 +935,22 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
+    it("Should be able to add variables to derivativeBase", async () => {
+      const derivativeAddressToUpgrade = (await safEth.derivatives(1))
+        .derivative;
+      const sfrxEthDerivative = await ethers.getContractAt(
+        "SfrxEth",
+        derivativeAddressToUpgrade
+      );
+      const preSlippage = await sfrxEthDerivative.maxSlippage();
+      const upgradedDerivative = await upgrade(
+        derivativeAddressToUpgrade,
+        "SfrxEthV2Mock"
+      );
+      await upgradedDerivative.deployed();
+      const postSlippage = await upgradedDerivative.maxSlippage();
+      expect(preSlippage).eq(postSlippage);
+    });
 
     it("Should allow owner to use admin features on upgraded contracts", async () => {
       const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");

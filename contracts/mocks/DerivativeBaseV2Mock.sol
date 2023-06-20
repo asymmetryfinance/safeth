@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
-import "../../interfaces/IDerivative.sol";
+import "../interfaces/IDerivative.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-abstract contract DerivativeBase is
+abstract contract DerivativeBaseV2Mock is
     ERC165Storage,
     IDerivative,
     Initializable,
@@ -20,6 +20,8 @@ abstract contract DerivativeBase is
     event ManagerUpdated(address _manager);
 
     address public manager;
+    uint256 public constant newVariable = 20;
+    uint256 public constant newVariable2 = 40;
 
     modifier onlyManager() {
         if (msg.sender != manager) revert Unauthorized();
