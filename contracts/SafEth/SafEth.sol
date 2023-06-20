@@ -168,7 +168,7 @@ contract SafEth is
                 ].derivative;
                 uint256 depositAmount = derivative.deposit{value: msg.value}();
                 uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative(false) * depositAmount);
+                    .ethPerDerivative(true) * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
             }
             // otherwise deposit according to weights
