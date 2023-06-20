@@ -152,7 +152,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
   });
-  describe("Pre-mint", function () {
+  describe.only("Pre-mint", function () {
     before(async () => {
       snapshot = await takeSnapshot();
     });
@@ -211,7 +211,7 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it.only("Should use approx price if approxPrice > floorPrice", async function () {
+    it("Should use approx price if approxPrice > floorPrice", async function () {
       const preMintAmount = ethers.utils.parseEther("2");
       // premint eth
       let tx = await safEth.preMint(0, false, {

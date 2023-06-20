@@ -456,9 +456,9 @@ contract SafEth is
     }
 
     function doPreMintedStake(
-        uint256 price,
-        uint256 _minOut
-    ) private returns (uint256 preMintPrice, uint256 mintedAmount) {
+        uint256 _minOut,
+        uint256 price
+    ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
         preMintPrice = price < floorPrice ? floorPrice : price;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
