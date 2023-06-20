@@ -108,12 +108,9 @@ contract SafEth is
      * @notice sets the eth amount at which it will use standard weighting vs buying a single derivative
      * @param _amount - amount of eth where it will switch to standard weighting
      */
-    function setSingleDerivativeThreshold(
-        uint256 _amount
-    ) external onlyOwner {
+    function setSingleDerivativeThreshold(uint256 _amount) external onlyOwner {
         singleDerivativeThreshold = _amount;
     }
-
 
     /**
         @notice - Stake your ETH into safETH
