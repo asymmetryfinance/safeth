@@ -132,80 +132,12 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-
         depositPrice = approxPrice(true);
-
-        uint256 preMintPrice = depositPrice < floorPrice
-            ? floorPrice
-            : depositPrice;
-        uint256 amountFromPreMint = (msg.value * 1e18) / preMintPrice;
-        if (
-            amountFromPreMint <= preMintedSupply &&
-            msg.value <= maxPreMintAmount
-        ) {
-            if (amountFromPreMint < _minOut) revert PremintTooLow();
-
-            // Use preminted safeth
-            ethToClaim += msg.value;
-            depositPrice = preMintPrice;
-            preMintedSupply -= amountFromPreMint;
-            IERC20(address(this)).transfer(msg.sender, amountFromPreMint);
-            emit Staked(
-                msg.sender,
-                msg.value,
-                (amountFromPreMint * depositPrice) / 1e18,
-                depositPrice,
-                true
-            );
-        } else {
-            // Mint new safeth
-            uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
-            uint256 amountStaked = 0;
-
-            // deposits less than singleDerivativeThreshold go into the first underweight derivative (saves gas)
-            if (msg.value < singleDerivativeThreshold) {
-                IDerivative derivative = derivatives[
-                    firstUnderweightDerivativeIndex()
-                ].derivative;
-                uint256 depositAmount = derivative.deposit{value: msg.value}();
-                uint256 derivativeReceivedEthValue = (derivative
-                    .ethPerDerivative(true) * depositAmount);
-                totalStakeValueEth += derivativeReceivedEthValue;
-            }
-            // otherwise deposit according to weights
-            else {
-                for (uint256 i = 0; i < derivativeCount; i++) {
-                    if (!derivatives[i].enabled) continue;
-                    uint256 weight = derivatives[i].weight;
-                    if (weight == 0) continue;
-                    IDerivative derivative = derivatives[i].derivative;
-                    uint256 ethAmount = i == derivativeCount - 1
-                        ? msg.value - amountStaked
-                        : (msg.value * weight) / totalWeight;
-
-                    amountStaked += ethAmount;
-                    uint256 depositAmount = derivative.deposit{
-                        value: ethAmount
-                    }();
-                    // This is slightly less than ethAmount because slippage
-                    uint256 derivativeReceivedEthValue = (derivative
-                        .ethPerDerivative(true) * depositAmount);
-                    totalStakeValueEth += derivativeReceivedEthValue;
-                }
-            }
-            // MintedAmount represents a percentage of the total assets in the system
-            mintedAmount = (totalStakeValueEth) / depositPrice;
-            if (mintedAmount < _minOut) revert MintedAmountTooLow();
-
-            _mint(msg.sender, mintedAmount);
-            emit Staked(
-                msg.sender,
-                msg.value,
-                totalStakeValueEth / 1e18,
-                depositPrice,
-                false
-            );
-        }
+        if (shouldPremint(depositPrice))
+            return (doPreMintedStake(_minOut, depositPrice), depositPrice);
+        if (msg.value < singleDerivativeThreshold)
+            return (doSingleStake(_minOut, depositPrice), depositPrice);
+        return (doMultiStake(_minOut, depositPrice), depositPrice);
     }
 
     /**
@@ -515,6 +447,96 @@ contract SafEth is
             if (trueWeight < derivatives[i].weight) return i;
         }
         return 0;
+    }
+
+    function shouldPremint(uint256 price) private view returns (bool) {
+        uint256 preMintPrice = price < floorPrice ? floorPrice : price;
+        uint256 amount = (msg.value * 1e18) / preMintPrice;
+        return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
+    }
+
+    function doPreMintedStake(
+        uint256 price,
+        uint256 _minOut
+    ) private returns (uint256 mintedAmount) {
+        uint256 preMintPrice = price < floorPrice ? floorPrice : price;
+        price = preMintPrice;
+        mintedAmount = (msg.value * 1e18) / preMintPrice;
+        if (mintedAmount < _minOut) revert PremintTooLow();
+        ethToClaim += msg.value;
+        price = price;
+        preMintedSupply -= mintedAmount;
+        IERC20(address(this)).transfer(msg.sender, mintedAmount);
+        emit Staked(
+            msg.sender,
+            msg.value,
+            (mintedAmount * price) / 1e18,
+            price,
+            true
+        );
+    }
+
+    function doSingleStake(
+        uint256 _minOut,
+        uint256 price
+    ) private returns (uint256 mintedAmount) {
+        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+        IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
+            .derivative;
+        uint256 depositAmount = derivative.deposit{value: msg.value}();
+        uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
+            true
+        ) * depositAmount);
+        totalStakeValueEth += derivativeReceivedEthValue;
+        // MintedAmount represents a percentage of the total assets in the system
+        mintedAmount = (totalStakeValueEth) / price;
+        if (mintedAmount < _minOut) revert MintedAmountTooLow();
+
+        _mint(msg.sender, mintedAmount);
+        emit Staked(
+            msg.sender,
+            msg.value,
+            totalStakeValueEth / 1e18,
+            price,
+            false
+        );
+    }
+
+    function doMultiStake(
+        uint256 _minOut,
+        uint256 price
+    ) private returns (uint256 mintedAmount) {
+        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+        uint256 amountStaked = 0;
+        for (uint256 i = 0; i < derivativeCount; i++) {
+            if (!derivatives[i].enabled) continue;
+            uint256 weight = derivatives[i].weight;
+            if (weight == 0) continue;
+            IDerivative derivative = derivatives[i].derivative;
+            uint256 ethAmount = i == derivativeCount - 1
+                ? msg.value - amountStaked
+                : (msg.value * weight) / totalWeight;
+
+            amountStaked += ethAmount;
+            uint256 depositAmount = derivative.deposit{value: ethAmount}();
+            // This is slightly less than ethAmount because slippage
+            uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
+                true
+            ) * depositAmount);
+            totalStakeValueEth += derivativeReceivedEthValue;
+        }
+        // MintedAmount represents a percentage of the total assets in the system
+        mintedAmount = (totalStakeValueEth) / price;
+        if (mintedAmount < _minOut) revert MintedAmountTooLow();
+
+        _mint(msg.sender, mintedAmount);
+        emit Staked(
+            msg.sender,
+            msg.value,
+            totalStakeValueEth / 1e18,
+            price,
+            false
+        );
     }
 
     /**
