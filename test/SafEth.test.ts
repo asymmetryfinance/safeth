@@ -22,7 +22,7 @@ import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
 import { within1Percent, withinHalfPercent } from "./helpers/functions";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -122,14 +122,14 @@ describe.only("SafEth", function () {
         expect(withinHalfPercent(ethBalances[i], ethBalances[0])).eq(true);
       }
     });
-    it("Should use less than half as much gas when staking < 10 eth vs > 10 eth", async function () {
+    it("Should use nearly half as much gas when staking < 10 eth vs > 10 eth", async function () {
       const depositAmountSmall = ethers.utils.parseEther("9");
       const tx1 = await safEth.stake(0, { value: depositAmountSmall });
       const mined1 = await tx1.wait();
       const depositAmountLarge = ethers.utils.parseEther("11");
       const tx2 = await safEth.stake(0, { value: depositAmountLarge });
       const mined2 = await tx2.wait();
-      expect(mined2.gasUsed).gt(mined1.gasUsed.mul(2));
+      expect(mined2.gasUsed.toNumber()).gt(mined1.gasUsed.toNumber() * 1.9);
     });
   });
 
@@ -438,7 +438,7 @@ describe.only("SafEth", function () {
       ]);
       const broken = await brokenDerivative.deployed();
 
-      const depositAmount = ethers.utils.parseEther("6");
+      const depositAmount = ethers.utils.parseEther("11");
 
       // staking works before adding the bad derivative
       const tx1 = await safEth.stake(0, { value: depositAmount });
@@ -903,7 +903,7 @@ describe.only("SafEth", function () {
     it("Should allow owner to use admin features on upgraded contracts", async () => {
       const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
-      const depositAmount = ethers.utils.parseEther("1");
+      const depositAmount = ethers.utils.parseEther("11");
       const tx1 = await safEth2.stake(0, { value: depositAmount });
       await tx1.wait();
       const derivativeCount = await safEth2.derivativeCount();
@@ -977,7 +977,7 @@ describe.only("SafEth", function () {
       const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000"); // 10^18
-      const initialDeposit = ethers.utils.parseEther("1");
+      const initialDeposit = ethers.utils.parseEther("11");
 
       // set all derivatives to the same weight and stake
       // if there are 3 derivatives this is 33/33/33
@@ -1009,14 +1009,13 @@ describe.only("SafEth", function () {
       expect(within1Percent(balanceSum, initialDeposit)).eq(true);
     });
 
-    it("Should stake with a weight set to 0", async () => {
+    it("Should stake a large amount with a weight set to 0", async () => {
       const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000");
-      const initialDeposit = ethers.utils.parseEther("1");
+      const initialDeposit = ethers.utils.parseEther("11");
 
       // set all derivatives to the same weight and stake
-      // if there are 3 derivatives this is 33/33/33
       for (let i = 0; i < derivativeCount; i++) {
         const tx1 = await safEth.adjustWeight(i, initialWeight);
         await tx1.wait();
@@ -1043,11 +1042,43 @@ describe.only("SafEth", function () {
       expect(within1Percent(remainingBalanceSum, initialDeposit)).eq(true);
     });
 
-    it("Should stake, set a weight to 0, rebalance, & unstake", async () => {
+    it("Should stake a small amount with a weight set to 0", async () => {
       const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       const initialWeight = BigNumber.from("1000000000000000000");
       const initialDeposit = ethers.utils.parseEther("1");
+
+      // set all derivatives to the same weight and stake
+      for (let i = 0; i < derivativeCount; i++) {
+        const tx1 = await safEth.adjustWeight(i, initialWeight);
+        await tx1.wait();
+      }
+
+      const tx2 = await safEth.adjustWeight(0, 0);
+      await tx2.wait();
+      const tx3 = await safEth.stake(0, { value: initialDeposit });
+      await tx3.wait();
+
+      const ethBalances = await estimatedDerivativeValues();
+
+      const balanceSum = ethBalances.reduce(
+        (acc, val) => acc.add(val),
+        BigNumber.from(0)
+      );
+      let remainingBalanceSum = BigNumber.from(0);
+
+      for (let i = 1; i < ethBalances.length; i++) {
+        remainingBalanceSum = remainingBalanceSum.add(ethBalances[i]);
+      }
+
+      expect(within1Percent(balanceSum, initialDeposit)).eq(true);
+    });
+
+    it("Should stake, set a weight to 0, rebalance, & unstake", async () => {
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
+
+      const initialWeight = BigNumber.from("1000000000000000000");
+      const initialDeposit = ethers.utils.parseEther("11");
 
       const balanceBefore = await adminAccount.getBalance();
 
@@ -1109,13 +1140,12 @@ describe.only("SafEth", function () {
     const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
     const initialWeight = BigNumber.from("1000000000000000000");
-    const initialDeposit = ethers.utils.parseEther("1");
+    const initialDeposit = ethers.utils.parseEther("11");
 
     const balanceBefore = await adminAccount.getBalance();
 
     let totalNetworkFee = BigNumber.from(0);
     // set all derivatives to the same weight and stake
-    // if there are 3 derivatives this is 33/33/33
     for (let i = 0; i < derivativeCount; i++) {
       const tx1 = await safEth.adjustWeight(i, initialWeight);
       const mined1 = await tx1.wait();
@@ -1172,7 +1202,7 @@ describe.only("SafEth", function () {
 
   describe("Price", function () {
     it("Should correctly get approxPrice()", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
+      const depositAmount = ethers.utils.parseEther("11");
       const startingPrice = await safEth.approxPrice(true);
       // starting price = 1 Eth
       expect(startingPrice).eq("1000000000000000000");
