@@ -56,6 +56,7 @@ contract SafEthStorage {
     event Rebalanced();
     event DerivativeDisabled(uint256 indexed index);
     event DerivativeEnabled(uint256 indexed index);
+    event SingleDerivativeThresholdUpdated(uint256 indexed newThreshold);
 
     error BlacklistedAddress();
     error StakingPausedError();

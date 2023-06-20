@@ -110,6 +110,7 @@ contract SafEth is
      */
     function setSingleDerivativeThreshold(uint256 _amount) external onlyOwner {
         singleDerivativeThreshold = _amount;
+        emit SingleDerivativeThresholdUpdated(_amount);
     }
 
     /**
