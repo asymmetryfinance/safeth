@@ -8,6 +8,7 @@
     "console": "yarn hardhat console",
     "coverage": "yarn hardhat coverage",
     "deploy": "yarn hardhat run scripts/deploy.ts",
+    "deployVotiumMock": "yarn hardhat run scripts/deployVotiumMock.ts",
     "monitor:safEth": "yarn hardhat run scripts/monitorSafEth.ts",
     "lint": "yarn lint:ts && yarn lint:solidity && yarn lint:prettier",
     "lint:ts": "yarn eslint '**/*.{js,ts}'",

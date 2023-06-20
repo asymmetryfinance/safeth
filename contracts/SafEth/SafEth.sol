@@ -40,6 +40,7 @@ contract SafEth is
         maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
         pauseStaking = true; // pause staking on initialize for adding derivatives
         __ReentrancyGuard_init();
+        singleDerivativeThreshold = 10e18;
     }
 
     /**
@@ -104,6 +105,15 @@ contract SafEth is
     }
 
     /**
+     * @notice sets the eth amount at which it will use standard weighting vs buying a single derivative
+     * @param _amount - amount of eth where it will switch to standard weighting
+     */
+    function setSingleDerivativeThreshold(uint256 _amount) external onlyOwner {
+        singleDerivativeThreshold = _amount;
+        emit SingleDerivativeThresholdUpdated(_amount);
+    }
+
+    /**
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
@@ -149,26 +159,39 @@ contract SafEth is
             );
         } else {
             // Mint new safeth
-            uint256 count = derivativeCount;
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
             uint256 amountStaked = 0;
 
-            // Loop through each derivative and deposit the correct amount of ETH
-            for (uint256 i = 0; i < count; i++) {
-                if (!derivatives[i].enabled) continue;
-                uint256 weight = derivatives[i].weight;
-                if (weight == 0) continue;
-                IDerivative derivative = derivatives[i].derivative;
-                uint256 ethAmount = i == count - 1
-                    ? msg.value - amountStaked
-                    : (msg.value * weight) / totalWeight;
-
-                amountStaked += ethAmount;
-                uint256 depositAmount = derivative.deposit{value: ethAmount}();
-                // This is slightly less than ethAmount because slippage
+            // deposits less than singleDerivativeThreshold go into the first underweight derivative (saves gas)
+            if (msg.value < singleDerivativeThreshold) {
+                IDerivative derivative = derivatives[
+                    firstUnderweightDerivativeIndex()
+                ].derivative;
+                uint256 depositAmount = derivative.deposit{value: msg.value}();
                 uint256 derivativeReceivedEthValue = (derivative
                     .ethPerDerivative(true) * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
+            }
+            // otherwise deposit according to weights
+            else {
+                for (uint256 i = 0; i < derivativeCount; i++) {
+                    if (!derivatives[i].enabled) continue;
+                    uint256 weight = derivatives[i].weight;
+                    if (weight == 0) continue;
+                    IDerivative derivative = derivatives[i].derivative;
+                    uint256 ethAmount = i == derivativeCount - 1
+                        ? msg.value - amountStaked
+                        : (msg.value * weight) / totalWeight;
+
+                    amountStaked += ethAmount;
+                    uint256 depositAmount = derivative.deposit{
+                        value: ethAmount
+                    }();
+                    // This is slightly less than ethAmount because slippage
+                    uint256 derivativeReceivedEthValue = (derivative
+                        .ethPerDerivative(true) * depositAmount);
+                    totalStakeValueEth += derivativeReceivedEthValue;
+                }
             }
             // MintedAmount represents a percentage of the total assets in the system
             mintedAmount = (totalStakeValueEth) / depositPrice;
@@ -451,6 +474,25 @@ contract SafEth is
         }
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
         return (underlyingValue) / safEthTotalSupply;
+    }
+
+    function firstUnderweightDerivativeIndex() public view returns (uint256) {
+        uint256 count = derivativeCount;
+
+        uint256 tvlEth = totalSupply() * approxPrice(false);
+
+        if (tvlEth == 0) return 0;
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            uint256 trueWeight = (totalWeight *
+                IDerivative(derivatives[i].derivative).balance() *
+                IDerivative(derivatives[i].derivative).ethPerDerivative(
+                    false
+                )) / tvlEth;
+            if (trueWeight < derivatives[i].weight) return i;
+        }
+        return 0;
     }
 
     /**
