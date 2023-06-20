@@ -229,8 +229,6 @@ describe("SafEth", function () {
       const receipt = await tx.wait();
       const event = await receipt?.events?.[receipt?.events?.length - 1];
 
-      console.log('event', event);
-      console.log('await safEth.floorPrice()', await safEth.floorPrice());
       expect(await safEth.floorPrice()).lt(event?.args?.[3]);
     });
     it("Should use floor price if approxPrice <= floorPrice", async function () {
