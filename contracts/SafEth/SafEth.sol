@@ -514,7 +514,7 @@ contract SafEth is
                 )) / tvlEth;
             if (trueWeight < derivatives[i].weight) return i;
         }
-        revert("Shouldnt ever happen"); // makes lint happy
+        return 0;
     }
 
     /**
