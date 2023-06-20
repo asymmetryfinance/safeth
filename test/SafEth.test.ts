@@ -1362,6 +1362,19 @@ describe("SafEth", function () {
     });
   });
 
+  describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
+    it("Should stake with minimal slippage for all 3 stake sizes", async function () {
+      // TODO
+    });
+    it("Should have gas pricing: premint < single derivative < multi derivative", async function () {
+      // TODO
+    });
+    it("Should be the same doing multiple smaller stakes as a single larger stake", async function () {
+      // TODO
+    });
+
+  });
+
   // get estimated total eth value of each derivative
   const estimatedDerivativeValues = async () => {
     const derivativeCount = (await safEth.derivativeCount()).toNumber();
