@@ -430,6 +430,10 @@ contract SafEth is
         return (underlyingValue) / safEthTotalSupply;
     }
 
+    /**
+     * @notice - find derivative that is underweight relative to target weights
+     * @return - a derivative index that is underweight relative to target weights
+     */
     function firstUnderweightDerivativeIndex() public view returns (uint256) {
         uint256 count = derivativeCount;
 
@@ -449,12 +453,24 @@ contract SafEth is
         return 0;
     }
 
+    /**
+     * @notice - decides if the contract can send preminted safEth (to save gas) instead of minting new
+     * @param price - price safEth price passed from approxPrice()
+     * @return - true or false if it can use preminted or not
+     */
     function shouldPremint(uint256 price) private view returns (bool) {
         uint256 preMintPrice = price < floorPrice ? floorPrice : price;
         uint256 amount = (msg.value * 1e18) / preMintPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
     }
 
+    /**
+     * @notice - stakes by using preminted supply instead of minting new
+     * @param _minOut - minimum amount of safEth to receive or revert
+     * @param price - price safEth price passed from approxPrice()
+     * @return mintedAmount - amount of safEth token sent from the preminted supply
+     * @return preMintPrice - price at which preminted safEth was sold to user upon staking
+     */
     function doPreMintedStake(
         uint256 _minOut,
         uint256 price
@@ -474,6 +490,12 @@ contract SafEth is
         );
     }
 
+    /**
+     * @notice - stakes by using a single derivative to save gas
+     * @param _minOut - minimum amount of safEth to receive or revert
+     * @param price - price safEth price passed from approxPrice()
+     * @return mintedAmount - amount of safEth token minted
+     */
     function doSingleStake(
         uint256 _minOut,
         uint256 price
@@ -500,6 +522,12 @@ contract SafEth is
         );
     }
 
+    /**
+     * @notice - stakes into all derivatives
+     * @param _minOut - minimum amount of safEth to receive or revert
+     * @param price - price safEth price passed from approxPrice()
+     * @return mintedAmount - amount of safEth token minted
+     */
     function doMultiStake(
         uint256 _minOut,
         uint256 price
