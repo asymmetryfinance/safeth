@@ -460,18 +460,16 @@ contract SafEth is
         uint256 _minOut
     ) private returns (uint256 mintedAmount) {
         uint256 preMintPrice = price < floorPrice ? floorPrice : price;
-        price = preMintPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
         ethToClaim += msg.value;
-        price = price;
         preMintedSupply -= mintedAmount;
         IERC20(address(this)).transfer(msg.sender, mintedAmount);
         emit Staked(
             msg.sender,
             msg.value,
-            (mintedAmount * price) / 1e18,
-            price,
+            (mintedAmount * preMintPrice) / 1e18,
+            preMintPrice,
             true
         );
     }
