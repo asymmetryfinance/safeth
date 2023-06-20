@@ -15,12 +15,12 @@ import {
 import { BigNumber } from "ethers";
 import { withinHalfPercent } from "./helpers/functions";
 import { derivativeAbi } from "./abi/derivativeAbi";
+import { MULTI_SIG } from "./helpers/constants";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
 describe("SafEth Integration Test", function () {
   let safEthAddress: string;
-
   let startingBalances: BigNumber[];
 
   // total gas fees per user account for all tests
@@ -91,10 +91,28 @@ describe("SafEth Integration Test", function () {
     // withdraws are affecting the pool but price is oraclePrice that doesnt change
     // so with enough tests slippage becomes high because there is no arb happening
     const ankrDerivativeIndex = supportedDerivatives.indexOf("Ankr");
-    const t = await safEth.setMaxSlippage(
-      ankrDerivativeIndex,
-      "30000000000000000"
-    ); // 2% slippage
+    const ankrDerivativeAddress = (
+      await safEth.derivatives(ankrDerivativeIndex)
+    ).derivative;
+    const ankrDerivative = await getLatestContract(
+      ankrDerivativeAddress,
+      "Ankr"
+    );
+    await ankrDerivative.initializeV2();
+    const signers = await ethers.getSigners();
+    await signers[0].sendTransaction({
+      to: MULTI_SIG,
+      value: "1000000000000000000000",
+    });
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [MULTI_SIG],
+    });
+
+    const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+    const ankrMultiSig = ankrDerivative.connect(multiSigSigner);
+
+    const t = await ankrMultiSig.setMaxSlippage("30000000000000000"); // 2% slippage
     await t.wait();
     expect(derivativeCount).eq(supportedDerivatives.length);
   });

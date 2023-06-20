@@ -34,10 +34,6 @@ contract Ankr is DerivativeBase {
         maxSlippage = (1 * 1e16); // 1%
     }
 
-    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
-        // noop
-    }
-
     /**
         @notice - Return derivative name
     */
@@ -49,7 +45,7 @@ contract Ankr is DerivativeBase {
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - Amount of slippage to set in wei
     */
-    function setMaxSlippage(uint256 _slippage) public onlyOwner {
+    function setMaxSlippage(uint256 _slippage) public onlyManager {
         maxSlippage = _slippage;
     }
 

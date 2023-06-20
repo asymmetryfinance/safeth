@@ -1,4 +1,6 @@
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
+import { ethers, network } from "hardhat";
+import { MULTI_SIG } from "./constants";
 
 export const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;
@@ -18,4 +20,20 @@ export const getDifferenceRatio = (amount1: BigNumber, amount2: BigNumber) => {
     ? amount1.sub(amount2)
     : amount2.sub(amount1);
   return amount1.div(difference);
+};
+
+export const setMaxSlippage = async (
+  derivative: Contract,
+  amount: BigNumber
+) => {
+  await network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [MULTI_SIG],
+  });
+
+  const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+  const multiSig = derivative.connect(multiSigSigner);
+
+  const t = await multiSig.setMaxSlippage(amount);
+  t.wait();
 };

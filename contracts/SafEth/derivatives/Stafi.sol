@@ -34,8 +34,6 @@ contract Stafi is DerivativeBase {
     IVault public constant BALANCER_VAULT =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    AggregatorV3Interface public chainlinkFeed;
-
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
@@ -44,10 +42,6 @@ contract Stafi is DerivativeBase {
     function initialize(address _owner) external initializer {
         super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
-    }
-
-    function setChainlinkFeed(address _priceFeedAddress) public onlyOwner {
-        // noop
     }
 
     /**
@@ -61,7 +55,7 @@ contract Stafi is DerivativeBase {
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - new slippage amount in wei
     */
-    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyManager {
         maxSlippage = _slippage;
     }
 

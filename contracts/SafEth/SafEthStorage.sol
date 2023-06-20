@@ -28,9 +28,9 @@ contract SafEthStorage {
     event Staked(
         address indexed recipient,
         uint256 indexed ethIn,
-        uint256 indexed totalStakeValue,
+        uint256 totalStakeValue,
         uint256 price,
-        bool usedPremint
+        bool indexed usedPremint
     );
     event Unstaked(
         address indexed recipient,

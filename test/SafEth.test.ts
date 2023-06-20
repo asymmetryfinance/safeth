@@ -16,11 +16,15 @@ import {
   takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-network-helpers";
-import { WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
+import { MULTI_SIG, WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
-import { within1Percent, withinHalfPercent } from "./helpers/functions";
+import {
+  setMaxSlippage,
+  within1Percent,
+  withinHalfPercent,
+} from "./helpers/functions";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -59,6 +63,13 @@ describe("SafEth", function () {
   before(async () => {
     await resetToBlock(Number(process.env.BLOCK_NUMBER));
     await safEth.setMaxPreMintAmount("3000000000000000000");
+
+    // Seed multi-sig with ETH
+    const signers = await ethers.getSigners();
+    await signers[9].sendTransaction({
+      to: MULTI_SIG,
+      value: "100000000000000000000",
+    });
   });
 
   describe("Large Amounts", function () {
@@ -134,19 +145,30 @@ describe("SafEth", function () {
   });
 
   describe("Slippage", function () {
-    it("Should set slippage derivatives via the safEth contract", async function () {
+    it("Should set slippage derivatives for each derivatives contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const derivativeCount = (await safEth.derivativeCount()).toNumber();
 
       for (let i = 0; i < derivativeCount; i++) {
-        await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.01")); // 1%
+        const derivativeAddress = (await safEth.derivatives(i)).derivative;
+        const derivative = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          adminAccount
+        );
+        await setMaxSlippage(derivative, ethers.utils.parseEther("0.01"));
       }
       let tx;
       tx = await safEth.stake(0, { value: depositAmount });
       await tx.wait();
       for (let i = 0; i < derivativeCount; i++) {
-        tx = await safEth.setMaxSlippage(i, ethers.utils.parseEther("0.02")); // 2%
-        await tx.wait();
+        const derivativeAddress = (await safEth.derivatives(i)).derivative;
+        const derivative = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          adminAccount
+        );
+        await setMaxSlippage(derivative, ethers.utils.parseEther("0.02"));
       }
       tx = await safEth.stake(0, { value: depositAmount });
       await tx.wait();
@@ -603,6 +625,11 @@ describe("SafEth", function () {
     let derivatives = [] as any;
     before(async () => {
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
+      const signers = await ethers.getSigners();
+      await signers[9].sendTransaction({
+        to: MULTI_SIG,
+        value: "100000000000000000000",
+      });
     });
     beforeEach(async () => {
       derivatives = await deployDerivatives(adminAccount.address);
@@ -711,8 +738,15 @@ describe("SafEth", function () {
         adminAccount.address,
       ]);
       await rEthDerivative.deployed();
+      await rEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
 
-      await rEthDerivative.setChainlinkFeed(
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = rEthDerivative.connect(multiSigSigner);
+      await multiSig.setChainlinkFeed(
         "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
       );
 
@@ -775,7 +809,7 @@ describe("SafEth", function () {
       const rEthDerivative = derivatives[0];
       const weiDepositAmount = ethers.utils.parseEther("9000");
 
-      await rEthDerivative.setMaxSlippage(0);
+      await setMaxSlippage(rEthDerivative, BigNumber.from(0));
       await expect(
         rEthDerivative.deposit({ value: weiDepositAmount })
       ).to.be.revertedWith("SlippageTooHigh");
@@ -814,13 +848,15 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
-    it("Should successfully call setChainlinkFeed() on all derivatives", async function () {
+    it("Should successfully call setChainlinkFeed() on derivatives that support it", async function () {
       const derivativeCount = await safEth.derivativeCount();
       for (let i = 0; i < derivativeCount.toNumber(); i++) {
-        await safEth.setChainlinkFeed(
-          i,
-          "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
-        );
+        if (derivatives[i].setChainLinkFeed) {
+          await derivatives[i].setChainlinkFeed(
+            i,
+            "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
+          );
+        }
       }
     });
   });
@@ -898,6 +934,22 @@ describe("SafEth", function () {
           withdrawAmount.add(networkFee1).add(networkFee2)
         )
       ).eq(true);
+    });
+    it("Should be able to add variables to derivativeBase", async () => {
+      const derivativeAddressToUpgrade = (await safEth.derivatives(1))
+        .derivative;
+      const sfrxEthDerivative = await ethers.getContractAt(
+        "SfrxEth",
+        derivativeAddressToUpgrade
+      );
+      const preSlippage = await sfrxEthDerivative.maxSlippage();
+      const upgradedDerivative = await upgrade(
+        derivativeAddressToUpgrade,
+        "SfrxEthV2Mock"
+      );
+      await upgradedDerivative.deployed();
+      const postSlippage = await upgradedDerivative.maxSlippage();
+      expect(preSlippage).eq(postSlippage);
     });
 
     it("Should allow owner to use admin features on upgraded contracts", async () => {

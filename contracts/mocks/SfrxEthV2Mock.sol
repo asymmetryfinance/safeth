@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "../../interfaces/IDerivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
+import "../interfaces/IDerivative.sol";
+import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/curve/IFrxEthEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
+import "../interfaces/curve/IFrxEthEthPool.sol";
+import "../interfaces/frax/IFrxETHMinter.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
-import "./DerivativeBase.sol";
+import "./DerivativeBaseV2Mock.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
 
-contract SfrxEth is DerivativeBase {
+contract SfrxEthV2Mock is DerivativeBaseV2Mock {
     address private constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
     address private constant FRX_ETH_ADDRESS =
