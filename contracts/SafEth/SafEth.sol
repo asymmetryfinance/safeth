@@ -11,8 +11,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
 
-import "hardhat/console.sol";
-
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -124,7 +122,7 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-        
+
         depositPrice = approxPrice(true);
 
         uint256 preMintPrice = depositPrice < floorPrice
@@ -154,15 +152,18 @@ contract SafEth is
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
             uint256 amountStaked = 0;
 
-            uint256 index = firstUnderweightDerivativeIndex();
             // deposits of less than 5 eth go into the first underweight derivative (saves gas)
-            if(msg.value < 5e18) {
-                IDerivative derivative = derivatives[index].derivative;
+            if (msg.value < 5e18) {
+                IDerivative derivative = derivatives[
+                    firstUnderweightDerivativeIndex()
+                ].derivative;
                 uint256 depositAmount = derivative.deposit{value: msg.value}();
-                uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(false) * depositAmount);
+                uint256 derivativeReceivedEthValue = (derivative
+                    .ethPerDerivative(false) * depositAmount);
                 totalStakeValueEth += derivativeReceivedEthValue;
-            } else {
-                // Loop through each derivative and deposit the correct amount of ETH
+            }
+            // otherwise deposit according to weights
+            else {
                 for (uint256 i = 0; i < derivativeCount; i++) {
                     if (!derivatives[i].enabled) continue;
                     uint256 weight = derivatives[i].weight;
@@ -173,7 +174,9 @@ contract SafEth is
                         : (msg.value * weight) / totalWeight;
 
                     amountStaked += ethAmount;
-                    uint256 depositAmount = derivative.deposit{value: ethAmount}();
+                    uint256 depositAmount = derivative.deposit{
+                        value: ethAmount
+                    }();
                     // This is slightly less than ethAmount because slippage
                     uint256 derivativeReceivedEthValue = (derivative
                         .ethPerDerivative(true) * depositAmount);
@@ -490,12 +493,16 @@ contract SafEth is
 
         uint256 tvlEth = totalSupply() * approxPrice(false);
 
-        if(tvlEth == 0 ) return 0;
+        if (tvlEth == 0) return 0;
 
         for (uint256 i = 0; i < count; i++) {
             if (!derivatives[i].enabled) continue;
-            uint256 trueWeight = (totalWeight * IDerivative(derivatives[i].derivative).balance() * IDerivative(derivatives[i].derivative).ethPerDerivative(false)) / tvlEth;
-            if(trueWeight < derivatives[i].weight) return i;
+            uint256 trueWeight = (totalWeight *
+                IDerivative(derivatives[i].derivative).balance() *
+                IDerivative(derivatives[i].derivative).ethPerDerivative(
+                    false
+                )) / tvlEth;
+            if (trueWeight < derivatives[i].weight) return i;
         }
         revert("Shouldnt ever happen"); // makes lint happy
     }
