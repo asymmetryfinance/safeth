@@ -17,6 +17,8 @@ abstract contract DerivativeBase is
     error AlreadyInitialized();
     error Unauthorized();
 
+    event ManagerUpdated(address _manager);
+
     address public manager;
 
     uint256[50] private __gap;
@@ -65,6 +67,12 @@ abstract contract DerivativeBase is
         if (_owner == address(0)) revert InvalidAddress();
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
+    }
+
+    function updateManager(address _manager) public onlyManager {
+        if (_manager == address(0)) revert InvalidAddress();
+        manager = _manager;
+        emit ManagerUpdated(_manager);
     }
 
     receive() external payable {}

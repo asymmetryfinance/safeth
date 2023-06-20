@@ -16,6 +16,7 @@ export const deployDerivatives = async function (owner: string) {
     const derivative = await upgrades.deployProxy(factory, [owner]);
     await derivative.deployed();
     derivatives.push(derivative);
+    await derivative.initializeV2();
   }
   return derivatives;
 };

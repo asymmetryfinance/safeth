@@ -156,5 +156,4 @@ contract SfrxEth is DerivativeBase {
         depegSlippage = _depegSlippage;
         emit DepegSlippageSet(_depegSlippage);
     }
-
 }
