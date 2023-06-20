@@ -21,7 +21,6 @@ import { MULTI_SIG } from "./helpers/constants";
 // Together they form a single integration test simulating real-world usage
 describe("SafEth Integration Test", function () {
   let safEthAddress: string;
-
   let startingBalances: BigNumber[];
 
   // total gas fees per user account for all tests
