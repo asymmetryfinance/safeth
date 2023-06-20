@@ -134,7 +134,7 @@ contract SafEth is
         if (totalWeight == 0) revert TotalWeightZero();
         depositPrice = approxPrice(true);
         if (shouldPremint(depositPrice))
-            return (doPreMintedStake(_minOut, depositPrice), depositPrice);
+            return doPreMintedStake(_minOut, depositPrice);
         if (msg.value < singleDerivativeThreshold)
             return (doSingleStake(_minOut, depositPrice), depositPrice);
         return (doMultiStake(_minOut, depositPrice), depositPrice);
@@ -458,8 +458,8 @@ contract SafEth is
     function doPreMintedStake(
         uint256 price,
         uint256 _minOut
-    ) private returns (uint256 mintedAmount) {
-        uint256 preMintPrice = price < floorPrice ? floorPrice : price;
+    ) private returns (uint256 preMintPrice, uint256 mintedAmount) {
+        preMintPrice = price < floorPrice ? floorPrice : price;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
         ethToClaim += msg.value;
