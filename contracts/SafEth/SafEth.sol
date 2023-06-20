@@ -500,7 +500,7 @@ contract SafEth is
         uint256 _minOut,
         uint256 price
     ) private returns (uint256 mintedAmount) {
-        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+        uint256 totalStakeValueEth = 0;
         IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
             .derivative;
         uint256 depositAmount = derivative.deposit{value: msg.value}();
@@ -508,7 +508,6 @@ contract SafEth is
             true
         ) * depositAmount);
         totalStakeValueEth += derivativeReceivedEthValue;
-        // MintedAmount represents a percentage of the total assets in the system
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 
@@ -532,7 +531,7 @@ contract SafEth is
         uint256 _minOut,
         uint256 price
     ) private returns (uint256 mintedAmount) {
-        uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
+        uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
         for (uint256 i = 0; i < derivativeCount; i++) {
             if (!derivatives[i].enabled) continue;
@@ -545,13 +544,11 @@ contract SafEth is
 
             amountStaked += ethAmount;
             uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            // This is slightly less than ethAmount because slippage
             uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
                 true
             ) * depositAmount);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
-        // MintedAmount represents a percentage of the total assets in the system
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 
