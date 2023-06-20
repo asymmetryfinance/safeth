@@ -40,6 +40,7 @@ contract SafEth is
         maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
         pauseStaking = true; // pause staking on initialize for adding derivatives
         __ReentrancyGuard_init();
+        singleDerivativeThreshold = 10e18;
     }
 
     /**
@@ -104,6 +105,17 @@ contract SafEth is
     }
 
     /**
+     * @notice sets the eth amount at which it will use standard weighting vs buying a single derivative
+     * @param _amount - amount of eth where it will switch to standard weighting
+     */
+    function setSingleDerivativeThreshold(
+        uint256 _amount
+    ) external onlyOwner {
+        singleDerivativeThreshold = _amount;
+    }
+
+
+    /**
         @notice - Stake your ETH into safETH
         @dev - Deposits into each derivative based on its weight
         @dev - Mints safEth in a redeemable value which equals to the correct percentage of the total staked value
@@ -152,8 +164,8 @@ contract SafEth is
             uint256 totalStakeValueEth = 0; // Total amount of derivatives staked by user in eth
             uint256 amountStaked = 0;
 
-            // deposits of less than 5 eth go into the first underweight derivative (saves gas)
-            if (msg.value < 5e18) {
+            // deposits less than singleDerivativeThreshold go into the first underweight derivative (saves gas)
+            if (msg.value < singleDerivativeThreshold) {
                 IDerivative derivative = derivatives[
                     firstUnderweightDerivativeIndex()
                 ].derivative;

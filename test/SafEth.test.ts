@@ -122,11 +122,11 @@ describe.only("SafEth", function () {
         expect(withinHalfPercent(ethBalances[i], ethBalances[0])).eq(true);
       }
     });
-    it("Should use less than half as much gas when staking < 5 eth vs > 5 eth", async function () {
-      const depositAmountSmall = ethers.utils.parseEther("4");
+    it("Should use less than half as much gas when staking < 10 eth vs > 10 eth", async function () {
+      const depositAmountSmall = ethers.utils.parseEther("9");
       const tx1 = await safEth.stake(0, { value: depositAmountSmall });
       const mined1 = await tx1.wait();
-      const depositAmountLarge = ethers.utils.parseEther("6");
+      const depositAmountLarge = ethers.utils.parseEther("11");
       const tx2 = await safEth.stake(0, { value: depositAmountLarge });
       const mined2 = await tx2.wait();
       expect(mined2.gasUsed).gt(mined1.gasUsed.mul(2));
