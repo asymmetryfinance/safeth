@@ -152,7 +152,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
   });
-  describe.only("Pre-mint", function () {
+  describe("Pre-mint", function () {
     before(async () => {
       snapshot = await takeSnapshot();
     });
