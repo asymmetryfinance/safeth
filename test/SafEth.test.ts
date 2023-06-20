@@ -20,7 +20,7 @@ import { WSTETH_ADDRESS, WSTETH_WHALE } from "./helpers/constants";
 import { derivativeAbi } from "./abi/derivativeAbi";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { getUserAccounts } from "./helpers/integrationHelpers";
-import { within1Percent } from "./helpers/functions";
+import { within1Percent, withinHalfPercent } from "./helpers/functions";
 
 describe.only("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -105,6 +105,31 @@ describe.only("SafEth", function () {
       await expect(
         safEth.stake(0, { value: depositAmount })
       ).to.be.revertedWith("AmountTooHigh");
+    });
+  });
+
+  describe("Round Robin minting small amounts", function () {
+    it("Should have equal weights after staking a small amount over all derivatives the same number of times", async function () {
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
+      // stale 0.1 eth on each derivative 3 times
+      for (let i = 0; i < derivativeCount * 3; i++) {
+        const depositAmount = ethers.utils.parseEther("0.1");
+        const tx1 = await safEth.stake(0, { value: depositAmount });
+        await tx1.wait();
+      }
+      const ethBalances = await estimatedDerivativeValues();
+      for (let i = 0; i < derivativeCount; i++) {
+        expect(withinHalfPercent(ethBalances[i], ethBalances[0])).eq(true);
+      }
+    });
+    it("Should use less than half as much gas when staking < 5 eth vs > 5 eth", async function () {
+      const depositAmountSmall = ethers.utils.parseEther("4");
+      const tx1 = await safEth.stake(0, { value: depositAmountSmall });
+      const mined1 = await tx1.wait();
+      const depositAmountLarge = ethers.utils.parseEther("6");
+      const tx2 = await safEth.stake(0, { value: depositAmountLarge });
+      const mined2 = await tx2.wait();
+      expect(mined2.gasUsed).gt(mined1.gasUsed.mul(2));
     });
   });
 
@@ -413,7 +438,7 @@ describe.only("SafEth", function () {
       ]);
       const broken = await brokenDerivative.deployed();
 
-      const depositAmount = ethers.utils.parseEther("1");
+      const depositAmount = ethers.utils.parseEther("6");
 
       // staking works before adding the bad derivative
       const tx1 = await safEth.stake(0, { value: depositAmount });
