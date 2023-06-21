@@ -357,6 +357,9 @@ describe("SafEth", function () {
         safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("PremintTooLow");
     });
+    it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
+      // TODO
+    });
   });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
