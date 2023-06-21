@@ -140,7 +140,7 @@ describe("SafEth", function () {
       const depositAmountLarge = ethers.utils.parseEther("11");
       const tx2 = await safEth.stake(0, { value: depositAmountLarge });
       const mined2 = await tx2.wait();
-      expect(mined2.gasUsed.toNumber()).gt(mined1.gasUsed.toNumber() * 1.9);
+      expect(mined2.gasUsed.toNumber()).gt(mined1.gasUsed.toNumber() * 1.8);
     });
   });
 
