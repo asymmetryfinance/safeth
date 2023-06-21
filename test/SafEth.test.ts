@@ -23,8 +23,10 @@ import { getUserAccounts } from "./helpers/integrationHelpers";
 import {
   setMaxSlippage,
   within1Percent,
+  within1Pip,
   withinHalfPercent,
 } from "./helpers/functions";
+import { parseEther } from "ethers/lib/utils";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -357,6 +359,99 @@ describe("SafEth", function () {
         safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("PremintTooLow");
     });
+    it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
+      // do a large initial stake so all derivatives have some balance like real world
+      let tx = await safEth.stake(0, {
+        value: await safEth.singleDerivativeThreshold(),
+      });
+      await tx.wait();
+
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
+      let maxPremintAmount = await safEth.maxPreMintAmount();
+      tx = await safEth.preMint(0, false, {
+        value: ethers.utils.parseEther("2.5"),
+      });
+      await tx.wait();
+
+      const balance0 = await safEth.balanceOf(adminAccount.address);
+
+      const ethAmount1 = maxPremintAmount;
+      // this should be premint
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      await tx.wait();
+
+      const balance1 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived1 = balance1.sub(balance0);
+
+      const ethAmount2 = ethers.utils.parseEther("1");
+      // this should be single derivative stake (not enough premint funds)
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      await tx.wait();
+
+      const balance2 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived2 = balance2.sub(balance1);
+
+      const ethAmount3 = ethers.utils.parseEther("10");
+      // this should be multi derivative stake (not enough premint funds)
+      tx = await safEth.stake(0, {
+        value: ethAmount3,
+      });
+      await tx.wait();
+
+      const balance3 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived3 = balance3.sub(balance2);
+
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
+      maxPremintAmount = await safEth.maxPreMintAmount();
+      tx = await safEth.preMint(0, false, {
+        value: maxPremintAmount,
+      });
+      await tx.wait();
+
+      const ethAmount4 = ethers.utils.parseEther("10");
+      // this should be a premint stake (instead of a multi derivative stake)
+      tx = await safEth.stake(0, {
+        value: ethAmount4,
+      });
+      await tx.wait();
+
+      const balance4 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived4 = balance4.sub(balance3);
+
+      // price should be ~1 because safEth just launched
+      expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
+      expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
+      expect(withinHalfPercent(safEthReceived3, ethAmount3)).eq(true);
+      expect(withinHalfPercent(safEthReceived4, ethAmount4)).eq(true);
+    });
+
+    it("Should not effect the price when staking via premint", async function () {
+      // do a large initial stake so all derivatives have some balance like real world
+      let tx = await safEth.stake(0, {
+        value: ethers.utils.parseEther("11"),
+      });
+      await tx.wait();
+
+      tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
+      await tx.wait();
+      const maxPremintAmount = await safEth.maxPreMintAmount();
+      tx = await safEth.preMint(0, false, {
+        value: ethers.utils.parseEther("3"),
+      });
+      await tx.wait();
+
+      const price0 = await safEth.approxPrice(true);
+      tx = await safEth.stake(0, {
+        value: maxPremintAmount,
+      });
+      await tx.wait();
+      const price1 = await safEth.approxPrice(true);
+      expect(within1Pip(price0, price1)).eq(true);
+    });
   });
   describe("Receive Eth", function () {
     it("Should revert if sent eth by a user", async function () {
@@ -496,6 +591,13 @@ describe("SafEth", function () {
   });
 
   describe("Owner functions", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEth.setPauseStaking(true);
@@ -618,6 +720,14 @@ describe("SafEth", function () {
       await newOwnerSigner.acceptOwnership();
       await newOwnerSigner.setPauseStaking(false);
       expect(await safEth.pauseStaking()).eq(false);
+    });
+    it("Should test setSingleDerivativeThreshold()", async function () {
+      let tx = await safEth.setSingleDerivativeThreshold(parseEther("42.0"));
+      await tx.wait();
+      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("42.0"));
+      tx = await safEth.setSingleDerivativeThreshold(parseEther("4.20"));
+      await tx.wait();
+      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("4.20"));
     });
   });
 
@@ -754,7 +864,27 @@ describe("SafEth", function () {
         "call revert exception"
       );
     });
-    it("Should test deposit & withdraw, ethPerDerivative & getName on each derivative contract", async () => {
+    it("Should setDepegSlippage() on sfrxEth derivative", async function () {
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const SfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await SfrxEthDerivative.deployed();
+      await SfrxEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = SfrxEthDerivative.connect(multiSigSigner);
+      const depegSlippageBefore = await multiSig.depegSlippage();
+      await multiSig.setDepegSlippage(123456);
+      const depegSlippageAfter = await multiSig.depegSlippage();
+      expect(depegSlippageBefore).eq(0);
+      expect(depegSlippageAfter).eq(123456);
+    });
+    it("Should test deposit & withdraw, ethPerDerivative, getName & updateManager on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
         const name = await derivatives[i].name();
@@ -802,6 +932,23 @@ describe("SafEth", function () {
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
         expect(postWithdrawBalance.eq(0)).eq(true);
+
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [MULTI_SIG],
+        });
+
+        const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+        const multiSig = derivatives[i].connect(multiSigSigner);
+        const tx3 = await multiSig.updateManager(adminAccount.address);
+        await tx3.wait();
+
+        const newManager1 = await derivatives[i].manager();
+        expect(newManager1).eq(adminAccount.address);
+        const tx4 = await derivatives[i].updateManager(MULTI_SIG);
+        await tx4.wait();
+        const newManager2 = await derivatives[i].manager();
+        expect(newManager2).eq(MULTI_SIG);
       }
     });
 
@@ -851,12 +998,15 @@ describe("SafEth", function () {
     it("Should successfully call setChainlinkFeed() on derivatives that support it", async function () {
       const derivativeCount = await safEth.derivativeCount();
       for (let i = 0; i < derivativeCount.toNumber(); i++) {
-        if (derivatives[i].setChainLinkFeed) {
-          await derivatives[i].setChainlinkFeed(
-            i,
-            "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
-          );
-        }
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [MULTI_SIG],
+        });
+        const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+        const multiSig = derivatives[i].connect(multiSigSigner);
+        if (typeof multiSig.setChainlinkFeed !== "function") continue;
+        const tx3 = await multiSig.setChainlinkFeed(adminAccount.address);
+        await tx3.wait();
       }
     });
   });
@@ -1359,6 +1509,78 @@ describe("SafEth", function () {
           false
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
+    beforeEach(async () => {
+      let tx = await safEth.preMint(0, false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await tx.wait();
+      tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
+      await tx.wait();
+    });
+
+    it("Should stake with minimal slippage for all 3 stake sizes", async function () {
+      const safEthBalance0 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
+      // this should be a premint tx
+      let tx = await safEth.stake(0, {
+        value: ethAmount0,
+      });
+      await tx.wait();
+
+      // this should be a single derive stake
+      const safEthBalance1 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      await tx.wait();
+
+      // this should be a multi derive stake
+      const safEthBalance2 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      await tx.wait();
+
+      const safEthBalance3 = await safEth.balanceOf(adminAccount.address);
+
+      const safEthReceived0 = safEthBalance1.sub(safEthBalance0);
+      const safEthReceived1 = safEthBalance2.sub(safEthBalance1);
+      const safEthReceived2 = safEthBalance3.sub(safEthBalance2);
+
+      expect(withinHalfPercent(safEthReceived0, ethAmount0)).eq(true);
+      expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
+      expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
+    });
+    it("Should have gas pricing: premint < single derivative < multi derivative", async function () {
+      const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
+      // this should be a premint tx
+      let tx = await safEth.stake(0, {
+        value: ethAmount0,
+      });
+      const receipt1 = await tx.wait();
+      // this should be a single derive stake
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      const receipt2 = await tx.wait();
+      // this should be a multi derive stake
+      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      const receipt3 = await tx.wait();
+
+      expect(
+        receipt1.gasUsed.lt(receipt2.gasUsed) &&
+          receipt2.gasUsed.lt(receipt3.gasUsed)
+      ).eq(true);
     });
   });
 
