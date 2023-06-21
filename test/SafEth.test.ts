@@ -622,6 +622,9 @@ describe("SafEth", function () {
       await newOwnerSigner.setPauseStaking(false);
       expect(await safEth.pauseStaking()).eq(false);
     });
+    it("Should test setSingleDerivativeThreshold", async function() {
+      // TODO
+    });
   });
 
   describe("Derivatives", async () => {
