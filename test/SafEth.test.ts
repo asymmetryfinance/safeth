@@ -423,7 +423,6 @@ describe("SafEth", function () {
       const safEthReceived4 = balance4.sub(balance3);
 
       // price should be ~1 because safEth just launched
-      // we show mount of safEth received is within 0.5% of the amount of eth sent for each type of stake
       expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
       expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
       expect(withinHalfPercent(safEthReceived3, ethAmount3)).eq(true);
