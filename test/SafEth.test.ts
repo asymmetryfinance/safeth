@@ -810,6 +810,12 @@ describe("SafEth", function () {
       const totalSupply = await safEth.totalSupply();
       expect(totalSupply).gt(1);
     });
+    it("Shouldn't deploy derivative with zero address", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      await expect(
+        upgrades.deployProxy(factory, [ethers.constants.AddressZero])
+      ).to.be.revertedWith("InvalidAddress");
+    });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
       const rEthDerivative = await upgrades.deployProxy(factory, [
@@ -862,6 +868,18 @@ describe("SafEth", function () {
 
       await expect(rEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "call revert exception"
+      );
+    });
+    it("Should not allow calling initializeV2 after first time", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      const rEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await rEthDerivative.deployed();
+      await rEthDerivative.initializeV2();
+
+      await expect(rEthDerivative.initializeV2()).to.be.revertedWith(
+        "AlreadyInitialized"
       );
     });
     it("Should setDepegSlippage() on sfrxEth derivative", async function () {
@@ -938,10 +956,20 @@ describe("SafEth", function () {
           params: [MULTI_SIG],
         });
 
+        // fail when called by non manager
+        await expect(
+          derivatives[i].updateManager(MULTI_SIG)
+        ).to.be.revertedWith("Unauthorized");
+
         const multiSigSigner = await ethers.getSigner(MULTI_SIG);
         const multiSig = derivatives[i].connect(multiSigSigner);
         const tx3 = await multiSig.updateManager(adminAccount.address);
         await tx3.wait();
+
+        // fail when zero address
+        await expect(
+          derivatives[i].updateManager(ethers.constants.AddressZero)
+        ).to.be.revertedWith("InvalidAddress");
 
         const newManager1 = await derivatives[i].manager();
         expect(newManager1).eq(adminAccount.address);
