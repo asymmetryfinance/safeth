@@ -1513,10 +1513,12 @@ describe("SafEth", function () {
   });
 
   describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
-    this.beforeEach( async () => {
-      const tx = await safEth.preMint(0, false, {
+    beforeEach(async () => {
+      let tx = await safEth.preMint(0, false, {
         value: ethers.utils.parseEther("10"),
       });
+      await tx.wait();
+      tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
       await tx.wait();
     });
 
