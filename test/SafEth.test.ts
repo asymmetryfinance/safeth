@@ -1514,14 +1514,72 @@ describe("SafEth", function () {
   });
 
   describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
+    this.beforeEach( async () => {
+      const tx = await safEth.preMint(0, false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await tx.wait();
+    });
+
     it("Should stake with minimal slippage for all 3 stake sizes", async function () {
-      // TODO
+      const safEthBalance0 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
+      // this should be a premint tx
+      let tx = await safEth.stake(0, {
+        value: ethAmount0,
+      });
+      await tx.wait();
+
+      // this should be a single derive stake
+      const safEthBalance1 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      await tx.wait();
+
+      // this should be a multi derive stake
+      const safEthBalance2 = await safEth.balanceOf(adminAccount.address);
+      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      await tx.wait();
+
+      const safEthBalance3 = await safEth.balanceOf(adminAccount.address);
+
+      const safEthReceived0 = safEthBalance1.sub(safEthBalance0);
+      const safEthReceived1 = safEthBalance2.sub(safEthBalance1);
+      const safEthReceived2 = safEthBalance3.sub(safEthBalance2);
+
+      expect(withinHalfPercent(safEthReceived0, ethAmount0)).eq(true);
+      expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
+      expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
     });
     it("Should have gas pricing: premint < single derivative < multi derivative", async function () {
-      // TODO
-    });
-    it("Should be the same doing multiple smaller stakes as a single larger stake", async function () {
-      // TODO
+      const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
+      // this should be a premint tx
+      let tx = await safEth.stake(0, {
+        value: ethAmount0,
+      });
+      const receipt1 = await tx.wait();
+      // this should be a single derive stake
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      const receipt2 = await tx.wait();
+      // this should be a multi derive stake
+      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      const receipt3 = await tx.wait();
+
+      expect(
+        receipt1.gasUsed.lt(receipt2.gasUsed) &&
+          receipt2.gasUsed.lt(receipt3.gasUsed)
+      ).eq(true);
     });
   });
 
