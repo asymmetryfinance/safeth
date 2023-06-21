@@ -37,3 +37,8 @@ export const setMaxSlippage = async (
   const t = await multiSig.setMaxSlippage(amount);
   t.wait();
 };
+
+export const within1Pip = (amount1: BigNumber, amount2: BigNumber) => {
+  if (amount1.eq(amount2)) return true;
+  return getDifferenceRatio(amount1, amount2).gt("10000");
+};
