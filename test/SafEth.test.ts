@@ -26,6 +26,7 @@ import {
   within1Pip,
   withinHalfPercent,
 } from "./helpers/functions";
+import { parseEther } from "ethers/lib/utils";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -715,10 +716,12 @@ describe("SafEth", function () {
       expect(await safEth.pauseStaking()).eq(false);
     });
     it("Should test setSingleDerivativeThreshold()", async function () {
-      // TODO
-    });
-    it("Should test updateManager()", async function () {
-      // TODO
+      let tx = await safEth.setSingleDerivativeThreshold(parseEther("42.0"));
+      await tx.wait();
+      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("42.0"));
+      tx = await safEth.setSingleDerivativeThreshold(parseEther("4.20"));
+      await tx.wait();
+      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("4.20"));
     });
     it("Should test setDepegSlippage() on sfrxEth derivative", async function () {
       // TODO
@@ -861,7 +864,7 @@ describe("SafEth", function () {
         "call revert exception"
       );
     });
-    it("Should test deposit & withdraw, ethPerDerivative & getName on each derivative contract", async () => {
+    it("Should test deposit & withdraw, ethPerDerivative, getName & updateManager on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
         const name = await derivatives[i].name();
@@ -909,6 +912,23 @@ describe("SafEth", function () {
         // no balance after withdrawing all
         const postWithdrawBalance = await derivatives[i].balance();
         expect(postWithdrawBalance.eq(0)).eq(true);
+
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [MULTI_SIG],
+        });
+
+        const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+        const multiSig = derivatives[i].connect(multiSigSigner);
+        const tx3 = await multiSig.updateManager(adminAccount.address);
+        await tx3.wait();
+
+        const newManager1 = await derivatives[i].manager();
+        expect(newManager1).eq(adminAccount.address);
+        const tx4 = await derivatives[i].updateManager(MULTI_SIG);
+        await tx4.wait();
+        const newManager2 = await derivatives[i].manager();
+        expect(newManager2).eq(MULTI_SIG);
       }
     });
 
