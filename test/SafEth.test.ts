@@ -72,6 +72,35 @@ describe("SafEth", function () {
     });
   });
 
+  describe.only("wtf", function () {
+    it("Should show it is BROKEN for single stake", async function () {
+      // single stake is used for deposits < 10 eth
+      const depositAmount = ethers.utils.parseEther("9");
+
+      const tx = await safEth.stake(0, {
+        value: depositAmount,
+      });
+      await tx.wait();
+      await time.increase(1000);
+      const ap = await safEth.approxPrice(false);
+      // price has NOT gone up (WHY???!!!)
+      expect(ap).eq("1000000000000000000");
+    });
+    it("Should show it WORKING for multistake", async function () {
+      // multi stake is used for deposits >= 10 eth
+      const depositAmount = ethers.utils.parseEther("11");
+
+      const tx = await safEth.stake(0, {
+        value: depositAmount,
+      });
+      await tx.wait();
+      await time.increase(1000);
+      const ap = await safEth.approxPrice(false);
+      // price has gone up (as expected)
+      expect(ap).gt("1000000000000000000");
+    });
+  });
+
   describe("Large Amounts", function () {
     it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
