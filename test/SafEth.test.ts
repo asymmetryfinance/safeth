@@ -865,6 +865,26 @@ describe("SafEth", function () {
         "call revert exception"
       );
     });
+    it("Should setDepegSlippage() on sfrxEth derivative", async function () {
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const SfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await SfrxEthDerivative.deployed();
+      await SfrxEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = SfrxEthDerivative.connect(multiSigSigner);
+      const depegSlippageBefore = await multiSig.depegSlippage();
+      await multiSig.setDepegSlippage(123456);
+      const depegSlippageAfter = await multiSig.depegSlippage();
+      expect(depegSlippageBefore).eq(0);
+      expect(depegSlippageAfter).eq(123456);
+    });
     it("Should test deposit & withdraw, ethPerDerivative, getName & updateManager on each derivative contract", async () => {
       const weiDepositAmount = ethers.utils.parseEther("50");
       for (let i = 0; i < derivatives.length; i++) {
@@ -1145,9 +1165,6 @@ describe("SafEth", function () {
       const erc20Received = erc20BalanceAfter.sub(erc20BalanceBefore);
 
       expect(erc20Received).eq(erc20Amount);
-    });
-    it("Should test setDepegSlippage() on sfrxEth derivative", async function () {
-      // TODO
     });
   });
 
