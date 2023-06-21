@@ -592,6 +592,13 @@ describe("SafEth", function () {
   });
 
   describe("Owner functions", function () {
+    beforeEach(async () => {
+      snapshot = await takeSnapshot();
+    });
+    afterEach(async () => {
+      await snapshot.restore();
+    });
+
     it("Should pause staking / unstaking", async function () {
       snapshot = await takeSnapshot();
       const tx1 = await safEth.setPauseStaking(true);
@@ -722,12 +729,6 @@ describe("SafEth", function () {
       tx = await safEth.setSingleDerivativeThreshold(parseEther("4.20"));
       await tx.wait();
       expect(await safEth.singleDerivativeThreshold()).eq(parseEther("4.20"));
-    });
-    it("Should test setDepegSlippage() on sfrxEth derivative", async function () {
-      // TODO
-    });
-    it("Should test setChainlinkFeed() on wstEth derivative", async function () {
-      // TODO
     });
   });
 
@@ -978,12 +979,15 @@ describe("SafEth", function () {
     it("Should successfully call setChainlinkFeed() on derivatives that support it", async function () {
       const derivativeCount = await safEth.derivativeCount();
       for (let i = 0; i < derivativeCount.toNumber(); i++) {
-        if (derivatives[i].setChainLinkFeed) {
-          await derivatives[i].setChainlinkFeed(
-            i,
-            "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741"
-          );
-        }
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [MULTI_SIG],
+        });
+        const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+        const multiSig = derivatives[i].connect(multiSigSigner);
+        if (typeof multiSig.setChainlinkFeed !== "function") continue;
+        const tx3 = await multiSig.setChainlinkFeed(adminAccount.address);
+        await tx3.wait();
       }
     });
   });
@@ -1141,6 +1145,9 @@ describe("SafEth", function () {
       const erc20Received = erc20BalanceAfter.sub(erc20BalanceBefore);
 
       expect(erc20Received).eq(erc20Amount);
+    });
+    it("Should test setDepegSlippage() on sfrxEth derivative", async function () {
+      // TODO
     });
   });
 
