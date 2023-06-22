@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
+import { Reth, SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
 
 import {
   deploySafEth,
@@ -748,7 +748,7 @@ describe("SafEth", function () {
     afterEach(async () => {
       await snapshot.restore();
     });
-    it("Should fail transfer() in finalChecks", async function () {
+    it("Should fail transfer() in wstEth deposit", async function () {
       const RevertCallFactory = await ethers.getContractFactory("RevertCall");
       const revertCall = await RevertCallFactory.deploy();
       await revertCall.deployed();
@@ -760,7 +760,25 @@ describe("SafEth", function () {
       await derivative.deployed();
 
       await expect(
-        revertCall.testFinalCall(derivative.address)
+        revertCall.testDeposit(derivative.address)
+      ).to.be.revertedWith("FailedToSend");
+    });
+    it("Should fail transfer() in finalCall", async function () {
+      const RevertCallFactory = await ethers.getContractFactory("RevertCall");
+      const revertCall = await RevertCallFactory.deploy();
+      await revertCall.deployed();
+
+      const factory = await ethers.getContractFactory("Reth");
+      const derivative = (await upgrades.deployProxy(factory, [
+        revertCall.address,
+      ])) as Reth;
+      await derivative.deployed();
+
+      await revertCall.testDeposit(derivative.address, { value: "10000000" });
+      const balance = await derivative.balance();
+
+      await expect(
+        revertCall.testWithdraw(derivative.address, balance)
       ).to.be.revertedWith("FailedToSend");
     });
     it("Should not be able to steal funds by sending derivative tokens", async function () {
