@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { SafEth, SafEthReentrancyTest } from "../typechain-types";
+import { SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
 
 import {
   deploySafEth,
@@ -747,6 +747,21 @@ describe("SafEth", function () {
     });
     afterEach(async () => {
       await snapshot.restore();
+    });
+    it("Should fail transfer() in finalChecks", async function () {
+      const RevertCallFactory = await ethers.getContractFactory("RevertCall");
+      const revertCall = await RevertCallFactory.deploy();
+      await revertCall.deployed();
+
+      const factory = await ethers.getContractFactory("WstEth");
+      const derivative = (await upgrades.deployProxy(factory, [
+        revertCall.address,
+      ])) as WstEth;
+      await derivative.deployed();
+
+      await expect(
+        revertCall.testFinalCall(derivative.address)
+      ).to.be.revertedWith("FailedToSend");
     });
     it("Should not be able to steal funds by sending derivative tokens", async function () {
       const userAccounts = await getUserAccounts();
