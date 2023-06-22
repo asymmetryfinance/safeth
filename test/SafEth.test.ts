@@ -28,7 +28,7 @@ import {
 } from "./helpers/functions";
 import { parseEther } from "ethers/lib/utils";
 
-describe("SafEth", function () {
+describe.only("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -483,33 +483,6 @@ describe("SafEth", function () {
       await expect(
         safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("MintedAmountTooLow");
-    });
-  });
-
-  describe("Sfrx", function () {
-    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
-      const factory = await ethers.getContractFactory("SfrxEth");
-      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
-        adminAccount.address,
-      ]);
-      await sfrxEthDerivative.deployed();
-      await sfrxEthDerivative.initializeV2();
-      await network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: [MULTI_SIG],
-      });
-      const signers = await ethers.getSigners();
-      await signers[9].sendTransaction({
-        to: MULTI_SIG,
-        value: "100000000000000000000",
-      });
-      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
-      const multiSig = sfrxEthDerivative.connect(multiSigSigner);
-      await multiSig.setDepegSlippage(1);
-
-      await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
-        "FrxDepegged"
-      );
     });
   });
   describe("Enable / Disable", function () {
@@ -1648,6 +1621,56 @@ describe("SafEth", function () {
         receipt1.gasUsed.lt(receipt2.gasUsed) &&
           receipt2.gasUsed.lt(receipt3.gasUsed)
       ).eq(true);
+    });
+  });
+  describe("Sfrx", function () {
+    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await sfrxEthDerivative.deployed();
+      await sfrxEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+      const signers = await ethers.getSigners();
+      await signers[9].sendTransaction({
+        to: MULTI_SIG,
+        value: "100000000000000000000",
+      });
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = sfrxEthDerivative.connect(multiSigSigner);
+      await multiSig.setDepegSlippage(1);
+
+      await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
+        "FrxDepegged"
+      );
+    });
+    it("Should get correct price difference if value over 1", async function () {
+      resetToBlock(16080532);
+      await network.provider.request({
+        method: "hardhat_reset",
+        params: [
+          {
+            forking: {
+              jsonRpcUrl: process.env.MAINNET_URL,
+              blockNumber: 16080532,
+            },
+          },
+        ],
+      });
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await sfrxEthDerivative.deployed();
+      await sfrxEthDerivative.initializeV2();
+      const price = await sfrxEthDerivative.ethPerDerivative(false);
+      expect(price).gt(0);
+
+      await resetToBlock(Number(process.env.BLOCK_NUMBER));
     });
   });
 
