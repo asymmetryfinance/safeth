@@ -84,9 +84,6 @@ describe("SafEth Integration Test", function () {
       await tx1.wait();
     }
 
-    // const accounts = await ethers.getSigners();
-    // await deployDerivatives(accounts[0].address);
-
     const derivativeCount = await safEth.derivativeCount();
     await safEth.setPauseStaking(false);
 

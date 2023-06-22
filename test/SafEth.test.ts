@@ -944,7 +944,7 @@ describe("SafEth", function () {
       const depegSlippageBefore = await multiSig.depegSlippage();
       await multiSig.setDepegSlippage(123456);
       const depegSlippageAfter = await multiSig.depegSlippage();
-      expect(depegSlippageBefore).eq(4000000000000000);
+      expect(depegSlippageBefore).eq(0);
       expect(depegSlippageAfter).eq(123456);
     });
     it("Should test deposit & withdraw, ethPerDerivative, getName & updateManager on each derivative contract", async () => {

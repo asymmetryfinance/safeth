@@ -38,7 +38,6 @@ contract SfrxEth is DerivativeBase {
     function initialize(address _owner) external initializer {
         super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
-        depegSlippage = 4e15;
     }
 
     /**
