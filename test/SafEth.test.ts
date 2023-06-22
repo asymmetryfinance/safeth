@@ -28,7 +28,7 @@ import {
 } from "./helpers/functions";
 import { parseEther } from "ethers/lib/utils";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
