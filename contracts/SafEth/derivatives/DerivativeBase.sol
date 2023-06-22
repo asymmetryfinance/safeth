@@ -61,7 +61,7 @@ abstract contract DerivativeBase is
         return _underlyingBalance + _received;
     }
 
-    function init(address _owner) public {
+    function init(address _owner) internal {
         if (_owner == address(0)) revert InvalidAddress();
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);

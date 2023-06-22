@@ -3,7 +3,7 @@ import { network, upgrades, ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { SafEth, SafEthReentrancyTest } from "../typechain-types";
+import { Reth, SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
 
 import {
   deploySafEth,
@@ -33,7 +33,6 @@ describe("SafEth", function () {
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
   let snapshot: SnapshotRestorer;
-  let initialHardhatBlock: number; // incase we need to reset to where we started
 
   const resetToBlock = async (blockNumber: number) => {
     await network.provider.request({
@@ -486,26 +485,6 @@ describe("SafEth", function () {
       ).to.be.revertedWith("MintedAmountTooLow");
     });
   });
-
-  // TODO find a block where its reverted by > 0.4%
-  describe.skip("Sfrx", function () {
-    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
-      // a block where frxEth prices are abnormally depegged from eth by ~0.2%
-      await resetToBlock(15946736);
-
-      const factory = await ethers.getContractFactory("SfrxEth");
-      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
-        adminAccount.address,
-      ]);
-      await sfrxEthDerivative.deployed();
-
-      await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
-        "FrxDepegged"
-      );
-
-      await resetToBlock(initialHardhatBlock);
-    });
-  });
   describe("Enable / Disable", function () {
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEth.disableDerivative(999)).to.be.revertedWith(
@@ -748,6 +727,39 @@ describe("SafEth", function () {
     afterEach(async () => {
       await snapshot.restore();
     });
+    it("Should fail transfer() in wstEth deposit", async function () {
+      const RevertCallFactory = await ethers.getContractFactory("RevertCall");
+      const revertCall = await RevertCallFactory.deploy();
+      await revertCall.deployed();
+
+      const factory = await ethers.getContractFactory("WstEth");
+      const derivative = (await upgrades.deployProxy(factory, [
+        revertCall.address,
+      ])) as WstEth;
+      await derivative.deployed();
+
+      await expect(
+        revertCall.testDeposit(derivative.address)
+      ).to.be.revertedWith("FailedToSend");
+    });
+    it("Should fail transfer() in finalCall", async function () {
+      const RevertCallFactory = await ethers.getContractFactory("RevertCall");
+      const revertCall = await RevertCallFactory.deploy();
+      await revertCall.deployed();
+
+      const factory = await ethers.getContractFactory("Reth");
+      const derivative = (await upgrades.deployProxy(factory, [
+        revertCall.address,
+      ])) as Reth;
+      await derivative.deployed();
+
+      await revertCall.testDeposit(derivative.address, { value: "10000000" });
+      const balance = await derivative.balance();
+
+      await expect(
+        revertCall.testWithdraw(derivative.address, balance)
+      ).to.be.revertedWith("FailedToSend");
+    });
     it("Should not be able to steal funds by sending derivative tokens", async function () {
       const userAccounts = await getUserAccounts();
 
@@ -810,6 +822,12 @@ describe("SafEth", function () {
       const totalSupply = await safEth.totalSupply();
       expect(totalSupply).gt(1);
     });
+    it("Shouldn't deploy derivative with zero address", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      await expect(
+        upgrades.deployProxy(factory, [ethers.constants.AddressZero])
+      ).to.be.revertedWith("InvalidAddress");
+    });
     it("Should withdraw reth on amm if deposit contract empty", async () => {
       const factory = await ethers.getContractFactory("Reth");
       const rEthDerivative = await upgrades.deployProxy(factory, [
@@ -862,6 +880,18 @@ describe("SafEth", function () {
 
       await expect(rEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "call revert exception"
+      );
+    });
+    it("Should not allow calling initializeV2 after first time", async () => {
+      const factory = await ethers.getContractFactory("Reth");
+      const rEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await rEthDerivative.deployed();
+      await rEthDerivative.initializeV2();
+
+      await expect(rEthDerivative.initializeV2()).to.be.revertedWith(
+        "AlreadyInitialized"
       );
     });
     it("Should setDepegSlippage() on sfrxEth derivative", async function () {
@@ -938,10 +968,20 @@ describe("SafEth", function () {
           params: [MULTI_SIG],
         });
 
+        // fail when called by non manager
+        await expect(
+          derivatives[i].updateManager(MULTI_SIG)
+        ).to.be.revertedWith("Unauthorized");
+
         const multiSigSigner = await ethers.getSigner(MULTI_SIG);
         const multiSig = derivatives[i].connect(multiSigSigner);
         const tx3 = await multiSig.updateManager(adminAccount.address);
         await tx3.wait();
+
+        // fail when zero address
+        await expect(
+          derivatives[i].updateManager(ethers.constants.AddressZero)
+        ).to.be.revertedWith("InvalidAddress");
 
         const newManager1 = await derivatives[i].manager();
         expect(newManager1).eq(adminAccount.address);
@@ -1581,6 +1621,56 @@ describe("SafEth", function () {
         receipt1.gasUsed.lt(receipt2.gasUsed) &&
           receipt2.gasUsed.lt(receipt3.gasUsed)
       ).eq(true);
+    });
+  });
+  describe("Sfrx", function () {
+    it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await sfrxEthDerivative.deployed();
+      await sfrxEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+      const signers = await ethers.getSigners();
+      await signers[9].sendTransaction({
+        to: MULTI_SIG,
+        value: "100000000000000000000",
+      });
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = sfrxEthDerivative.connect(multiSigSigner);
+      await multiSig.setDepegSlippage(1);
+
+      await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
+        "FrxDepegged"
+      );
+    });
+    it("Should get correct price difference if value over 1", async function () {
+      resetToBlock(16080532);
+      await network.provider.request({
+        method: "hardhat_reset",
+        params: [
+          {
+            forking: {
+              jsonRpcUrl: process.env.MAINNET_URL,
+              blockNumber: 16080532,
+            },
+          },
+        ],
+      });
+      const factory = await ethers.getContractFactory("SfrxEth");
+      const sfrxEthDerivative = await upgrades.deployProxy(factory, [
+        adminAccount.address,
+      ]);
+      await sfrxEthDerivative.deployed();
+      await sfrxEthDerivative.initializeV2();
+      const price = await sfrxEthDerivative.ethPerDerivative(false);
+      expect(price).gt(0);
+
+      await resetToBlock(Number(process.env.BLOCK_NUMBER));
     });
   });
 

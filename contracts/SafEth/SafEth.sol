@@ -412,7 +412,7 @@ contract SafEth is
      * @notice - find derivative that is underweight relative to target weights
      * @return - a derivative index that is underweight relative to target weights
      */
-    function firstUnderweightDerivativeIndex() public view returns (uint256) {
+    function firstUnderweightDerivativeIndex() private view returns (uint256) {
         uint256 count = derivativeCount;
 
         uint256 tvlEth = totalSupply() * approxPrice(false);
