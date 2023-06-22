@@ -1,4 +1,5 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
+import { MULTI_SIG } from "./constants";
 
 export const supportedDerivatives = [
   "Reth",
@@ -17,6 +18,21 @@ export const deployDerivatives = async function (owner: string) {
     await derivative.deployed();
     derivatives.push(derivative);
     await derivative.initializeV2();
+
+    if (supportedDerivatives[i] === "SfrxEth") {
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+      const signers = await ethers.getSigners();
+      await signers[9].sendTransaction({
+        to: MULTI_SIG,
+        value: "100000000000000000000",
+      });
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = derivative.connect(multiSigSigner);
+      await multiSig.setDepegSlippage("4000000000000000");
+    }
   }
   return derivatives;
 };

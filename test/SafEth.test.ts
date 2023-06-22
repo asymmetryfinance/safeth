@@ -487,8 +487,7 @@ describe("SafEth", function () {
     });
   });
 
-  // TODO find a block where its reverted by > 0.4%
-  describe.skip("Sfrx", function () {
+  describe("Sfrx", function () {
     it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
       // a block where frxEth prices are abnormally depegged from eth by ~0.2%
       await resetToBlock(15946736);
@@ -498,11 +497,24 @@ describe("SafEth", function () {
         adminAccount.address,
       ]);
       await sfrxEthDerivative.deployed();
+      await sfrxEthDerivative.initializeV2();
+      await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [MULTI_SIG],
+      });
+      const signers = await ethers.getSigners();
+      await signers[9].sendTransaction({
+        to: MULTI_SIG,
+        value: "100000000000000000000",
+      });
+      const multiSigSigner = await ethers.getSigner(MULTI_SIG);
+      const multiSig = sfrxEthDerivative.connect(multiSigSigner);
+      await multiSig.setDepegSlippage(1);
 
       await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "FrxDepegged"
       );
-
+      await multiSig.setDepegSlippage("4000000000000000");
       await resetToBlock(initialHardhatBlock);
     });
   });
@@ -932,7 +944,7 @@ describe("SafEth", function () {
       const depegSlippageBefore = await multiSig.depegSlippage();
       await multiSig.setDepegSlippage(123456);
       const depegSlippageAfter = await multiSig.depegSlippage();
-      expect(depegSlippageBefore).eq(0);
+      expect(depegSlippageBefore).eq(4000000000000000);
       expect(depegSlippageAfter).eq(123456);
     });
     it("Should test deposit & withdraw, ethPerDerivative, getName & updateManager on each derivative contract", async () => {
