@@ -33,7 +33,6 @@ describe("SafEth", function () {
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
   let snapshot: SnapshotRestorer;
-  let initialHardhatBlock: number; // incase we need to reset to where we started
 
   const resetToBlock = async (blockNumber: number) => {
     await network.provider.request({
@@ -489,9 +488,6 @@ describe("SafEth", function () {
 
   describe("Sfrx", function () {
     it("Should revert ethPerDerivative for sfrx if frxEth has depegged from eth", async function () {
-      // a block where frxEth prices are abnormally depegged from eth by ~0.2%
-      await resetToBlock(15946736);
-
       const factory = await ethers.getContractFactory("SfrxEth");
       const sfrxEthDerivative = await upgrades.deployProxy(factory, [
         adminAccount.address,
@@ -514,8 +510,6 @@ describe("SafEth", function () {
       await expect(sfrxEthDerivative.ethPerDerivative(true)).to.be.revertedWith(
         "FrxDepegged"
       );
-      await multiSig.setDepegSlippage("4000000000000000");
-      await resetToBlock(initialHardhatBlock);
     });
   });
   describe("Enable / Disable", function () {
