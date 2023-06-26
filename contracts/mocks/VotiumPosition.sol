@@ -4,7 +4,6 @@ import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/votium/IVotiumMerkleStash.sol";
-import "../interfaces/convex/IClaimZap.sol";
 
 contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     address private constant CVX_CLAIM_ZAP =
@@ -42,22 +41,6 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     ) external onlyOwner {
         IVotiumMerkleStash(0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A)
             .claimMulti(address(this), claims);
-        // TODO convertreward tokens to eth
-    }
-
-    function claimVlcvxRewards() external onlyOwner {
-        address[] memory emptyArray;
-        IClaimZap(CVX_CLAIM_ZAP).claimRewards(
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            emptyArray,
-            0,
-            0,
-            0,
-            0,
-            8
-        );
         // TODO convertreward tokens to eth
     }
 
