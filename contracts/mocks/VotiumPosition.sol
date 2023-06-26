@@ -6,9 +6,6 @@ import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/votium/IVotiumMerkleStash.sol";
 
 contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
-    address private constant CVX_CLAIM_ZAP =
-        0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
-
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -41,7 +38,7 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     ) external onlyOwner {
         IVotiumMerkleStash(0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A)
             .claimMulti(address(this), claims);
-        // TODO convertreward tokens to eth
+        // TODO convert reward tokens to eth
     }
 
     receive() external payable {}
