@@ -7,7 +7,6 @@ import "../interfaces/votium/IVotiumMerkleStash.sol";
 import "../interfaces/convex/IClaimZap.sol";
 
 contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
-
     address private constant CVX_CLAIM_ZAP =
         0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
 
@@ -38,8 +37,11 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
         ILockedCvx(VL_CVX).lock(address(this), _amount, 0);
     }
 
-    function claimVotiumRewards(IVotiumMerkleStash.claimParam[] calldata claims) external onlyOwner {
-        IVotiumMerkleStash(0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A).claimMulti(address(this), claims);
+    function claimVotiumRewards(
+        IVotiumMerkleStash.claimParam[] calldata claims
+    ) external onlyOwner {
+        IVotiumMerkleStash(0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A)
+            .claimMulti(address(this), claims);
         // TODO convertreward tokens to eth
     }
 

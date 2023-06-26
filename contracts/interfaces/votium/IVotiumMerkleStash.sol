@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 interface IVotiumMerkleStash {
-    struct claimParam {
+    struct ClaimParam {
         address token;
         uint256 index;
         uint256 amount;
         bytes32[] merkleProof;
     }
 
-    function claimMulti(address account, claimParam[] calldata claims) external;
+    function claimMulti(address account, ClaimParam[] calldata claims) external;
 }
