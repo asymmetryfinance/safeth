@@ -36,9 +36,9 @@ describe.only("VotiumMerkleAccountClaim", async function () {
     );
 
     const token = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
-    const index = 807;
+    const index = "807";
     const account = "0x3c1f89de9834b6c2f5a98e0bc2540439256656e5";
-    const amount = 297114812891068366848;
+    const amount = "297114812891068366848";
     const merkleProof = [
       "0x5765c08649a570fe5a7ac6ba9d2e7684a58b7d0da778e6fd6cdaab7e4198c92d",
       "0x37598f5704f3485e7cb81d6c401bc15f7072934e5667253f7dcf72b71b84b6ac",
