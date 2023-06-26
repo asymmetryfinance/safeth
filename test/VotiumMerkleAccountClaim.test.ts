@@ -17,7 +17,7 @@ describe.only("VotiumMerkleAccountClaim", async function () {
         {
           forking: {
             jsonRpcUrl: process.env.MAINNET_URL,
-            blockNumber: Number(17447306), // block number for https://etherscan.io/tx/0xf31af41d8d572a6fc6845b631ab4a1ce469104d8dd0e57944960fd4e32e56da2
+            blockNumber: Number(17447305), // block number before https://etherscan.io/tx/0xf31af41d8d572a6fc6845b631ab4a1ce469104d8dd0e57944960fd4e32e56da2
           },
         },
       ],
