@@ -1,5 +1,7 @@
 import { ethers, network } from "hardhat";
 import { votiumMultiMerkleStashAbi } from "./abi/votiumMerkleStashAbi";
+import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { expect } from "chai";
 
 // These tests are for us to gain a better understanding of how the claim process works with merkle trees
 // Claim will ultimately be called by our contract but first we need to understand the fundamentals.
@@ -24,6 +26,8 @@ describe.only("VotiumMerkleAccountClaim", async function () {
     });
   });
   it("Should impersonate an account that can claim at a specific block and claim using merkle tree data.", async function () {
+    const fxsTokenAddress = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
+
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [votiumClaimer],
@@ -37,7 +41,6 @@ describe.only("VotiumMerkleAccountClaim", async function () {
 
     const token = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
     const index = "807";
-    const account = "0x3c1f89de9834b6c2f5a98e0bc2540439256656e5";
     const amount = "297114812891068366848";
     const merkleProof = [
       "0x5765c08649a570fe5a7ac6ba9d2e7684a58b7d0da778e6fd6cdaab7e4198c92d",
@@ -54,8 +57,17 @@ describe.only("VotiumMerkleAccountClaim", async function () {
       "0xf98355d99d451a1cf05f5ecdbc3f143214c9e00305ba02464affc7ef8e29c28a",
     ];
 
-    const claimArgs = [token, index, account, amount, merkleProof];
+    const claimArgs = [token, index, votiumClaimer, amount, merkleProof];
 
-    await votiumMultiMerkleStash.claim(...claimArgs);
+    const fxsContract = new ethers.Contract(
+      fxsTokenAddress,
+      ERC20.abi,
+      claimerSigner
+    );
+    const fxsBalanceBefore = await fxsContract.balanceOf(votiumClaimer);
+    const tx = await votiumMultiMerkleStash.claim(...claimArgs);
+    await tx.wait();
+    const fxsBalanceAfter = await fxsContract.balanceOf(votiumClaimer);
+    expect(fxsBalanceAfter).gt(fxsBalanceBefore);
   });
 });
