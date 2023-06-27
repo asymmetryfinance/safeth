@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/votium/IVotiumMerkleStash.sol";
 
-contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
+contract VotiumPosition is Ownable {
     constructor() {
-        _disableInitializers();
-    }
-
-    function initialize() external initializer {
-        Ownable2StepUpgradeable.__Ownable2Step_init();
         _transferOwnership(msg.sender);
     }
 

@@ -1,9 +1,8 @@
-import { upgrades, ethers } from "hardhat";
+import { ethers } from "hardhat";
 
 async function main() {
   const VotiumMockFactory = await ethers.getContractFactory("VotiumPosition");
-  const votiumMock = await upgrades.deployProxy(VotiumMockFactory, []);
-
+  const votiumMock = await VotiumMockFactory.deploy();
   await votiumMock.deployed();
 
   console.log("Votium Mock deployed to:", votiumMock.address);

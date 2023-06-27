@@ -1,4 +1,4 @@
-import { ethers, network, upgrades } from "hardhat";
+import { ethers, network } from "hardhat";
 import { VotiumPosition } from "../typechain-types";
 import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
@@ -19,10 +19,9 @@ describe("VotiumPosition", async function () {
         },
       ],
     });
-    const votiumMockFactory = await ethers.getContractFactory("VotiumPosition");
-    votiumMock = (await upgrades.deployProxy(
-      votiumMockFactory
-    )) as VotiumPosition;
+    const VotiumMockFactory = await ethers.getContractFactory("VotiumPosition");
+    votiumMock = await VotiumMockFactory.deploy();
+    await votiumMock.deployed();
   });
 
   it("Should set delegate and lock cvx", async function () {
