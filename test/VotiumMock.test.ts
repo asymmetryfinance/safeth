@@ -1,13 +1,14 @@
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { VotiumPosition } from "../typechain-types";
 import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { expect } from "chai";
+import { upgrade } from "./helpers/upgradeHelpers";
 
-describe("VotiumPosition", async function () {
+describe.only("VotiumPosition", async function () {
   let votiumMock: VotiumPosition;
 
-  before(async () => {
+  beforeEach(async () => {
     await network.provider.request({
       method: "hardhat_reset",
       params: [
@@ -19,12 +20,11 @@ describe("VotiumPosition", async function () {
         },
       ],
     });
-    const VotiumMockFactory = await ethers.getContractFactory("VotiumPosition");
-    votiumMock = await VotiumMockFactory.deploy();
-    await votiumMock.deployed();
-  });
+    const votiumMockFactory = await ethers.getContractFactory("VotiumPosition");
+    votiumMock = (await upgrades.deployProxy(
+      votiumMockFactory
+    )) as VotiumPosition;
 
-  it("Should set delegate and lock cvx", async function () {
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [CVX_WHALE],
@@ -33,14 +33,22 @@ describe("VotiumPosition", async function () {
     const cvx = new ethers.Contract(CVX_ADDRESS, ERC20.abi, whaleSigner);
     const cvxAmount = ethers.utils.parseEther("100");
     await cvx.transfer(votiumMock.address, cvxAmount);
+  });
 
+  it("Should set delegate and lock cvx", async function () {
     await votiumMock.setDelegate();
-    await votiumMock.lockCvx(cvxAmount);
+    await votiumMock.lockCvx(ethers.utils.parseEther("1"));
   });
   it("Should have owner be admin account", async function () {
     const accounts = await ethers.getSigners();
     const owner = await votiumMock.owner();
     expect(owner).to.equal(accounts[0].address);
+  });
+  it("Should upgrade the contract and set delegate and lock cvx", async function () {
+    const tx = await upgrade(votiumMock.address, "VotiumPositionV2");
+    await tx.deployed();
+    await votiumMock.setDelegate();
+    await votiumMock.lockCvx(ethers.utils.parseEther("1"));
   });
 
   // TODO:

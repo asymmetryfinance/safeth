@@ -5,7 +5,7 @@ import "../interfaces/ISnapshotDelegationRegistry.sol";
 import "../interfaces/convex/ILockedCvx.sol";
 import "../interfaces/votium/IVotiumMerkleStash.sol";
 
-contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
+contract VotiumPositionV2 is Initializable, Ownable2StepUpgradeable {
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -32,6 +32,7 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
         address VL_CVX = 0x72a19342e8F1838460eBFCCEf09F6585e32db86E;
         IERC20(CVX).approve(VL_CVX, _amount);
         ILockedCvx(VL_CVX).lock(address(this), _amount, 0);
+        if(msg.sender == address(0)) return; // a diff that wont be compiler optimized to show it upgraded
     }
 
     function claimVotiumRewards(
