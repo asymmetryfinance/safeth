@@ -20,9 +20,10 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     function setDelegate() external onlyOwner {
         bytes32 VotiumVoteDelegationId = 0x6376782e65746800000000000000000000000000000000000000000000000000;
         address DelegationRegistry = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+        address votiumVoteProxyAddress = 0xde1E6A7ED0ad3F61D531a8a78E83CcDdbd6E0c49;
         ISnapshotDelegationRegistry(DelegationRegistry).setDelegate(
             VotiumVoteDelegationId,
-            owner()
+            votiumVoteProxyAddress
         );
     }
 
@@ -34,7 +35,7 @@ contract VotiumPosition is Initializable, Ownable2StepUpgradeable {
     }
 
     function claimVotiumRewards(
-        IVotiumMerkleStash.claimParam[] calldata claims
+        IVotiumMerkleStash.ClaimParam[] calldata claims
     ) external onlyOwner {
         IVotiumMerkleStash(0x378Ba9B73309bE80BF4C2c027aAD799766a7ED5A)
             .claimMulti(address(this), claims);
