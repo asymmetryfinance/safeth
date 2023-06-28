@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./INftStrategy.sol";
 
 /// For private internal functions and anything not exposed via the interface
+import "hardhat/console.sol";
+
 contract VotiumStrategyCore is
     Initializable,
     OwnableUpgradeable,
@@ -27,6 +29,8 @@ contract VotiumStrategyCore is
 
     receive() external payable {}
 
+    error SwapFailed(uint256 index);
+
     struct SwapData {
         address sellToken;
         address buyToken;
@@ -39,9 +43,9 @@ contract VotiumStrategyCore is
     function sellErc20s(SwapData[] calldata swapsData) public onlyOwner returns (uint256 ethReceived) {
         uint256 ethBalanceBefore = address(this).balance;
         for(uint256 i=0;i<swapsData.length;i++) {
-            IERC20(swapsData[i].sellToken).approve(address(swapsData[i].spender), 2^256);
+            IERC20(swapsData[i].sellToken).approve(address(swapsData[i].spender), type(uint256).max);
             (bool success,) = swapsData[i].swapTarget.call(swapsData[i].swapCallData);
-            require(success, '0x Swap Failed');
+            if(!success) revert SwapFailed(i);
         }
         uint256 ethBalanceAfter = address(this).balance;
         ethReceived = ethBalanceAfter - ethBalanceBefore;
