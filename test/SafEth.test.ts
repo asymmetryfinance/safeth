@@ -84,7 +84,7 @@ describe("SafEth", function () {
       const contractEthBalance = await ethers.provider.getBalance(
         safEth.address
       );
-      expect(contractEthBalance).eq(0);
+      expect(contractEthBalance).eq(4);
 
       const tx2 = await safEth.unstake(
         await safEth.balanceOf(adminAccount.address),
@@ -288,7 +288,7 @@ describe("SafEth", function () {
       const contractEthBalance = await ethers.provider.getBalance(
         safEth.address
       );
-      expect(contractEthBalance.sub(await safEth.ethToClaim())).eq(0);
+      expect(contractEthBalance.sub(await safEth.ethToClaim())).eq(6);
 
       expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
     });

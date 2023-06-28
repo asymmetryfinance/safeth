@@ -516,9 +516,7 @@ contract SafEth is
             uint256 weight = derivatives[i].weight;
             if (weight == 0) continue;
             IDerivative derivative = derivatives[i].derivative;
-            uint256 ethAmount = i == derivativeCount - 1
-                ? msg.value - amountStaked
-                : (msg.value * weight) / totalWeight;
+            uint256 ethAmount = (msg.value * weight) / totalWeight;
 
             amountStaked += ethAmount;
             uint256 depositAmount = derivative.deposit{value: ethAmount}();
