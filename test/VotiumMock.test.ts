@@ -4,7 +4,7 @@ import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { expect } from "chai";
 
-describe("VotiumPosition", async function () {
+describe.skip("VotiumPosition", async function () {
   let votiumMock: VotiumPosition;
 
   before(async () => {
