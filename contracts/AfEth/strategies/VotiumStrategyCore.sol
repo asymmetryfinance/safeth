@@ -29,5 +29,4 @@ contract VotiumStrategyCore is
 
     /// sell any number of erc20's via 0x in a single tx
     function sellErc20s() private {}
-
 }

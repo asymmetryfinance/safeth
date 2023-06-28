@@ -13,10 +13,8 @@ contract AfStrategy is Initializable, OwnableUpgradeable {
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
     */
-    function initialize(
-    ) external initializer {
+    function initialize() external initializer {
         _transferOwnership(msg.sender);
-       
     }
 
     receive() external payable {}
