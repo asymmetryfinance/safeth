@@ -36,11 +36,14 @@ contract VotiumStrategyCore is
     }
 
     /// sell any number of erc20's via 0x in a single tx
-    function sellErc20s(SwapData[] calldata swapsData) public onlyOwner {
+    function sellErc20s(SwapData[] calldata swapsData) public onlyOwner returns (uint256 ethReceived) {
+        uint256 ethBalanceBefore = address(this).balance;
         for(uint256 i=0;i<swapsData.length;i++) {
             IERC20(swapsData[i].sellToken).approve(address(swapsData[i].spender), 2^256);
             (bool success,) = swapsData[i].swapTarget.call(swapsData[i].swapCallData);
             require(success, '0x Swap Failed');
         }
+        uint256 ethBalanceAfter = address(this).balance;
+        ethReceived = ethBalanceAfter - ethBalanceBefore;
     }
 }
