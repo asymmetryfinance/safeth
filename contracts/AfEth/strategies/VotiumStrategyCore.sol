@@ -27,6 +27,32 @@ contract VotiumStrategyCore is
 
     receive() external payable {}
 
+    error SwapFailed(uint256 index);
+
+    struct SwapData {
+        address sellToken;
+        address buyToken;
+        address spender;
+        address swapTarget;
+        bytes swapCallData;
+    }
+
     /// sell any number of erc20's via 0x in a single tx
-    function sellErc20s() private {}
+    function sellErc20s(
+        SwapData[] calldata swapsData
+    ) public onlyOwner returns (uint256 ethReceived) {
+        uint256 ethBalanceBefore = address(this).balance;
+        for (uint256 i = 0; i < swapsData.length; i++) {
+            IERC20(swapsData[i].sellToken).approve(
+                address(swapsData[i].spender),
+                type(uint256).max
+            );
+            (bool success, ) = swapsData[i].swapTarget.call(
+                swapsData[i].swapCallData
+            );
+            if (!success) revert SwapFailed(i);
+        }
+        uint256 ethBalanceAfter = address(this).balance;
+        ethReceived = ethBalanceAfter - ethBalanceBefore;
+    }
 }
