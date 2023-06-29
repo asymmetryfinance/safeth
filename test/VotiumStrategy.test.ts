@@ -4,7 +4,7 @@ import axios from "axios";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { expect } from "chai";
 
-describe.only("VotiumStrategy", async function () {
+describe("VotiumStrategy", async function () {
   let votiumStrategy: any;
 
   // mapping of token address to whale address
