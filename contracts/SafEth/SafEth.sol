@@ -503,6 +503,8 @@ contract SafEth is
         uint256 _minOut,
         uint256 price
     ) private returns (uint256 mintedAmount) {
+        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
+        
         uint256 totalStakeValueEth = 0;
         IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
             .derivative;
@@ -534,13 +536,14 @@ contract SafEth is
         uint256 _minOut,
         uint256 price
     ) private returns (uint256 mintedAmount) {
+        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
 
         for (uint256 i = 0; i < enabledDerivativeCount; i++) {
             uint256 index = enabledDerivatives[i];
-            if (!derivatives[index].enabled) continue; // might not be needed anymore
             uint256 weight = derivatives[index].weight;
+            
             if (weight == 0) continue;
             IDerivative derivative = derivatives[index].derivative;
             uint256 ethAmount = i == enabledDerivativeCount - 1
