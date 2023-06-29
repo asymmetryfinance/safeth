@@ -6,8 +6,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./INftStrategy.sol";
 
 /// For private internal functions and anything not exposed via the interface
-import "hardhat/console.sol";
-
 contract VotiumStrategyCore is
     Initializable,
     OwnableUpgradeable,

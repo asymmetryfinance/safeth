@@ -1,11 +1,8 @@
 import { network, ethers, upgrades } from "hardhat";
 import { VotiumStrategy } from "../typechain-types";
 import axios from "axios";
-import { CVX_ADDRESS, CVX_WHALE } from "./helpers/constants";
 import ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { expect } from "chai";
-import { exec } from "child_process";
-import exp from "constants";
 
 describe.only("VotiumStrategy", async function () {
   let votiumStrategy: any;
