@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -282,8 +283,8 @@ contract SafEth is
         uint256[] memory tempArray = new uint256[](
             enabledDerivatives.length - 1
         );
+        uint256 tempIndex = 0;
         for (uint256 i = 0; i < enabledDerivatives.length; i++) {
-            uint256 tempIndex = 0;
             if (enabledDerivatives[i] != _derivativeIndex) {
                 tempArray[tempIndex] = enabledDerivatives[i];
                 tempIndex++;
@@ -504,7 +505,7 @@ contract SafEth is
         uint256 price
     ) private returns (uint256 mintedAmount) {
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-        
+
         uint256 totalStakeValueEth = 0;
         IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
             .derivative;
@@ -543,7 +544,7 @@ contract SafEth is
         for (uint256 i = 0; i < enabledDerivativeCount; i++) {
             uint256 index = enabledDerivatives[i];
             uint256 weight = derivatives[index].weight;
-            
+
             if (weight == 0) continue;
             IDerivative derivative = derivatives[index].derivative;
             uint256 ethAmount = i == enabledDerivativeCount - 1
