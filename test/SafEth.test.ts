@@ -489,6 +489,7 @@ describe("SafEth", function () {
     it("Should keep track of derivative indexes when enabling and disabling derivatives", async () => {
       const enabledDerivativeCountBefore =
         await safEth.enabledDerivativeCount();
+
       await safEth.disableDerivative(0);
 
       let count = await safEth.enabledDerivativeCount();
@@ -504,6 +505,7 @@ describe("SafEth", function () {
       await safEth.enableDerivative(0);
 
       count = await safEth.enabledDerivativeCount();
+      expect(count).eq(6);
       let containsZeroIndex = false;
       for (let i = 0; i < count.toNumber(); i++) {
         if ((await safEth.enabledDerivatives(i)).eq(0)) {
@@ -517,6 +519,7 @@ describe("SafEth", function () {
       await safEth.disableDerivative(3);
 
       count = await safEth.enabledDerivativeCount();
+      expect(count).eq(3);
       for (let i = 0; i < count.toNumber(); i++) {
         expect(await safEth.enabledDerivatives(i)).to.not.eq(1);
         expect(await safEth.enabledDerivatives(i)).to.not.eq(2);
@@ -527,6 +530,7 @@ describe("SafEth", function () {
       await safEth.enableDerivative(2);
 
       count = await safEth.enabledDerivativeCount();
+      expect(count).eq(5);
       let containsFirstIndex = false;
       let containsSecondIndex = false;
       let containsThirdIndex = false;
@@ -550,6 +554,8 @@ describe("SafEth", function () {
       await safEth.enableDerivative(3);
       await safEth.disableDerivative(2);
 
+      count = await safEth.enabledDerivativeCount();
+      expect(count).eq(5);
       containsSecondIndex = false;
       containsThirdIndex = false;
       for (let i = 0; i < count.toNumber(); i++) {

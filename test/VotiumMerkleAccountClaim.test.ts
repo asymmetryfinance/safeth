@@ -5,7 +5,7 @@ import { expect } from "chai";
 
 // These tests are for us to gain a better understanding of how the claim process works with merkle trees
 // Claim will ultimately be called by our contract but first we need to understand the fundamentals.
-describe.skip("VotiumMerkleAccountClaim", async function () {
+describe("VotiumMerkleAccountClaim", async function () {
   const votiumMultiMerkleStashAddress =
     "0x378ba9b73309be80bf4c2c027aad799766a7ed5a";
   const fxsTokenAddress = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
