@@ -437,12 +437,11 @@ contract SafEth is
      * @return - a derivative index that is underweight relative to target weights
      */
     function firstUnderweightDerivativeIndex() private view returns (uint256) {
-        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-
         uint256 count = derivativeCount;
+
         uint256 tvlEth = totalSupply() * approxPrice(false);
 
-        if (tvlEth == 0) return enabledDerivatives[0];
+        if (tvlEth == 0) return 0;
 
         for (uint256 i = 0; i < count; i++) {
             if (!derivatives[i].enabled) continue;
@@ -453,7 +452,7 @@ contract SafEth is
                 )) / tvlEth;
             if (trueWeight < derivatives[i].weight) return i;
         }
-        return enabledDerivatives[0];
+        return 0;
     }
 
     /**
