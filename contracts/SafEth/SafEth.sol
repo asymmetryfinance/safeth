@@ -206,7 +206,7 @@ contract SafEth is
             value: amount
         }(_minAmount);
 
-        floorPrice = depositPrice;
+        floorPrice = floorPrice < depositPrice ? depositPrice : floorPrice;
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
