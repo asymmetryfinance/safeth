@@ -486,6 +486,19 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
+    it.only("InitializeV2 should set the correct values", async function () {
+      await safEth.initializeV2();
+      const enabledDerivativeCount = await safEth.enabledDerivativeCount();
+      const enabledDerivatives0 = await safEth.enabledDerivatives(0);
+      const enabledDerivatives1 = await safEth.enabledDerivatives(1);
+      const enabledDerivatives2 = await safEth.enabledDerivatives(2);
+
+      await expect(safEth.enabledDerivatives(3)).to.be.reverted;
+      expect(enabledDerivativeCount).eq(3);
+      expect(enabledDerivatives0).eq(0);
+      expect(enabledDerivatives1).eq(1);
+      expect(enabledDerivatives2).eq(2);
+    });
     it("Should keep track of derivative indexes when enabling and disabling derivatives", async () => {
       const enabledDerivativeCountBefore =
         await safEth.enabledDerivativeCount();

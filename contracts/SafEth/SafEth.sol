@@ -44,6 +44,15 @@ contract SafEth is
     }
 
     /**
+        @notice - Function to initialize values for enabledDerivatives
+    */
+    function initializeV2() external {
+        if (hasInitializedV2) revert AlreadySet();
+        enabledDerivatives = [0, 1, 2];
+        enabledDerivativeCount = 3;
+    }
+
+    /**
      * @notice - modifier for transfer() and transferFrom() for owner enforcing blacklists
      * @param sender - sender address
      * @param recipient - recipient address
