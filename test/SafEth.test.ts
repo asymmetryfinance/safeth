@@ -291,6 +291,7 @@ describe("SafEth", function () {
       expect(contractEthBalance.sub(await safEth.ethToClaim())).eq(0);
 
       expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
+      await safEth2.setMockFloorPrice(mockedFloorPrice.div(2));
     });
     it("Owner can withdraw ETH from their preMinted funds", async function () {
       const ethToClaim = await safEth.ethToClaim();
@@ -341,7 +342,7 @@ describe("SafEth", function () {
       );
     });
     it("User be able to call preMint() passing _useBalance as true", async function () {
-      const depositAmount = ethers.utils.parseEther("2");
+      const depositAmount = ethers.utils.parseEther("1");
       const ethToClaimBefore = await safEth.ethToClaim();
       const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
       const tx = await safEth.preMint(0, true, {
