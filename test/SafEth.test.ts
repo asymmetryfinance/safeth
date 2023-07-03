@@ -342,7 +342,7 @@ describe("SafEth", function () {
       );
     });
     it("User be able to call preMint() passing _useBalance as true", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
+      const depositAmount = ethers.utils.parseEther("2");
       const ethToClaimBefore = await safEth.ethToClaim();
       const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
       const tx = await safEth.preMint(0, true, {
