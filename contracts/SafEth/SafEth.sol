@@ -50,6 +50,7 @@ contract SafEth is
         if (hasInitializedV2) revert AlreadySet();
         enabledDerivatives = [0, 1, 2];
         enabledDerivativeCount = 3;
+        hasInitializedV2 = true;
     }
 
     /**

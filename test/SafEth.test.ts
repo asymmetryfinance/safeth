@@ -486,7 +486,7 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
-    it.only("InitializeV2 should set the correct values", async function () {
+    it("InitializeV2 should set the correct values", async function () {
       await safEth.initializeV2();
       const enabledDerivativeCount = await safEth.enabledDerivativeCount();
       const enabledDerivatives0 = await safEth.enabledDerivatives(0);
@@ -498,6 +498,8 @@ describe("SafEth", function () {
       expect(enabledDerivatives0).eq(0);
       expect(enabledDerivatives1).eq(1);
       expect(enabledDerivatives2).eq(2);
+
+      await expect(safEth.initializeV2()).to.be.reverted;
     });
     it("Should keep track of derivative indexes when enabling and disabling derivatives", async () => {
       const enabledDerivativeCountBefore =
