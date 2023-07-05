@@ -1674,7 +1674,33 @@ describe("SafEth", function () {
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
     });
   });
+  describe("Floor Price", () => {
+    it("Should store the highest floor price", async function () {
+      await resetToBlock(17627525);
 
+      const preMintAmount = ethers.utils.parseEther("2");
+
+      // premint eth until the approx price is lower than floor price
+      let tx = await safEth.preMint(0, false, {
+        value: preMintAmount,
+      });
+      tx = await safEth.preMint(0, false, {
+        value: preMintAmount,
+      });
+      tx = await safEth.preMint(0, false, {
+        value: preMintAmount,
+      });
+      await tx.wait();
+      const floorPrice = await safEth.floorPrice();
+      const approxPrice = await safEth.approxPrice(false);
+
+      expect(approxPrice).lt(floorPrice);
+      const newFloorPrice = await safEth.floorPrice();
+      expect(floorPrice).eq(newFloorPrice);
+
+      await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    });
+  });
   // get estimated total eth value of each derivative
   const estimatedDerivativeValues = async () => {
     const derivativeCount = (await safEth.derivativeCount()).toNumber();
