@@ -189,6 +189,12 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("3");
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.999"));
 
+      await expect(
+        safEth.preMint(0, false, {
+          value: ethers.utils.parseEther("1"),
+        })
+      ).to.be.revertedWith("PremintTooLow");
+
       // premint eth
       let tx = await safEth.preMint(0, false, {
         value: depositAmount,
