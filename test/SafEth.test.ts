@@ -4,7 +4,6 @@ import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { Reth, SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
-
 import {
   deploySafEth,
   upgrade,
@@ -27,6 +26,7 @@ import {
   withinHalfPercent,
 } from "./helpers/functions";
 import { parseEther } from "ethers/lib/utils";
+import { proxyAdminAbi } from "./abi/proxyAdminAbi";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -1671,6 +1671,48 @@ describe("SafEth", function () {
       expect(price).gt(0);
 
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    });
+  });
+  describe.only("Upgrade", () => {
+    it("Should upgrade mainnet SafEth, Lido, Reth, and sfrxEth with new implementations", async () => {
+      const contracts = [
+        "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
+        "0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad",
+        "0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A",
+        "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3",
+      ];
+      for (let i = 0; i < contracts.length; i++) {
+        const contractAddress = contracts[i];
+        const adminAddress = "0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb";
+        const proxyAdminContract = new ethers.Contract(
+          "0x2b408df4B4e112276119bd6Ca1710b6C9966809E",
+          proxyAdminAbi,
+          adminAccount
+        );
+        const SafEthFactory = await ethers.getContractFactory("SafEth");
+
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [adminAddress],
+        });
+        const adminSigner = await ethers.getSigner(adminAddress);
+        const proxyAdmin = proxyAdminContract.connect(adminSigner);
+        const implementationBefore = await proxyAdmin.getProxyImplementation(
+          contractAddress
+        );
+        await upgrades.forceImport(contractAddress, SafEthFactory); // I think this will affect "prepareUpgrade"
+        const upgradeAddress = await upgrades.prepareUpgrade(
+          contractAddress,
+          SafEthFactory
+        );
+        await proxyAdmin.upgrade(contractAddress, upgradeAddress);
+        const implementationAfter = await proxyAdmin.getProxyImplementation(
+          contractAddress
+        );
+
+        expect(implementationAfter).not.eq(implementationBefore);
+        expect(implementationAfter).eq(upgradeAddress);
+      }
     });
   });
 
