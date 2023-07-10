@@ -1713,7 +1713,7 @@ describe("SafEth", function () {
         const implementationBefore = await proxyAdmin.getProxyImplementation(
           contractAddress
         );
-        await upgrades.forceImport(contractAddress, Factory); // I think this will affect "prepareUpgrade"
+        await upgrades.forceImport(contractAddress, Factory); // I think this will affect "prepareUpgrade" should bring all old versions of contracts in to upgrade
         const upgradeAddress = await upgrades.prepareUpgrade(
           contractAddress,
           Factory
