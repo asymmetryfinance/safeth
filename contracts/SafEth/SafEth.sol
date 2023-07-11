@@ -278,6 +278,22 @@ contract SafEth is
 
         derivatives[_derivativeIndex].enabled = false;
         setTotalWeight();
+
+        uint256[] memory tempArray = new uint256[](
+            enabledDerivatives.length - 1
+        );
+        for (uint256 i = 0; i < enabledDerivatives.length; i++) {
+            uint256 tempIndex = 0;
+            if (enabledDerivatives[i] != _derivativeIndex) {
+                tempArray[tempIndex] = enabledDerivatives[i];
+                tempIndex++;
+            }
+        }
+        enabledDerivatives = tempArray;
+        unchecked {
+            --enabledDerivativeCount;
+        }
+
         emit DerivativeDisabled(_derivativeIndex);
     }
 
@@ -290,7 +306,13 @@ contract SafEth is
         if (derivatives[_derivativeIndex].enabled) revert AlreadyEnabled();
 
         derivatives[_derivativeIndex].enabled = true;
+        enabledDerivatives.push(_derivativeIndex);
+
         setTotalWeight();
+
+        unchecked {
+            ++enabledDerivativeCount;
+        }
         emit DerivativeEnabled(_derivativeIndex);
     }
 
@@ -318,9 +340,11 @@ contract SafEth is
         derivatives[derivativeCount].derivative = IDerivative(_contractAddress);
         derivatives[derivativeCount].weight = _weight;
         derivatives[derivativeCount].enabled = true;
+        enabledDerivatives.push(derivativeCount);
         emit DerivativeAdded(_contractAddress, _weight, derivativeCount);
         unchecked {
             ++derivativeCount;
+            ++enabledDerivativeCount;
         }
         setTotalWeight();
     }
@@ -511,12 +535,14 @@ contract SafEth is
     ) private returns (uint256 mintedAmount) {
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
-        for (uint256 i = 0; i < derivativeCount; i++) {
-            if (!derivatives[i].enabled) continue;
-            uint256 weight = derivatives[i].weight;
+
+        for (uint256 i = 0; i < enabledDerivativeCount; i++) {
+            uint256 index = enabledDerivatives[i];
+            if (!derivatives[index].enabled) continue; // might not be needed anymore
+            uint256 weight = derivatives[index].weight;
             if (weight == 0) continue;
-            IDerivative derivative = derivatives[i].derivative;
-            uint256 ethAmount = i == derivativeCount - 1
+            IDerivative derivative = derivatives[index].derivative;
+            uint256 ethAmount = index == enabledDerivativeCount - 1
                 ? msg.value - amountStaked
                 : (msg.value * weight) / totalWeight;
 
