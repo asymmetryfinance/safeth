@@ -441,7 +441,7 @@ contract SafEth is
         if (safEthTotalSupply == 0 || underlyingValue == 0) return 1e18;
         return (underlyingValue) / safEthTotalSupply;
     }
-    
+
     /**
      * @notice - find derivative that is underweight relative to target weights
      * @return - a derivative index that is underweight relative to target weights
