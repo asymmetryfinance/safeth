@@ -5,16 +5,16 @@ import { expect } from "chai";
 
 // These tests are for us to gain a better understanding of how the claim process works with merkle trees
 // Claim will ultimately be called by our contract but first we need to understand the fundamentals.
-describe.skip("VotiumMerkleAccountClaim", async function () {
+describe.only("VotiumMerkleAccountClaim", async function () {
   const votiumMultiMerkleStashAddress =
     "0x378ba9b73309be80bf4c2c027aad799766a7ed5a";
   const fxsTokenAddress = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
   const cvxTokenAddress = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b";
   const usddTokenAddress = "0x0c10bf8fcb7bf5412187a595ab97a3609160b5c6";
 
-  it("Should impersonate an account that can claim (single) at a specific block and claim using merkle tree data.", async function () {
+  it.only("Should impersonate an account that can claim (single) at a specific block and claim using merkle tree data.", async function () {
     // claimer for https://etherscan.io/tx/0xf31af41d8d572a6fc6845b631ab4a1ce469104d8dd0e57944960fd4e32e56da2
-    const votiumSingleClaimer = "0x3C1f89de9834b6c2F5a98E0bC2540439256656e5";
+    const votiumSingleClaimer = "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741";
 
     await network.provider.request({
       method: "hardhat_reset",
@@ -22,7 +22,7 @@ describe.skip("VotiumMerkleAccountClaim", async function () {
         {
           forking: {
             jsonRpcUrl: process.env.MAINNET_URL,
-            blockNumber: Number(17447305), // block number before https://etherscan.io/tx/0xf31af41d8d572a6fc6845b631ab4a1ce469104d8dd0e57944960fd4e32e56da2
+            blockNumber: Number(17671000), // block number before https://etherscan.io/tx/0xf31af41d8d572a6fc6845b631ab4a1ce469104d8dd0e57944960fd4e32e56da2
           },
         },
       ],
@@ -40,21 +40,21 @@ describe.skip("VotiumMerkleAccountClaim", async function () {
     );
 
     const token = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0";
-    const index = "807";
-    const amount = "297114812891068366848";
+    const index = "1979";
+    const amount = "1112337167376589";
     const merkleProof = [
-      "0x5765c08649a570fe5a7ac6ba9d2e7684a58b7d0da778e6fd6cdaab7e4198c92d",
-      "0x37598f5704f3485e7cb81d6c401bc15f7072934e5667253f7dcf72b71b84b6ac",
-      "0x8df0fc67d4618b4c0a62f187ee9c7fa515468995e324282dc0994e1eb0e82d0e",
-      "0x1012295b45a78e90ecb7fbc3d29f16d6fddf715d6d3260256c0838c0317a0beb",
-      "0x3cdcf93321fd42506ff3c92c9b576c72c1e0feeffd42c61a558cd21894257a6c",
-      "0xe33b6b440c5b2909be537015095af65ebb46ba6e343f269b6c2977d239305748",
-      "0xe228ff6388e39682b35314278a459a951166103a01105bf0b031c4dd928dba75",
-      "0xbe24ee860dc3f474b8b00273b02fdd7a90b9af207dc12f05f8fcd97bd19942d3",
-      "0x638f7b9038907b5d617fc0a54bedd625b418dbc8c038ac7ffadadeb7c8feba01",
-      "0xd3639395729fbf967cdbb022359ae03674a4029a46df67d72bcaf8babb7b236a",
-      "0x306aa0c5fa53072ea9f739991f44cd7ead4dc2a1f6f592792f7646fe4aeb9c42",
-      "0xf98355d99d451a1cf05f5ecdbc3f143214c9e00305ba02464affc7ef8e29c28a",
+      "0x18bac82463aa912d6aa6ac03115529c1c5620ea129ff929d4c55b06faee598a7",
+      "0x76a2dceefde1630b3ec07facfd5e10142c5e3c73155034519e0c9f5dbe23ec93",
+      "0xe99f4c087a1a90b80eef269382c1ebc96cdfb7089a0fa1d8c78113accc74a1d4",
+      "0xabfbf2702f7627efc9f014e993f45e8cd4491ea1ee18a25c123854b9f58e6a0e",
+      "0x5c38612ced3664afba1d238dfff35e7da3a53092143b84eec84e38ebf6934136",
+      "0x02733ad9bce8db3c6ea08ff5cc4cdb2033e4b022653ea1b8132f41fa1593db6d",
+      "0x43ba09e7f507683daa5f4cd6df3c6f6fc0b50fc2e2bcbdeef6d7ebc28d5fdd37",
+      "0xe2c0521263d498e0e8804c0d76f1a26546067d913e78a9adb5d3ae661b89c0b4",
+      "0x3eedc7747ed7c54a9124f8a15b0f58caaf3159529281cba6034ebf78c1740154",
+      "0xd0c96c43161bfdc06de2933af08910006d189e5db4c8f6053c6d145f6fd0a37b",
+      "0x2e6d8cead919efb391a6ba85dff0a3bc28034a98117aa21b97ca203e172bda4f",
+      "0x1d078cc2169d7b238323e9756b3e285f469ae4e130ed82df6fb4755bb3bce2e4",
     ];
 
     const claimArgs = [token, index, votiumSingleClaimer, amount, merkleProof];
@@ -71,7 +71,7 @@ describe.skip("VotiumMerkleAccountClaim", async function () {
     expect(fxsBalanceAfter).gt(fxsBalanceBefore);
   });
   it("Should impersonate an account that can claim (multi) at a specific block and claim using merkle tree data.", async function () {
-    const votiumMultiClaimer = "0xa0081a1037b577Fe97B06FDdb4bB309c4e70a89f";
+    const votiumMultiClaimer = "0x8a65ac0E23F31979db06Ec62Af62b132a6dF4741";
 
     await network.provider.request({
       method: "hardhat_reset",
