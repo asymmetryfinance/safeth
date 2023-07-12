@@ -191,10 +191,12 @@ contract SafEth is
         @notice - Premints safEth for future users
         @param _minAmount - minimum amount to stake
         @param _useBalance - should use balance from previous premint's to mint more
+        @param _overWriteFloorPrice - should overwrite floorPrice even if it's 
      */
     function preMint(
         uint256 _minAmount,
-        bool _useBalance
+        bool _useBalance,
+        bool _overWriteFloorPrice
     ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
         if (_useBalance) {
@@ -204,7 +206,9 @@ contract SafEth is
         (uint256 mintedAmount, uint256 depositPrice) = this.stake{
             value: amount
         }(_minAmount);
-        floorPrice = floorPrice < depositPrice ? depositPrice : floorPrice;
+        floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
+            ? depositPrice
+            : floorPrice;
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;

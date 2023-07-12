@@ -189,7 +189,7 @@ describe("SafEth", function () {
       expect(depositAmount).lte(await safEth.maxPreMintAmount());
 
       // premint eth
-      let tx = await safEth.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, false, {
         value: depositAmount,
       });
       let receipt = await tx.wait();
@@ -237,7 +237,7 @@ describe("SafEth", function () {
     it("Should use approx price if approxPrice > floorPrice", async function () {
       const preMintAmount = ethers.utils.parseEther("2");
       // premint eth
-      let tx = await safEth.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, false, {
         value: preMintAmount,
       });
       await tx.wait();
@@ -262,7 +262,7 @@ describe("SafEth", function () {
       const preMintAmount = ethers.utils.parseEther("2");
 
       // premint eth
-      let tx = await safEth2.preMint(0, false, {
+      let tx = await safEth2.preMint(0, false, false, {
         value: preMintAmount,
       });
       await tx.wait();
@@ -323,7 +323,7 @@ describe("SafEth", function () {
       const accounts = await ethers.getSigners();
       const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(
-        nonOwnerSigner.preMint(0, false, {
+        nonOwnerSigner.preMint(0, false, false, {
           value: preMintAmount,
         })
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -345,7 +345,7 @@ describe("SafEth", function () {
       const depositAmount = ethers.utils.parseEther("2");
       const ethToClaimBefore = await safEth.ethToClaim();
       const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
-      const tx = await safEth.preMint(0, true, {
+      const tx = await safEth.preMint(0, true, false, {
         value: depositAmount,
       });
       await tx.wait();
@@ -368,7 +368,7 @@ describe("SafEth", function () {
 
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
       let maxPremintAmount = await safEth.maxPreMintAmount();
-      tx = await safEth.preMint(0, false, {
+      tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("2.5"),
       });
       await tx.wait();
@@ -407,7 +407,7 @@ describe("SafEth", function () {
 
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
       maxPremintAmount = await safEth.maxPreMintAmount();
-      tx = await safEth.preMint(0, false, {
+      tx = await safEth.preMint(0, false, false, {
         value: maxPremintAmount,
       });
       await tx.wait();
@@ -439,7 +439,7 @@ describe("SafEth", function () {
       tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
       await tx.wait();
       const maxPremintAmount = await safEth.maxPreMintAmount();
-      tx = await safEth.preMint(0, false, {
+      tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("3"),
       });
       await tx.wait();
@@ -1555,7 +1555,7 @@ describe("SafEth", function () {
 
   describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
     beforeEach(async () => {
-      let tx = await safEth.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("10"),
       });
       await tx.wait();
@@ -1681,13 +1681,13 @@ describe("SafEth", function () {
       const preMintAmount = ethers.utils.parseEther("2");
 
       // premint eth until the approx price is lower than floor price
-      let tx = await safEth.preMint(0, false, {
+      let tx = await safEth.preMint(0, false, false, {
         value: preMintAmount,
       });
-      tx = await safEth.preMint(0, false, {
+      tx = await safEth.preMint(0, false, false, {
         value: preMintAmount,
       });
-      tx = await safEth.preMint(0, false, {
+      tx = await safEth.preMint(0, false, false, {
         value: preMintAmount,
       });
       await tx.wait();
@@ -1695,6 +1695,31 @@ describe("SafEth", function () {
       const approxPrice = await safEth.approxPrice(false);
 
       expect(approxPrice).lt(floorPrice);
+      const newFloorPrice = await safEth.floorPrice();
+      expect(floorPrice).eq(newFloorPrice);
+
+      await resetToBlock(Number(process.env.BLOCK_NUMBER));
+    });
+    it("Should overwrite floor price if override is set to true", async function () {
+      await resetToBlock(17627525);
+
+      const preMintAmount = ethers.utils.parseEther("2");
+
+      // premint eth until the approx price is lower than floor price
+      let tx = await safEth.preMint(0, false, true, {
+        value: preMintAmount,
+      });
+      tx = await safEth.preMint(0, false, true, {
+        value: preMintAmount,
+      });
+      tx = await safEth.preMint(0, false, true, {
+        value: preMintAmount,
+      });
+      await tx.wait();
+      const floorPrice = await safEth.floorPrice();
+      const approxPrice = await safEth.approxPrice(false);
+
+      expect(approxPrice).eq(floorPrice);
       const newFloorPrice = await safEth.floorPrice();
       expect(floorPrice).eq(newFloorPrice);
 
