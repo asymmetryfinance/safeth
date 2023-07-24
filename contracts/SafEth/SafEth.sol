@@ -198,6 +198,7 @@ contract SafEth is
         bool _useBalance
     ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
+        if (amount <= maxPreMintAmount) revert PremintTooLow();
         if (_useBalance) {
             amount += ethToClaim;
             ethToClaim = 0;

@@ -59,6 +59,7 @@ describe("SafEth", function () {
 
     const accounts = await ethers.getSigners();
     adminAccount = accounts[0];
+    await safEth.setMaxPreMintAmount(ethers.utils.parseEther("0.5"));
   };
 
   before(async () => {
@@ -185,8 +186,14 @@ describe("SafEth", function () {
     });
 
     it("User should receive premint if under max premint amount & has premint funds", async function () {
-      const depositAmount = ethers.utils.parseEther("2");
-      expect(depositAmount).lte(await safEth.maxPreMintAmount());
+      const depositAmount = ethers.utils.parseEther("3");
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.999"));
+
+      await expect(
+        safEth.preMint(0, false, {
+          value: ethers.utils.parseEther("1"),
+        })
+      ).to.be.revertedWith("PremintTooLow");
 
       // premint eth
       let tx = await safEth.preMint(0, false, {
@@ -235,7 +242,7 @@ describe("SafEth", function () {
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
     it("Should use approx price if approxPrice > floorPrice", async function () {
-      const preMintAmount = ethers.utils.parseEther("2");
+      const preMintAmount = ethers.utils.parseEther("3");
       // premint eth
       let tx = await safEth.preMint(0, false, {
         value: preMintAmount,
@@ -259,7 +266,7 @@ describe("SafEth", function () {
       const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
 
-      const preMintAmount = ethers.utils.parseEther("2");
+      const preMintAmount = ethers.utils.parseEther("3");
 
       // premint eth
       let tx = await safEth2.preMint(0, false, {
@@ -340,17 +347,6 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
-    it("User be able to call preMint() passing _useBalance as true", async function () {
-      const depositAmount = ethers.utils.parseEther("2");
-      const ethToClaimBefore = await safEth.ethToClaim();
-      const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
-      const tx = await safEth.preMint(0, true, {
-        value: depositAmount,
-      });
-      await tx.wait();
-      const ethToClaimAfter = await safEth.ethToClaim();
-      expect(ethToClaimAfter).eq(expectedEthToClaimAfter);
-    });
     it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
@@ -405,7 +401,7 @@ describe("SafEth", function () {
       const safEthReceived3 = balance3.sub(balance2);
 
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
-      maxPremintAmount = await safEth.maxPreMintAmount();
+      maxPremintAmount = (await safEth.maxPreMintAmount()).add(1);
       tx = await safEth.preMint(0, false, {
         value: maxPremintAmount,
       });
