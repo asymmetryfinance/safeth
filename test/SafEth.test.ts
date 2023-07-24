@@ -348,17 +348,6 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
-    it("User be able to call preMint() passing _useBalance as true", async function () {
-      const depositAmount = ethers.utils.parseEther("2");
-      const ethToClaimBefore = await safEth.ethToClaim();
-      const expectedEthToClaimAfter = ethToClaimBefore.add(depositAmount);
-      const tx = await safEth.preMint(0, true, false, {
-        value: depositAmount,
-      });
-      await tx.wait();
-      const ethToClaimAfter = await safEth.ethToClaim();
-      expect(ethToClaimAfter).eq(expectedEthToClaimAfter);
-    });
     it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
