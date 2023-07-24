@@ -482,6 +482,110 @@ describe("SafEth", function () {
     });
   });
   describe("Enable / Disable", function () {
+    it("InitializeV2 should set the correct values", async function () {
+      const snapshot = await takeSnapshot();
+      await safEth.initializeV2();
+      const enabledDerivativeCount = await safEth.enabledDerivativeCount();
+      const enabledDerivatives0 = await safEth.enabledDerivatives(0);
+      const enabledDerivatives1 = await safEth.enabledDerivatives(1);
+      const enabledDerivatives2 = await safEth.enabledDerivatives(2);
+
+      await expect(safEth.enabledDerivatives(3)).to.be.reverted;
+      expect(enabledDerivativeCount).eq(3);
+      expect(enabledDerivatives0).eq(0);
+      expect(enabledDerivatives1).eq(1);
+      expect(enabledDerivatives2).eq(2);
+
+      await expect(safEth.initializeV2()).to.be.reverted;
+      snapshot.restore();
+    });
+    it("Should keep track of derivative indexes when enabling and disabling derivatives", async () => {
+      const enabledDerivativeCountBefore =
+        await safEth.enabledDerivativeCount();
+
+      await safEth.disableDerivative(0);
+
+      let count = await safEth.enabledDerivativeCount();
+      for (let i = 0; i < count.toNumber(); i++) {
+        expect(await safEth.enabledDerivatives(i)).to.not.eq(0);
+      }
+
+      const enabledDerivativeCountAfter = await safEth.enabledDerivativeCount();
+      expect(enabledDerivativeCountBefore).eq(
+        enabledDerivativeCountAfter.add(1)
+      );
+
+      await safEth.enableDerivative(0);
+
+      count = await safEth.enabledDerivativeCount();
+      expect(count).eq(6);
+      let containsZeroIndex = false;
+      for (let i = 0; i < count.toNumber(); i++) {
+        if ((await safEth.enabledDerivatives(i)).eq(0)) {
+          containsZeroIndex = true;
+        }
+      }
+      expect(containsZeroIndex).eq(true);
+
+      await safEth.disableDerivative(1);
+      await safEth.disableDerivative(2);
+      await safEth.disableDerivative(3);
+
+      count = await safEth.enabledDerivativeCount();
+      expect(count).eq(3);
+      for (let i = 0; i < count.toNumber(); i++) {
+        expect(await safEth.enabledDerivatives(i)).to.not.eq(1);
+        expect(await safEth.enabledDerivatives(i)).to.not.eq(2);
+        expect(await safEth.enabledDerivatives(i)).to.not.eq(3);
+      }
+
+      await safEth.enableDerivative(1);
+      await safEth.enableDerivative(2);
+
+      count = await safEth.enabledDerivativeCount();
+      expect(count).eq(5);
+      let containsFirstIndex = false;
+      let containsSecondIndex = false;
+      let containsThirdIndex = false;
+      for (let i = 0; i < count.toNumber(); i++) {
+        const derivative = await safEth.enabledDerivatives(i);
+        if (derivative.eq(1)) {
+          containsFirstIndex = true;
+        }
+        if (derivative.eq(2)) {
+          containsSecondIndex = true;
+        }
+        if (derivative.eq(3)) {
+          containsThirdIndex = true;
+        }
+      }
+
+      expect(containsFirstIndex).eq(true);
+      expect(containsSecondIndex).eq(true);
+      expect(containsThirdIndex).eq(false);
+
+      await safEth.enableDerivative(3);
+      await safEth.disableDerivative(2);
+
+      count = await safEth.enabledDerivativeCount();
+      expect(count).eq(5);
+      containsSecondIndex = false;
+      containsThirdIndex = false;
+      for (let i = 0; i < count.toNumber(); i++) {
+        const derivative = await safEth.enabledDerivatives(i);
+        if (derivative.eq(1)) {
+          containsFirstIndex = true;
+        }
+        if (derivative.eq(2)) {
+          containsSecondIndex = true;
+        }
+        if (derivative.eq(3)) {
+          containsThirdIndex = true;
+        }
+      }
+      expect(containsSecondIndex).eq(false);
+      expect(containsThirdIndex).eq(true);
+    });
     it("Should fail to enable / disable a non-existent derivative", async function () {
       await expect(safEth.disableDerivative(999)).to.be.revertedWith(
         "IndexOutOfBounds"
@@ -509,9 +613,14 @@ describe("SafEth", function () {
       const tx1 = await safEth.stake(0, { value: depositAmount });
       await tx1.wait();
       const priceBefore = await safEth.approxPrice(true);
+      const enabledDerivativeCountBefore =
+        await safEth.enabledDerivativeCount();
       await safEth.disableDerivative(0);
+      const enabledDerivativeCountAfter = await safEth.enabledDerivativeCount();
+      expect(enabledDerivativeCountBefore).eq(
+        enabledDerivativeCountAfter.add(1)
+      );
       const priceAfter = await safEth.approxPrice(true);
-
       await safEth.enableDerivative(0);
 
       const priceFinal = await safEth.approxPrice(true);
@@ -522,7 +631,6 @@ describe("SafEth", function () {
       // check within 1 percent because price will have gone up due to blocks passing
       expect(within1Percent(priceFinal, priceBefore)).eq(true);
     });
-
     it("Should allow disabling of a broken derivative so the others still work", async () => {
       const factory = await ethers.getContractFactory("BrokenDerivative");
       const brokenDerivative = await upgrades.deployProxy(factory, [
@@ -535,8 +643,13 @@ describe("SafEth", function () {
       // staking works before adding the bad derivative
       const tx1 = await safEth.stake(0, { value: depositAmount });
       await tx1.wait();
-
+      const enabledDerivativeCountBefore =
+        await safEth.enabledDerivativeCount();
       await safEth.addDerivative(broken.address, 100);
+      const enabledDerivativeCountAfter = await safEth.enabledDerivativeCount();
+      expect(enabledDerivativeCountBefore).eq(
+        enabledDerivativeCountAfter.sub(1)
+      );
 
       // staking is broken after deploying broken derivative
       await expect(
@@ -635,9 +748,13 @@ describe("SafEth", function () {
         safEth.address,
       ]);
       await derivative0.deployed();
+      const enabledDerivativeCountBefore =
+        await safEth.enabledDerivativeCount();
       await expect(
         safEth.addDerivative(derivative0.address, "1000000000000000000")
       ).to.be.revertedWith("InvalidDerivative");
+      const enabledDerivativeCountAfter = await safEth.enabledDerivativeCount();
+      expect(enabledDerivativeCountBefore).eq(enabledDerivativeCountAfter);
     });
     it("Should only allow owner to call pausing functions", async function () {
       const accounts = await ethers.getSigners();
