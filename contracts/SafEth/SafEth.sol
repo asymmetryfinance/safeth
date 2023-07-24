@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
-
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -202,10 +201,12 @@ contract SafEth is
         @notice - Premints safEth for future users
         @param _minAmount - minimum amount to stake
         @param _useBalance - should use balance from previous premint's to mint more
+        @param _overWriteFloorPrice - should overwrite floorPrice even if it's 
      */
     function preMint(
         uint256 _minAmount,
-        bool _useBalance
+        bool _useBalance,
+        bool _overWriteFloorPrice
     ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
         if (amount <= maxPreMintAmount) revert PremintTooLow();
@@ -216,8 +217,9 @@ contract SafEth is
         (uint256 mintedAmount, uint256 depositPrice) = this.stake{
             value: amount
         }(_minAmount);
-
-        floorPrice = depositPrice;
+        floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
+            ? depositPrice
+            : floorPrice;
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
