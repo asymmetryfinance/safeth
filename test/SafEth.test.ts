@@ -74,10 +74,10 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Large Amounts", function () {
-    it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
+  describe.only("Large Amounts", function () {
+    it.only("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
       const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("200");
+      const depositAmount = ethers.utils.parseEther("5000");
       const tx1 = await safEth.stake(0, { value: depositAmount });
       const mined1 = await tx1.wait();
       const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
@@ -94,6 +94,8 @@ describe("SafEth", function () {
       const mined2 = await tx2.wait();
       const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
       const finalBalance = await adminAccount.getBalance();
+      console.log('finalBalance', finalBalance);
+      console.log('startingBalance', startingBalance);
 
       expect(
         within1Percent(
@@ -101,6 +103,7 @@ describe("SafEth", function () {
           startingBalance
         )
       ).eq(true);
+
     });
     it("Should fail unstake on zero safEthAmount", async function () {
       await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");

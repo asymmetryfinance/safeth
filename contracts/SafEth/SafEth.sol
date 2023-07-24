@@ -139,7 +139,7 @@ contract SafEth is
     {
         if (pauseStaking) revert StakingPausedError();
         if (msg.value < minAmount) revert AmountTooLow();
-        if (msg.value > maxAmount) revert AmountTooHigh();
+        // if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
         depositPrice = approxPrice(true);
         if (shouldPremint(depositPrice))

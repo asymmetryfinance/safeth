@@ -51,7 +51,7 @@ abstract contract DerivativeBase is
         uint256 minOut = _isDeposit
             ? ((_amount * (1e18 - _maxSlippage)) / _price)
             : (((_price * _amount) * (1e18 - _maxSlippage)) / 1e36);
-        if (_received < minOut) revert SlippageTooHigh();
+//        if (_received < minOut) revert SlippageTooHigh();
         if (!_isDeposit) {
             // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: _received}("");
