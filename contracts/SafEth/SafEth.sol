@@ -216,10 +216,11 @@ contract SafEth is
         @notice - Claims ETH that was used to acquire preminted safEth
      */
     function withdrawEth() external onlyOwner {
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethToClaim}("");
-        if (!sent) revert FailedToSend();
+        uint256 _ethToClaim = ethToClaim;
         ethToClaim = 0;
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: _ethToClaim}("");
+        if (!sent) revert FailedToSend();
     }
 
     /**
