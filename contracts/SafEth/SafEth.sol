@@ -49,7 +49,7 @@ contract SafEth is
         enabledDerivatives = [0, 1, 2];
         enabledDerivativeCount = 3;
         maxPreMintAmount = 2 ether;
-        singleDerivativeThreshold = 10e18;
+        singleDerivativeThreshold = 10 ether;
         hasInitializedV2 = true;
     }
 
