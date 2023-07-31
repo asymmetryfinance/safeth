@@ -1,4 +1,4 @@
-import { ethers, defender } from "hardhat";
+import { ethers, defender, upgrades } from "hardhat";
 
 async function main() {
   //   const SafEthDeployment = await ethers.getContractFactory("SafEth");
@@ -6,8 +6,6 @@ async function main() {
     "SafEth",
     "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5"
   );
-  //   await safEth.setPauseStaking(true);
-  //   await safEth.setPauseUnstaking(true);
 
   //   const safEthProposal = await defender.proposeUpgrade(
   //     "0x6732Efaf6f39926346BeF8b821a04B6361C4F3e5",
@@ -15,20 +13,19 @@ async function main() {
   //   );
   //   console.log("SafEth proposal at: ", safEthProposal.url);
 
-  // Deploy derivatives
-  const RethDeployment = await ethers.getContractFactory("Reth");
-  const rEthProposal = await defender.proposeUpgrade(
-    "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3",
-    RethDeployment
-  );
-  console.log("Reth proposal at: ", rEthProposal.url);
+  //   // Deploy derivatives
+  //   const RethDeployment = await ethers.getContractFactory("Reth");
+  //   const rEthProposal = await defender.proposeUpgrade(
+  //     "0x7B6633c0cD81dC338688A528c0A3f346561F5cA3",
+  //     RethDeployment
+  //   );
+  //   console.log("Reth proposal at: ", rEthProposal.url);
 
   const SfrxDeployment = await ethers.getContractFactory("SfrxEth");
-  const sfrxProposal = await defender.proposeUpgrade(
-    "0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A",
-    SfrxDeployment
-  );
-  console.log("Sfrx proposal at: ", sfrxProposal.url);
+  const sfrx = await upgrades.deployProxy(SfrxDeployment, [safEth.address]);
+  await sfrx.deployed();
+
+  console.log("sfrxEth deployed to:", sfrx.address);
 
   const WstDeployment = await ethers.getContractFactory("WstEth");
   const wstProposal = await defender.proposeUpgrade(
