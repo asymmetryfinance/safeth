@@ -54,43 +54,6 @@ contract SafEth is
     }
 
     /**
-     * @notice - modifier for transfer() and transferFrom() for owner enforcing blacklists
-     * @param sender - sender address
-     * @param recipient - recipient address
-     */
-    modifier checkBlacklist(address sender, address recipient) {
-        if (blacklistedRecipients[recipient] && !whitelistedSenders[sender]) {
-            revert BlacklistedAddress();
-        }
-        _;
-    }
-
-    /**
-     * @notice - standard erc20 transferFrom() with checkBlacklist modifier
-     * @param sender - sender address
-     * @param recipient - recipient address
-     */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public override checkBlacklist(sender, recipient) returns (bool) {
-        return super.transferFrom(sender, recipient, amount);
-    }
-
-    /**
-     * @notice - standard erc20 transfer() with checkBlacklist modifier
-     * @param _recipient - _recipient address
-     * @param _amount = _amount to transfer
-     */
-    function transfer(
-        address _recipient,
-        uint256 _amount
-    ) public override checkBlacklist(msg.sender, _recipient) returns (bool) {
-        return super.transfer(_recipient, _amount);
-    }
-
-    /**
      * @notice sets a recipient address as blacklisted to receive tokens
      * @param _recipient - recipient address to set blacklisted on/off
      * @param _isBlacklisted - true or false
