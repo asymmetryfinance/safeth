@@ -19,25 +19,10 @@ abstract contract DerivativeBase is
 
     event ManagerUpdated(address _manager);
 
-    address public manager;
-
-    modifier onlyManager() {
-        if (msg.sender != manager) revert Unauthorized();
-        _;
-    }
-
     // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    /**
-        @notice - Sets the manager address for the derivative
-    */
-    function initializeV2() external {
-        if (manager != address(0)) revert AlreadyInitialized();
-        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
     }
 
     function finalChecks(
@@ -65,12 +50,6 @@ abstract contract DerivativeBase is
         if (_owner == address(0)) revert InvalidAddress();
         _registerInterface(type(IDerivative).interfaceId);
         _transferOwnership(_owner);
-    }
-
-    function updateManager(address _manager) external onlyManager {
-        if (_manager == address(0)) revert InvalidAddress();
-        manager = _manager;
-        emit ManagerUpdated(_manager);
     }
 
     receive() external payable {}

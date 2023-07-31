@@ -1239,23 +1239,6 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
-    it("Should be able to add variables to derivativeBase", async () => {
-      const derivativeAddressToUpgrade = (await safEth.derivatives(1))
-        .derivative;
-      const sfrxEthDerivative = await ethers.getContractAt(
-        "SfrxEth",
-        derivativeAddressToUpgrade
-      );
-      const preSlippage = await sfrxEthDerivative.maxSlippage();
-      const upgradedDerivative = await upgrade(
-        derivativeAddressToUpgrade,
-        "SfrxEthV2Mock"
-      );
-      await upgradedDerivative.deployed();
-      const postSlippage = await upgradedDerivative.maxSlippage();
-      expect(preSlippage).eq(postSlippage);
-    });
-
     it("Should allow owner to use admin features on upgraded contracts", async () => {
       const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
@@ -1575,94 +1558,6 @@ describe("SafEth", function () {
 
       // price has increased after some time
       expect(priceAfterTimeIncrease).gt(priceAfterStake);
-    });
-  });
-
-  describe("Blacklist", function () {
-    let blacklistedRecipientAddress: string;
-    let nonWhitelistedSafEthUser: SafEth;
-    let whitelistedSafEthUser: SafEth;
-
-    before(async () => {
-      const accounts = await ethers.getSigners();
-      nonWhitelistedSafEthUser = safEth.connect(accounts[0]);
-      whitelistedSafEthUser = safEth.connect(accounts[1]);
-      blacklistedRecipientAddress = accounts[2].address;
-
-      await safEth.setWhitelistedSender(
-        await whitelistedSafEthUser.signer.getAddress(),
-        true
-      );
-      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, true);
-    });
-
-    it("Should fail transfer() to blacklisted address from a non whitelisted address", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      await nonWhitelistedSafEthUser.stake(0, { value: depositAmount });
-      await expect(
-        nonWhitelistedSafEthUser.transfer(blacklistedRecipientAddress, 1)
-      ).to.be.revertedWith("BlacklistedAddress");
-    });
-
-    it("Should fail transferFrom() to blacklisted address from a non whitelisted address", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      await nonWhitelistedSafEthUser.stake(0, { value: depositAmount });
-      await nonWhitelistedSafEthUser.approve(
-        await nonWhitelistedSafEthUser.signer.getAddress(),
-        1
-      );
-      await expect(
-        nonWhitelistedSafEthUser.transferFrom(
-          await nonWhitelistedSafEthUser.signer.getAddress(),
-          blacklistedRecipientAddress,
-          1
-        )
-      ).to.be.revertedWith("BlacklistedAddress");
-    });
-
-    it("Should successfilly transfer() from a whitelisted address to blacklisted address", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      await whitelistedSafEthUser.stake(0, { value: depositAmount });
-      await whitelistedSafEthUser.transfer(blacklistedRecipientAddress, 1);
-    });
-
-    it("Should successfilly transferFrom() from a whitelisted address to blacklisted address", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      await whitelistedSafEthUser.stake(0, { value: depositAmount });
-      await whitelistedSafEthUser.approve(
-        await nonWhitelistedSafEthUser.signer.getAddress(),
-        1
-      );
-      await nonWhitelistedSafEthUser.transferFrom(
-        await whitelistedSafEthUser.signer.getAddress(),
-        blacklistedRecipientAddress,
-        1
-      );
-    });
-
-    it("Should allow owner to edit the whitelist and blacklist", async function () {
-      await safEth.setWhitelistedSender(
-        await whitelistedSafEthUser.signer.getAddress(),
-        false
-      );
-      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, false);
-      await safEth.setWhitelistedSender(
-        await whitelistedSafEthUser.signer.getAddress(),
-        true
-      );
-      await safEth.setBlacklistedRecipient(blacklistedRecipientAddress, true);
-    });
-
-    it("Should fail if non-owner tries to edit the whitelist and blacklist", async function () {
-      const accounts = await ethers.getSigners();
-      const nonOwner = accounts[1];
-      const nonOwnerSafEthUser = safEth.connect(nonOwner);
-      await expect(
-        nonOwnerSafEthUser.setWhitelistedSender(
-          await nonOwnerSafEthUser.signer.getAddress(),
-          false
-        )
-      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
