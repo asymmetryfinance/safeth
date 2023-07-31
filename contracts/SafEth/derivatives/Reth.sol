@@ -44,6 +44,29 @@ contract Reth is DerivativeBase {
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     AggregatorV3Interface public chainlinkFeed;
+    address public manager;
+
+    modifier onlyManager() {
+        if (msg.sender != manager) revert Unauthorized();
+        _;
+    }
+
+    /**
+        @notice - Updates the manager address for the derivative
+    */
+    function updateManager(address _manager) external onlyManager {
+        if (_manager == address(0)) revert InvalidAddress();
+        manager = _manager;
+        emit ManagerUpdated(_manager);
+    }
+
+    /**
+        @notice - Sets the manager address for the derivative
+    */
+    function initializeV2() external {
+        if (manager != address(0)) revert AlreadyInitialized();
+        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
+    }
 
     /**
         @notice - Function to initialize values for the contracts

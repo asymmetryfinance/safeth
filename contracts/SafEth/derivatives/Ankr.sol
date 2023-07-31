@@ -23,6 +23,29 @@ contract Ankr is DerivativeBase {
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
+    address public manager;
+
+    modifier onlyManager() {
+        if (msg.sender != manager) revert Unauthorized();
+        _;
+    }
+
+    /**
+        @notice - Updates the manager address for the derivative
+    */
+    function updateManager(address _manager) external onlyManager {
+        if (_manager == address(0)) revert InvalidAddress();
+        manager = _manager;
+        emit ManagerUpdated(_manager);
+    }
+
+    /**
+        @notice - Sets the manager address for the derivative
+    */
+    function initializeV2() external {
+        if (manager != address(0)) revert AlreadyInitialized();
+        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
+    }
 
     /**
         @notice - Function to initialize values for the contracts
