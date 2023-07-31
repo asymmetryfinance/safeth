@@ -9,6 +9,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import "solidity-coverage";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-storage-layout";
 import "@openzeppelin/hardhat-defender";
 import "hardhat-ethernal";
 import { HardhatUserConfig } from "hardhat/types";
