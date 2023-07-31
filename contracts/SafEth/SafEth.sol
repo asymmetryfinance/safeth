@@ -39,7 +39,6 @@ contract SafEth is
         maxAmount = 200 * 1e18; // initializing with 200 ETH as maximum
         pauseStaking = true; // pause staking on initialize for adding derivatives
         __ReentrancyGuard_init();
-        singleDerivativeThreshold = 10e18;
     }
 
     /**
@@ -49,6 +48,8 @@ contract SafEth is
         if (hasInitializedV2) revert AlreadySet();
         enabledDerivatives = [0, 1, 2];
         enabledDerivativeCount = 3;
+        maxPreMintAmount = 2 ether;
+        singleDerivativeThreshold = 10 ether;
         hasInitializedV2 = true;
     }
 

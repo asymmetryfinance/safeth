@@ -32,6 +32,8 @@ export const deploySafEth = async function () {
   for (let i = 0; i < derivatives.length; i++)
     await safEth.addDerivative(derivatives[i].address, "1000000000000000000");
   await safEth.setPauseStaking(false);
+  await safEth.setSingleDerivativeThreshold(ethers.utils.parseEther("10"));
+  await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
   return safEth;
 };
 
