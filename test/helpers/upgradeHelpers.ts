@@ -1,5 +1,26 @@
 import { ethers, upgrades } from "hardhat";
 
+export const supportedDerivatives = [
+  "Reth",
+  "SfrxEth",
+  "WstEth",
+  "Ankr",
+  "Stafi",
+  "Swell",
+];
+
+export const deployDerivatives = async function (owner: string) {
+  const derivatives = [];
+  for (let i = 0; i < supportedDerivatives.length; i++) {
+    const factory = await ethers.getContractFactory(supportedDerivatives[i]);
+    const derivative = await upgrades.deployProxy(factory, [owner]);
+    await derivative.deployed();
+    derivatives.push(derivative);
+    await derivative.initializeV2();
+  }
+  return derivatives;
+};
+
 export const deploySafEth = async function () {
   const SafEth = await ethers.getContractFactory("SafEth");
   const safEth = await upgrades.deployProxy(SafEth, [
@@ -7,38 +28,12 @@ export const deploySafEth = async function () {
     "safETH",
   ]);
   await safEth.deployed();
-
-  // deploy derivatives and add to strategy
-
-  const derivativeFactory0 = await ethers.getContractFactory("Reth");
-  const derivative0 = await upgrades.deployProxy(derivativeFactory0, [
-    safEth.address,
-  ]);
-  await derivative0.deployed();
-  await safEth.addDerivative(derivative0.address, "1000000000000000000");
-
-  const derivativeFactory1 = await ethers.getContractFactory("SfrxEth");
-  const derivative1 = await upgrades.deployProxy(derivativeFactory1, [
-    safEth.address,
-  ]);
-  await derivative1.deployed();
-  await safEth.addDerivative(derivative1.address, "1000000000000000000");
-
-  const derivativeFactory2 = await ethers.getContractFactory("WstEth");
-  const derivative2 = await upgrades.deployProxy(derivativeFactory2, [
-    safEth.address,
-  ]);
-  await derivative2.deployed();
-  await safEth.addDerivative(derivative2.address, "1000000000000000000");
-
-  const derivativeFactory3 = await ethers.getContractFactory("Ankr");
-  const derivative3 = await upgrades.deployProxy(derivativeFactory3, [
-    safEth.address,
-  ]);
-  await derivative3.deployed();
-  await safEth.addDerivative(derivative3.address, "1000000000000000000");
-
+  const derivatives = await deployDerivatives(safEth.address);
+  for (let i = 0; i < derivatives.length; i++)
+    await safEth.addDerivative(derivatives[i].address, "1000000000000000000");
   await safEth.setPauseStaking(false);
+  await safEth.setSingleDerivativeThreshold(ethers.utils.parseEther("10"));
+  await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
   return safEth;
 };
 

@@ -1,6 +1,7 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { getLatestContract } from "./upgradeHelpers";
+import { expect } from "chai";
 
 let randomSeed = 2;
 export const stakeMinimum = 0.5;
@@ -45,24 +46,24 @@ export const totalUserBalances = async () => {
 
 // randomly stake random amount for all users
 export const randomStakes = async (
-  strategyContractAddress: string,
+  safEthAddress: string,
   networkFeesPerAccount: BigNumber[],
   totalStakedPerAccount: BigNumber[]
 ) => {
-  const strategy = await getLatestContract(strategyContractAddress, "SafEth");
+  const safEth = await getLatestContract(safEthAddress, "SafEth");
 
   const userAccounts = await getUserAccounts();
 
   let totalStaked = BigNumber.from(0);
 
   for (let i = 0; i < userAccounts.length; i++) {
-    const userStrategySigner = strategy.connect(userAccounts[i]);
+    const userSafEthSigner = safEth.connect(userAccounts[i]);
     for (let j = 0; j < 3; j++) {
       const ethAmount = randomEthAmount(stakeMinimum, stakeMaximum);
       const depositAmount = ethers.utils.parseEther(ethAmount);
       totalStaked = totalStaked.add(depositAmount);
       // console.log("staking ", userAccounts[i].address, depositAmount);
-      const stakeResult = await userStrategySigner.stake(0, {
+      const stakeResult = await userSafEthSigner.stake(0, {
         value: depositAmount,
       });
       const mined = await stakeResult.wait();
@@ -71,34 +72,33 @@ export const randomStakes = async (
       totalStakedPerAccount[i] = totalStakedPerAccount[i].add(depositAmount);
     }
   }
+  const contractEthBalance = await ethers.provider.getBalance(safEthAddress);
+  expect(contractEthBalance).eq(0);
   return totalStaked;
 };
 
 // randomly unstake random amount for all users
 export const randomUnstakes = async (
-  strategyContractAddress: string,
-  safEthContractAddress: string,
+  safEthAddress: string,
   networkFeesPerAccount: BigNumber[]
 ) => {
-  const strategy = await getLatestContract(strategyContractAddress, "SafEth");
+  const safth = await getLatestContract(safEthAddress, "SafEth");
 
   const userAccounts = await getUserAccounts();
 
   let totalUnstaked = BigNumber.from(0);
 
   for (let i = 0; i < userAccounts.length; i++) {
-    const userStrategySigner = strategy.connect(userAccounts[i]);
+    const userSafEthSigner = safth.connect(userAccounts[i]);
     for (let j = 0; j < 3; j++) {
-      const safEthBalanceWei = await strategy.balanceOf(
-        userAccounts[i].address
-      );
+      const safEthBalanceWei = await safth.balanceOf(userAccounts[i].address);
       const safEthBalance = ethers.utils.formatEther(safEthBalanceWei);
       // withdraw a random portion of their balance
       const withdrawAmount = ethers.utils.parseEther(
         randomEthAmount(0, parseFloat(safEthBalance))
       );
       const balanceBefore = await userAccounts[i].getBalance();
-      const unstakeResult = await userStrategySigner.unstake(withdrawAmount, 0);
+      const unstakeResult = await userSafEthSigner.unstake(withdrawAmount, 0);
       const mined = await unstakeResult.wait();
       const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
       networkFeesPerAccount[i] = networkFeesPerAccount[i].add(networkFee);
@@ -108,5 +108,7 @@ export const randomUnstakes = async (
       // console.log("unstaked ", userAccounts[i].address, amountUnstaked);
     }
   }
+  const contractEthBalance = await ethers.provider.getBalance(safEthAddress);
+  expect(contractEthBalance).eq(0);
   return totalUnstaked;
 };

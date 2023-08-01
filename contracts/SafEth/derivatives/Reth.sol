@@ -12,10 +12,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./DerivativeBase.sol";
 
 /// @title Derivative contract for rETH
 /// @author Asymmetry Finance
-contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
+contract Reth is DerivativeBase {
     address private constant ROCKET_STORAGE_ADDRESS =
         0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46;
     address private constant W_ETH_ADDRESS =
@@ -30,21 +31,41 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     address public constant ROCKET_SWAP_ROUTER =
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C;
 
-    AggregatorV3Interface constant chainLinkRethEthFeed =
+    // Deprecated
+    AggregatorV3Interface internal constant CHAINLINK_RETH_ETH_FEED =
         AggregatorV3Interface(0x536218f9E9Eb48863970252233c8F271f554C2d0);
 
     uint256 public maxSlippage;
     uint256 public underlyingBalance;
 
-    IVault public constant balancerVault =
+    IVault public constant BALANCER_VAULT =
         IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    // As recommended by https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
+    AggregatorV3Interface public chainlinkFeed;
+    address public manager;
+
+    modifier onlyManager() {
+        if (msg.sender != manager) revert Unauthorized();
+        _;
+    }
+
+    /**
+        @notice - Updates the manager address for the derivative
+    */
+    function updateManager(address _manager) external onlyManager {
+        if (_manager == address(0)) revert InvalidAddress();
+        manager = _manager;
+        emit ManagerUpdated(_manager);
+    }
+
+    /**
+        @notice - Sets the manager address for the derivative
+    */
+    function initializeV2() external {
+        if (manager != address(0)) revert AlreadyInitialized();
+        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
     }
 
     /**
@@ -53,10 +74,19 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @param _owner - owner of the contract which should be SafEth.sol
     */
     function initialize(address _owner) external initializer {
-        require(_owner != address(0), "invalid address");
-        _registerInterface(type(IDerivative).interfaceId);
-        _transferOwnership(_owner);
+        super.init(_owner);
         maxSlippage = (1 * 1e16); // 1%
+        chainlinkFeed = AggregatorV3Interface(
+            0x536218f9E9Eb48863970252233c8F271f554C2d0
+        );
+    }
+
+    /**
+        @notice - Sets the address for the chainlink feed
+        @param _priceFeedAddress - address of the chainlink feed
+    */
+    function setChainlinkFeed(address _priceFeedAddress) public onlyManager {
+        chainlinkFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
     /**
@@ -70,7 +100,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         @notice - Owner only function to set max slippage for derivative
         @param _slippage - new slippage amount in wei
     */
-    function setMaxSlippage(uint256 _slippage) external onlyOwner {
+    function setMaxSlippage(uint256 _slippage) external onlyManager {
         maxSlippage = _slippage;
     }
 
@@ -88,48 +118,22 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
     }
 
     /**
-        @notice - Checks to see if can withdraw from RocketPool
-        @param _amount - amount of rETH to withdraw
-        @return - true if can withdraw, false otherwise
-     */
-    function canWithdrawFromRocketPool(
-        uint256 _amount
-    ) private view returns (bool) {
-        address rocketDepositPoolAddress = RocketStorageInterface(
-            ROCKET_STORAGE_ADDRESS
-        ).getAddress(
-                keccak256(
-                    abi.encodePacked("contract.address", "rocketDepositPool")
-                )
-            );
-        RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-                rocketDepositPoolAddress
-            );
-        uint256 _ethAmount = RocketTokenRETHInterface(rethAddress())
-            .getEthValue(_amount);
-        return rocketDepositPool.getExcessBalance() >= _ethAmount;
-    }
-
-    /**
         @notice - Convert derivative into ETH
         @param _amount - amount of rETH to convert
      */
     function withdraw(uint256 _amount) external onlyOwner {
-        underlyingBalance = underlyingBalance - _amount;
         uint256 ethBalanceBefore = address(this).balance;
         uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
         );
-        uint256 ethPerReth = ethPerDerivative();
-        uint256 minOut = ((ethPerReth * _amount) * (1e18 - maxSlippage)) / 1e36;
-        uint256 idealOut = ((ethPerReth * _amount) / 1e18);
+        uint256 idealOut = ((ethPerDerivative(true) * _amount) / 1e18);
         IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
         // swaps from reth into weth using 100% balancer pool
         RocketSwapRouterInterface(ROCKET_SWAP_ROUTER).swapFrom(
             0,
             10,
-            minOut,
+            0,
             idealOut,
             _amount
         );
@@ -137,37 +141,43 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             address(this)
         );
         IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
-        // solhint-disable-next-line
-        uint256 ethBalanceAfter = address(this).balance;
-        uint256 ethReceived = ethBalanceAfter - ethBalanceBefore;
-        (bool sent, ) = address(msg.sender).call{value: ethReceived}("");
-        require(sent, "Failed to send Ether");
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            _amount,
+            maxSlippage,
+            address(this).balance - ethBalanceBefore,
+            false,
+            underlyingBalance
+        );
     }
 
     /**
         @notice - Deposit into reth derivative
      */
     function deposit() external payable onlyOwner returns (uint256) {
-        uint256 minOut = (msg.value * (1e18 - maxSlippage)) /
-            ethPerDerivative();
         uint256 rethBalanceBefore = IERC20(rethAddress()).balanceOf(
             address(this)
         );
-        balancerSwap(msg.value, minOut);
-        uint256 rethBalanceAfter = IERC20(rethAddress()).balanceOf(
-            address(this)
+        balancerSwap(msg.value);
+        uint256 received = IERC20(rethAddress()).balanceOf(address(this)) -
+            rethBalanceBefore;
+        underlyingBalance = super.finalChecks(
+            ethPerDerivative(true),
+            msg.value,
+            maxSlippage,
+            received,
+            true,
+            underlyingBalance
         );
-        uint256 amountSwapped = rethBalanceAfter - rethBalanceBefore;
-        underlyingBalance = underlyingBalance + amountSwapped;
-        return amountSwapped;
+        return received;
     }
 
     /**
         @notice - Get price of derivative in terms of ETH
      */
-    function ethPerDerivative() public view returns (uint256) {
+    function ethPerDerivative(bool _validate) public view returns (uint256) {
         ChainlinkResponse memory cl;
-        try chainLinkRethEthFeed.latestRoundData() returns (
+        try chainlinkFeed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
@@ -179,21 +189,23 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
             cl.answer = answer;
             cl.updatedAt = updatedAt;
         } catch {
+            if (!_validate) return 0;
             cl.success = false;
         }
 
         // verify chainlink response
         if (
-            cl.success == true &&
-            cl.roundId != 0 &&
-            cl.answer >= 0 &&
-            cl.updatedAt != 0 &&
-            cl.updatedAt <= block.timestamp &&
-            block.timestamp - cl.updatedAt <= 25 hours
+            !_validate ||
+            (cl.success == true &&
+                cl.roundId != 0 &&
+                cl.answer >= 0 &&
+                cl.updatedAt != 0 &&
+                cl.updatedAt <= block.timestamp &&
+                block.timestamp - cl.updatedAt <= 25 hours)
         ) {
             return uint256(cl.answer);
         } else {
-            revert("Chainlink Failed");
+            revert("Chainlink Failed Reth");
         }
     }
 
@@ -204,7 +216,7 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         return underlyingBalance;
     }
 
-    function balancerSwap(uint256 _amount, uint256 _minOut) private {
+    function balancerSwap(uint256 _amount) private {
         if (_amount == 0) {
             return;
         }
@@ -222,11 +234,9 @@ contract Reth is ERC165Storage, IDerivative, Initializable, OwnableUpgradeable {
         fundManagement.fromInternalBalance = false;
         fundManagement.toInternalBalance = false;
 
-        IWETH(wETH).deposit{value: _amount}();
-        IERC20(W_ETH_ADDRESS).approve(address(balancerVault), _amount);
+        IWETH(W_ETH_ADDRESS).deposit{value: _amount}();
+        IERC20(W_ETH_ADDRESS).approve(address(BALANCER_VAULT), _amount);
         // Execute swap
-        balancerVault.swap(swap, fundManagement, _minOut, block.timestamp);
+        BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
     }
-
-    receive() external payable {}
 }

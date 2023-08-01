@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "../../interfaces/IDerivative.sol";
-import "../../interfaces/frax/IsFrxEth.sol";
+import "../interfaces/IDerivative.sol";
+import "../interfaces/frax/IsFrxEth.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/curve/IFrxEthEthPool.sol";
-import "../../interfaces/frax/IFrxETHMinter.sol";
+import "../interfaces/curve/IFrxEthEthPool.sol";
+import "../interfaces/frax/IFrxETHMinter.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
-import "./DerivativeBase.sol";
+import "./DerivativeBaseV2Mock.sol";
 
 /// @title Derivative contract for sfrxETH
 /// @author Asymmetry Finance
-contract SfrxEth is DerivativeBase {
+
+contract SfrxEthV2Mock is DerivativeBaseV2Mock {
     address private constant SFRX_ETH_ADDRESS =
         0xac3E018457B222d93114458476f3E3416Abbe38F;
     address private constant FRX_ETH_ADDRESS =
@@ -28,30 +29,6 @@ contract SfrxEth is DerivativeBase {
 
     error FrxDepegged();
     event DepegSlippageSet(uint256 depegSlippage);
-
-    address public manager;
-
-    modifier onlyManager() {
-        if (msg.sender != manager) revert Unauthorized();
-        _;
-    }
-
-    /**
-        @notice - Updates the manager address for the derivative
-    */
-    function updateManager(address _manager) external onlyManager {
-        if (_manager == address(0)) revert InvalidAddress();
-        manager = _manager;
-        emit ManagerUpdated(_manager);
-    }
-
-    /**
-        @notice - Sets the manager address for the derivative
-    */
-    function initializeV2() external {
-        if (manager != address(0)) revert AlreadyInitialized();
-        manager = 0x263b03BbA0BbbC320928B6026f5eAAFAD9F1ddeb;
-    }
 
     /**
         @notice - Function to initialize values for the contracts
@@ -156,8 +133,8 @@ contract SfrxEth is DerivativeBase {
         if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
         else priceDifference = 1e18 - oraclePrice;
 
-        uint256 depeg = depegSlippage > 0 ? depegSlippage : 4e15; // base depeg slippage
-        if (_validate && priceDifference > depeg) revert FrxDepegged();
+        if (_validate && priceDifference > 4e15) revert FrxDepegged();
+        // outside of 0.4% we assume depegged
 
         uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
         return ((frxEthAmount * oraclePrice) / 10 ** 18);

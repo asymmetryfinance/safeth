@@ -2,7 +2,10 @@
 pragma solidity 0.8.19;
 
 interface IDerivative {
-    // Represents a Chainlink oracle response
+    error ChainlinkFailed(string derivativeName);
+
+    // Represents a Chainlink oracle response.
+    // only applicable to some derivatives
     struct ChainlinkResponse {
         uint80 roundId;
         int256 answer;
@@ -20,7 +23,7 @@ interface IDerivative {
     function withdraw(uint256 amount) external;
 
     /// Estimated price per derivative when depositing amount
-    function ethPerDerivative() external view returns (uint256);
+    function ethPerDerivative(bool _validate) external view returns (uint256);
 
     /// underlying derivative balance held by this contract
     function balance() external view returns (uint256);
