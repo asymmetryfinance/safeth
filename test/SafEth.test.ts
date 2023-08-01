@@ -102,9 +102,17 @@ describe("SafEth", function () {
         adminAccount
       ) as any;
 
+      const priceBeforeStake = await safEthForked.approxPrice(true);
+
       const depositAmount = ethers.utils.parseEther("9");
+
+      const safEthBalanceBeforeStake = await safEthForked.balanceOf(adminAccount.address)
+
+      console.log('safEthBalanceBeforeStake', safEthBalanceBeforeStake);
       const txStake = await safEthForked.stake(0, { value: depositAmount });
       const minedStake = await txStake.wait();
+      const priceAfterStake = await safEthForked.approxPrice(true);
+
       const networkFeeStake = minedStake.gasUsed.mul(
         minedStake.effectiveGasPrice
       );
@@ -116,6 +124,7 @@ describe("SafEth", function () {
       );
 
       const minedUnstake = await txUnstake.wait();
+      const priceAfterUnstake = await safEthForked.approxPrice(true);
       const balanceAfterUnstake = await adminAccount.getBalance();
       const networkFeeUnstake = minedUnstake.gasUsed.mul(
         minedUnstake.effectiveGasPrice
@@ -146,6 +155,10 @@ describe("SafEth", function () {
         ethers.utils.formatEther(ethLostToSlippage)
       );
       console.log("slippagePercent", slippagePercent.toString(), "%");
+
+      console.log("priceBeforeStake", priceBeforeStake);
+      console.log("priceAfterStake", priceAfterStake);
+      console.log("priceAfterUnstake", priceAfterUnstake);
     });
   });
 
