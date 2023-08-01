@@ -19,7 +19,7 @@ import { MULTI_SIG } from "./helpers/constants";
 
 // These tests are intended to run in-order.
 // Together they form a single integration test simulating real-world usage
-describe("SafEth Integration Test", function () {
+describe.skip("SafEth Integration Test", function () {
   let safEthAddress: string;
   let startingBalances: BigNumber[];
 

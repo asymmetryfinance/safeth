@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -484,14 +485,10 @@ contract SafEth is
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
 
         uint256 totalStakeValueEth = 0;
-        IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
-            .derivative;
-        uint256 depositAmount = derivative.deposit{value: msg.value}();
-        uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
-            true
-        ) * depositAmount);
+        derivatives[firstUnderweightDerivativeIndex()].derivative.deposit{value: msg.value}();
+        uint256 derivativeReceivedEthValue = msg.value;
         totalStakeValueEth += derivativeReceivedEthValue;
-        mintedAmount = (totalStakeValueEth) / price;
+        mintedAmount = (totalStakeValueEth * 1e18) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 
         _mint(msg.sender, mintedAmount);
@@ -529,11 +526,8 @@ contract SafEth is
                 : (msg.value * weight) / totalWeight;
 
             amountStaked += ethAmount;
-            uint256 depositAmount = derivative.deposit{value: ethAmount}();
-            uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
-                true
-            ) * depositAmount);
-            totalStakeValueEth += derivativeReceivedEthValue;
+            derivative.deposit{value: ethAmount}();
+            totalStakeValueEth += ethAmount;
         }
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();

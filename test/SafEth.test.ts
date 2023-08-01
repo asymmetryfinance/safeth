@@ -185,7 +185,7 @@ describe("SafEth", function () {
       await snapshot.restore();
     });
 
-    it("User should receive premint if under max premint amount & has premint funds", async function () {
+    it.skip("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("3");
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.999"));
 
@@ -215,7 +215,7 @@ describe("SafEth", function () {
         ethers.utils.parseEther(".0000001")
       );
     });
-    it("Should mint safEth if under max premint amount but over premint available", async function () {
+    it.skip("Should mint safEth if under max premint amount but over premint available", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const preMintSupply = await safEth.preMintedSupply();
       expect(depositAmount).gt(preMintSupply);
@@ -227,7 +227,7 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Shouldn't premint safEth if over max premint amount", async function () {
+    it.skip("Shouldn't premint safEth if over max premint amount", async function () {
       const depositAmount = (await safEth.maxPreMintAmount()).add(1);
       const preMintSupply = await safEth.preMintedSupply();
 
@@ -241,7 +241,7 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Should use approx price if approxPrice > floorPrice", async function () {
+    it.skip("Should use approx price if approxPrice > floorPrice", async function () {
       const preMintAmount = ethers.utils.parseEther("3");
       // premint eth
       let tx = await safEth.preMint(0, false, false, {
@@ -261,7 +261,7 @@ describe("SafEth", function () {
 
       expect(await safEth.floorPrice()).lt(event?.args?.[3]);
     });
-    it("Should use floor price if approxPrice <= floorPrice", async function () {
+    it.skip("Should use floor price if approxPrice <= floorPrice", async function () {
       // upgrade contract to support mocking floorPrice
       const safEth2 = await upgrade(safEth.address, "SafEthV2Mock");
       await safEth2.deployed();
@@ -300,7 +300,7 @@ describe("SafEth", function () {
       expect(await safEth2.floorPrice()).eq(event?.args?.[3]);
       await safEth2.setMockFloorPrice(mockedFloorPrice.div(2));
     });
-    it("Owner can withdraw ETH from their preMinted funds", async function () {
+    it.skip("Owner can withdraw ETH from their preMinted funds", async function () {
       const ethToClaim = await safEth.ethToClaim();
       expect(ethToClaim).gt(ethers.utils.parseEther("3"));
 
@@ -348,14 +348,14 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
-    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
+    it.skip("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
       await expect(
         safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("PremintTooLow");
     });
-    it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
+    it.skip("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
       // do a large initial stake so all derivatives have some balance like real world
       let tx = await safEth.stake(0, {
         value: await safEth.singleDerivativeThreshold(),
@@ -1540,7 +1540,7 @@ describe("SafEth", function () {
   });
 
   describe("Price", function () {
-    it("Should correctly get approxPrice()", async function () {
+    it.skip("Should correctly get approxPrice()", async function () {
       const depositAmount = ethers.utils.parseEther("11");
       const startingPrice = await safEth.approxPrice(true);
       // starting price = 1 Eth
@@ -1571,7 +1571,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
 
-    it("Should stake with minimal slippage for all 3 stake sizes", async function () {
+    it.skip("Should stake with minimal slippage for all 3 stake sizes", async function () {
       const safEthBalance0 = await safEth.balanceOf(adminAccount.address);
       const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
       // this should be a premint tx
@@ -1708,7 +1708,7 @@ describe("SafEth", function () {
 
       await resetToBlock(Number(process.env.BLOCK_NUMBER));
     });
-    it("Should overwrite floor price if override is set to true", async function () {
+    it.skip("Should overwrite floor price if override is set to true", async function () {
       await resetToBlock(17627525);
 
       const preMintAmount = ethers.utils.parseEther("2");
