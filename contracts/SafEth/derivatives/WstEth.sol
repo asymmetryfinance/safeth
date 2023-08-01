@@ -102,9 +102,7 @@ contract WstEth is DerivativeBase {
         uint256 balancePre = address(this).balance;
         IStEthEthPool(LIDO_CRV_POOL).exchange(1, 0, stEthAmount, 0);
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - balancePre,
             false,
             underlyingBalance
@@ -124,54 +122,12 @@ contract WstEth is DerivativeBase {
         uint256 received = IWStETH(WST_ETH).balanceOf(address(this)) -
             wstEthBalancePre;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivative(bool _validate) public view returns (uint256) {
-        ChainlinkResponse memory cl;
-        try chainlinkFeed.latestRoundData() returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 /* startedAt */,
-            uint256 updatedAt,
-            uint80 /* answeredInRound */
-        ) {
-            cl.success = true;
-            cl.roundId = roundId;
-            cl.answer = answer;
-            cl.updatedAt = updatedAt;
-        } catch {
-            if (!_validate) return 0;
-            cl.success = false;
-        }
-
-        // verify chainlink response
-        if (
-            !_validate ||
-            (cl.success == true &&
-                cl.roundId != 0 &&
-                cl.answer >= 0 &&
-                cl.updatedAt != 0 &&
-                cl.updatedAt <= block.timestamp &&
-                block.timestamp - cl.updatedAt <= 25 hours)
-        ) {
-            uint256 stPerWst = IWStETH(WST_ETH).getStETHByWstETH(1e18);
-            if (cl.answer < 0) cl.answer = 0;
-            uint256 ethPerWstEth = (stPerWst * uint256(cl.answer)) / 1e18;
-            return ethPerWstEth;
-        } else {
-            revert ChainlinkFailed("Wst");
-        }
     }
 
     /**

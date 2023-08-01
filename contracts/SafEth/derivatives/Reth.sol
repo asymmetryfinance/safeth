@@ -126,7 +126,6 @@ contract Reth is DerivativeBase {
         uint256 wethBalanceBefore = IERC20(W_ETH_ADDRESS).balanceOf(
             address(this)
         );
-        uint256 idealOut = ((ethPerDerivative(true) * _amount) / 1e18);
         IERC20(rethAddress()).approve(ROCKET_SWAP_ROUTER, _amount);
 
         // swaps from reth into weth using 100% balancer pool
@@ -134,7 +133,7 @@ contract Reth is DerivativeBase {
             0,
             10,
             0,
-            idealOut,
+            0,
             _amount
         );
         uint256 wethBalanceAfter = IERC20(W_ETH_ADDRESS).balanceOf(
@@ -142,9 +141,7 @@ contract Reth is DerivativeBase {
         );
         IWETH(W_ETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - ethBalanceBefore,
             false,
             underlyingBalance
@@ -162,51 +159,12 @@ contract Reth is DerivativeBase {
         uint256 received = IERC20(rethAddress()).balanceOf(address(this)) -
             rethBalanceBefore;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivative(bool _validate) public view returns (uint256) {
-        ChainlinkResponse memory cl;
-        try chainlinkFeed.latestRoundData() returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 /* startedAt */,
-            uint256 updatedAt,
-            uint80 /* answeredInRound */
-        ) {
-            cl.success = true;
-            cl.roundId = roundId;
-            cl.answer = answer;
-            cl.updatedAt = updatedAt;
-        } catch {
-            if (!_validate) return 0;
-            cl.success = false;
-        }
-
-        // verify chainlink response
-        if (
-            !_validate ||
-            (cl.success == true &&
-                cl.roundId != 0 &&
-                cl.answer >= 0 &&
-                cl.updatedAt != 0 &&
-                cl.updatedAt <= block.timestamp &&
-                block.timestamp - cl.updatedAt <= 25 hours)
-        ) {
-            return uint256(cl.answer);
-        } else {
-            revert("Chainlink Failed Reth");
-        }
     }
 
     /**

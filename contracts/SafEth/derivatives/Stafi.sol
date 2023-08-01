@@ -104,9 +104,7 @@ contract Stafi is DerivativeBase {
         uint256 balancePre = address(this).balance;
         BALANCER_VAULT.swap(swap, fundManagement, 0, block.timestamp);
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - balancePre,
             false,
             underlyingBalance
@@ -135,21 +133,12 @@ contract Stafi is DerivativeBase {
         uint256 received = IStafi(STAFI_TOKEN).balanceOf(address(this)) -
             stafiBalancePre;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivative(bool) public view returns (uint256) {
-        return IStafi(STAFI_TOKEN).getExchangeRate();
     }
 
     /**

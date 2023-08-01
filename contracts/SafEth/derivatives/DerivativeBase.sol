@@ -26,17 +26,11 @@ abstract contract DerivativeBase is
     }
 
     function finalChecks(
-        uint256 _price,
         uint256 _amount,
-        uint256 _maxSlippage,
         uint256 _received,
         bool _isDeposit,
         uint256 _underlyingBalance
     ) internal returns (uint256 newUnderlyingBalance) {
-        uint256 minOut = _isDeposit
-            ? ((_amount * (1e18 - _maxSlippage)) / _price)
-            : (((_price * _amount) * (1e18 - _maxSlippage)) / 1e36);
-        if (_received < minOut) revert SlippageTooHigh();
         if (!_isDeposit) {
             // solhint-disable-next-line
             (bool sent, ) = address(msg.sender).call{value: _received}("");

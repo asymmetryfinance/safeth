@@ -107,9 +107,7 @@ contract SfrxEth is DerivativeBase {
             0
         );
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - ethBalanceBefore,
             false,
             underlyingBalance
@@ -131,36 +129,12 @@ contract SfrxEth is DerivativeBase {
         uint256 received = IERC20(SFRX_ETH_ADDRESS).balanceOf(address(this)) -
             sfrxBalancePre;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivative(bool _validate) public view returns (uint256) {
-        // There is no chainlink price fees for frxEth
-        // We making the assumption that frxEth is always priced 1-1 with eth
-        // revert if the curve oracle price suggests otherwise
-        // Theory is its very hard for attacker to manipulate price away from 1-1 for any long period of time
-        // and if its depegged attack probably cant maniulate it back to 1-1
-        uint256 oraclePrice = IFrxEthEthPool(FRX_ETH_CRV_POOL_ADDRESS)
-            .price_oracle();
-        uint256 priceDifference;
-        if (oraclePrice > 1e18) priceDifference = oraclePrice - 1e18;
-        else priceDifference = 1e18 - oraclePrice;
-
-        uint256 depeg = depegSlippage > 0 ? depegSlippage : 4e15; // base depeg slippage
-        if (_validate && priceDifference > depeg) revert FrxDepegged();
-
-        uint256 frxEthAmount = IsFrxEth(SFRX_ETH_ADDRESS).convertToAssets(1e18);
-        return ((frxEthAmount * oraclePrice) / 10 ** 18);
     }
 
     /**

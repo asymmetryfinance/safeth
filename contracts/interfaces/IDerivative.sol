@@ -22,9 +22,6 @@ interface IDerivative {
     /// sells the underlying derivative for this contract & sends user eth
     function withdraw(uint256 amount) external;
 
-    /// Estimated price per derivative when depositing amount
-    function ethPerDerivative(bool _validate) external view returns (uint256);
-
     /// underlying derivative balance held by this contract
     function balance() external view returns (uint256);
 

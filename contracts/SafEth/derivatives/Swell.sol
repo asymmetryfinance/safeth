@@ -89,9 +89,7 @@ contract Swell is DerivativeBase {
         );
         IWETH(WETH_ADDRESS).withdraw(wethBalanceAfter - wethBalanceBefore);
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - ethBalanceBefore,
             false,
             underlyingBalance
@@ -111,21 +109,12 @@ contract Swell is DerivativeBase {
         uint256 received = IERC20(SWETH_ADDRESS).balanceOf(address(this)) -
             swethBalanceBefore;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-    */
-    function ethPerDerivative(bool) public view returns (uint256) {
-        return ISwellEth(SWETH_ADDRESS).swETHToETHRate();
     }
 
     /**

@@ -80,9 +80,7 @@ contract Ankr is DerivativeBase {
         uint256 balancePre = address(this).balance;
         IAnkrEthEthPool(ANKR_ETH_POOL).exchange(1, 0, _amount, 0);
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             _amount,
-            maxSlippage,
             address(this).balance - balancePre,
             false,
             underlyingBalance
@@ -101,21 +99,12 @@ contract Ankr is DerivativeBase {
         uint256 received = IERC20(ANKR_ETH_ADDRESS).balanceOf(address(this)) -
             ankrBalancePre;
         underlyingBalance = super.finalChecks(
-            ethPerDerivative(true),
             msg.value,
-            maxSlippage,
             received,
             true,
             underlyingBalance
         );
         return received;
-    }
-
-    /**
-        @notice - Get price of derivative in terms of ETH
-     */
-    function ethPerDerivative(bool) public view returns (uint256) {
-        return AnkrEth(ANKR_ETH_ADDRESS).sharesToBonds(1e18);
     }
 
     /**
