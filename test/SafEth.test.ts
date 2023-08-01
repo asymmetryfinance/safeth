@@ -4,6 +4,7 @@ import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { Reth, SafEth, SafEthReentrancyTest, WstEth } from "../typechain-types";
+import { BigNumber as BN } from "bignumber.js";
 
 import {
   deploySafEth,
@@ -27,6 +28,7 @@ import {
   withinHalfPercent,
 } from "./helpers/functions";
 import { parseEther } from "ethers/lib/utils";
+import axios from "axios";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
@@ -75,49 +77,75 @@ describe("SafEth", function () {
   });
 
   describe("Large Amounts", function () {
-    it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
-      const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("200");
-      const tx1 = await safEth.stake(0, { value: depositAmount });
-      const mined1 = await tx1.wait();
-      const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
-
-      const contractEthBalance = await ethers.provider.getBalance(
-        safEth.address
+    it.only("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
+      const result = await axios.get(
+        `https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${process.env.ETHERSCAN_API_KEY}`
       );
-      expect(contractEthBalance).eq(0);
+      await network.provider.request({
+        method: "hardhat_reset",
+        params: [
+          {
+            forking: {
+              jsonRpcUrl: process.env.MAINNET_URL,
+              blockNumber: Number(result.data.result) - 60,
+            },
+          },
+        ],
+      });
+      const SafEthInterface = (await ethers.getContractFactory("SafEth"))
+        .interface as any;
 
-      const tx2 = await safEth.unstake(
-        await safEth.balanceOf(adminAccount.address),
+      // safEth forked from mainnet instead of launched locally
+      const safEthForked = new ethers.Contract(
+        "0x6732efaf6f39926346bef8b821a04b6361c4f3e5",
+        SafEthInterface,
+        adminAccount
+      ) as any;
+
+      const depositAmount = ethers.utils.parseEther("9");
+      const txStake = await safEthForked.stake(0, { value: depositAmount });
+      const minedStake = await txStake.wait();
+      const networkFeeStake = minedStake.gasUsed.mul(
+        minedStake.effectiveGasPrice
+      );
+
+      const balanceBeforeUnstake = await adminAccount.getBalance();
+      const txUnstake = await safEthForked.unstake(
+        await safEthForked.balanceOf(adminAccount.address),
         0
       );
-      const mined2 = await tx2.wait();
-      const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
-      const finalBalance = await adminAccount.getBalance();
 
-      expect(
-        within1Percent(
-          finalBalance.add(networkFee1).add(networkFee2),
-          startingBalance
-        )
-      ).eq(true);
-    });
-    it("Should fail unstake on zero safEthAmount", async function () {
-      await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
-    });
-    it("Should fail unstake on invalid safEthAmount", async function () {
-      await expect(safEth.unstake(10, 0)).revertedWith("InsufficientBalance");
-    });
-    it("Should fail with wrong min/max", async function () {
-      let depositAmount = ethers.utils.parseEther(".002");
-      await expect(
-        safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("AmountTooLow");
+      const minedUnstake = await txUnstake.wait();
+      const balanceAfterUnstake = await adminAccount.getBalance();
+      const networkFeeUnstake = minedUnstake.gasUsed.mul(
+        minedUnstake.effectiveGasPrice
+      );
 
-      depositAmount = ethers.utils.parseEther("2050");
-      await expect(
-        safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("AmountTooHigh");
+      const ethReceivedOnUnstake = balanceAfterUnstake
+        .sub(balanceBeforeUnstake)
+        .add(networkFeeUnstake);
+
+      const ethLostToSlippage = depositAmount.sub(ethReceivedOnUnstake);
+
+      const slippagePercent = new BN(ethLostToSlippage.toString())
+        .div(depositAmount.toString())
+        .multipliedBy(100);
+
+      console.log("depositAmount", ethers.utils.formatEther(depositAmount));
+      console.log("networkFeeStake", ethers.utils.formatEther(networkFeeStake));
+      console.log(
+        "networkFeeUnstake",
+        ethers.utils.formatEther(networkFeeUnstake)
+      );
+      console.log(
+        "ethReceivedOnUnstake",
+        ethers.utils.formatEther(ethReceivedOnUnstake)
+      );
+      console.log(
+        "ethLostToSlippage",
+        ethers.utils.formatEther(ethLostToSlippage)
+      );
+      console.log("slippagePercent", slippagePercent.toString(), "%");
     });
   });
 

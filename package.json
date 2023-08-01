@@ -87,6 +87,7 @@
     "@openzeppelin/hardhat-defender": "^1.8.2",
     "@openzeppelin/hardhat-upgrades": "^1.17.0",
     "axios": "^0.27.2",
+    "bignumber.js": "^9.1.1",
     "discord.js": "^14.9.0"
   }
 }
