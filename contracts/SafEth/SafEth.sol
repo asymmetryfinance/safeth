@@ -444,6 +444,7 @@ contract SafEth is
     /**
      * @notice - stakes into all derivatives
      * @param _minOut - minimum amount of safEth to receive or revert
+     * @param price - price safEth price passed from approxPrice()
      * @return mintedAmount - amount of safEth token minted
      */
     function doMultiStake(
