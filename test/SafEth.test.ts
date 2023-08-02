@@ -1489,7 +1489,7 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Various Stake Sizes (Premint / Single Derivative / Multi Derivative)", function () {
+  describe("Various Stake Sizes (PremintMulti Derivative)", function () {
     beforeEach(async () => {
       let tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("10"),
@@ -1499,7 +1499,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
 
-    it("Should stake with minimal slippage for all 3 stake sizes", async function () {
+    it("Should stake with minimal slippage for all 2 stake sizes", async function () {
       const safEthBalance0 = await safEth.balanceOf(adminAccount.address);
       const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
       // this should be a premint tx
@@ -1508,47 +1508,37 @@ describe("SafEth", function () {
       });
       await tx.wait();
 
-      // this should be a single derive stake
+      // this should be a multi derive stake
       const safEthBalance1 = await safEth.balanceOf(adminAccount.address);
-      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
+      const ethAmount1 = (await safEth.singleDerivativeThreshold()).add(1);
       tx = await safEth.stake(0, {
         value: ethAmount1,
       });
       await tx.wait();
 
-      // this should be a multi derive stake
       const safEthBalance2 = await safEth.balanceOf(adminAccount.address);
-      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
-      tx = await safEth.stake(0, {
-        value: ethAmount2,
-      });
-      await tx.wait();
-
-      const safEthBalance3 = await safEth.balanceOf(adminAccount.address);
 
       const safEthReceived0 = safEthBalance1.sub(safEthBalance0);
       const safEthReceived1 = safEthBalance2.sub(safEthBalance1);
-      const safEthReceived2 = safEthBalance3.sub(safEthBalance2);
 
       expect(withinHalfPercent(safEthReceived0, ethAmount0)).eq(true);
       expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
-      expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
     });
-    it("Should have gas pricing: premint < single derivative < multi derivative", async function () {
+    it("Should have gas pricing: premint < multi derivative", async function () {
       const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
       // this should be a premint tx
       let tx = await safEth.stake(0, {
         value: ethAmount0,
       });
-      const receipt2 = await tx.wait();
+      const receipt1 = await tx.wait();
       // this should be a multi derive stake
-      const ethAmount2 = (await safEth.singleDerivativeThreshold()).add(1);
+      const ethAmount1 = (await safEth.singleDerivativeThreshold()).add(1);
       tx = await safEth.stake(0, {
-        value: ethAmount2,
+        value: ethAmount1,
       });
-      const receipt3 = await tx.wait();
+      const receipt2 = await tx.wait();
 
-      expect(receipt2.gasUsed.lt(receipt3.gasUsed)).eq(true);
+      expect(receipt1.gasUsed.lt(receipt2.gasUsed)).eq(true);
     });
   });
   describe("Sfrx", function () {
