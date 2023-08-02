@@ -290,7 +290,11 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
-    it.only("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
+    it("Should fail staking through preMint with minOut higher than expected safEth output", async function () {
+      const tx = await safEth.preMint(0, false, false, {
+        value: ethers.utils.parseEther("6"),
+      });
+      await tx.wait();
       const depositAmount = ethers.utils.parseEther("1");
       const minOut = ethers.utils.parseEther("2");
       await expect(
