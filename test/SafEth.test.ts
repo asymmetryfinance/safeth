@@ -285,74 +285,75 @@ describe("SafEth", function () {
         safEth.stake(minOut, { value: depositAmount })
       ).to.be.revertedWith("PremintTooLow");
     });
-    // it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
-    //   // do a large initial stake so all derivatives have some balance like real world
-    //   let tx = await safEth.stake(0, {
-    //     value: await ethers.utils.parseEther("20"),
-    //   });
-    //   await tx.wait();
+    it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
+      // do a large initial stake so all derivatives have some balance like real world
+      let tx = await safEth.stake(0, {
+        value: await safEth.singleDerivativeThreshold(),
+      });
+      await tx.wait();
 
-    //   tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
-    //   await tx.wait();
-    //   const maxPremintAmount = await safEth.maxPreMintAmount();
-    //   tx = await safEth.preMint(0, false, false, {
-    //     value: ethers.utils.parseEther("2.5"),
-    //   });
-    //   await tx.wait();
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
+      let maxPremintAmount = await safEth.maxPreMintAmount();
+      tx = await safEth.preMint(0, false, false, {
+        value: ethers.utils.parseEther("2.5"),
+      });
+      await tx.wait();
 
-    //   const balance0 = await safEth.balanceOf(adminAccount.address);
+      const balance0 = await safEth.balanceOf(adminAccount.address);
 
-    //   const ethAmount1 = maxPremintAmount;
-    //   // this should be premint
-    //   tx = await safEth.stake(0, {
-    //     value: ethAmount1,
-    //   });
-    //   await tx.wait();
+      const ethAmount1 = maxPremintAmount;
+      // this should be premint
+      tx = await safEth.stake(0, {
+        value: ethAmount1,
+      });
+      await tx.wait();
 
-    //   const balance1 = await safEth.balanceOf(adminAccount.address);
-    //   const safEthReceived1 = balance1.sub(balance0);
+      const balance1 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived1 = balance1.sub(balance0);
 
-    //   const balance2 = await safEth.balanceOf(adminAccount.address);
-    //   const safEthReceived2 = balance2.sub(balance1);
+      const ethAmount2 = ethers.utils.parseEther("1");
+      // this should be single derivative stake (not enough premint funds)
+      tx = await safEth.stake(0, {
+        value: ethAmount2,
+      });
+      await tx.wait();
 
-    //   const ethAmount3 = ethers.utils.parseEther("10");
-    //   // this should be multi derivative stake (not enough premint funds)
-    //   tx = await safEth.stake(0, {
-    //     value: ethAmount3,
-    //   });
-    //   await tx.wait();
+      const balance2 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived2 = balance2.sub(balance1);
 
-    //   const balance3 = await safEth.balanceOf(adminAccount.address);
-    //   const safEthReceived3 = balance3.sub(balance2);
+      const ethAmount3 = ethers.utils.parseEther("10");
+      // this should be multi derivative stake (not enough premint funds)
+      tx = await safEth.stake(0, {
+        value: ethAmount3,
+      });
+      await tx.wait();
 
-    //   await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
-    //   maxPremintAmount = (await safEth.maxPreMintAmount()).add(1);
-    //   tx = await safEth.preMint(0, false, false, {
-    //     value: maxPremintAmount,
-    //   });
-    //   await tx.wait();
+      const balance3 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived3 = balance3.sub(balance2);
 
-    //   const ethAmount4 = ethers.utils.parseEther("10");
-    //   // this should be a premint stake (instead of a multi derivative stake)
-    //   tx = await safEth.stake(0, {
-    //     value: ethAmount4,
-    //   });
-    //   await tx.wait();
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
+      maxPremintAmount = (await safEth.maxPreMintAmount()).add(1);
+      tx = await safEth.preMint(0, false, false, {
+        value: maxPremintAmount,
+      });
+      await tx.wait();
 
-    //   const balance4 = await safEth.balanceOf(adminAccount.address);
-    //   const safEthReceived4 = balance4.sub(balance3);
+      const ethAmount4 = ethers.utils.parseEther("10");
+      // this should be a premint stake (instead of a multi derivative stake)
+      tx = await safEth.stake(0, {
+        value: ethAmount4,
+      });
+      await tx.wait();
 
-    //   console.log('safEthReceived1', safEthReceived1.toString())
-    //   console.log('safEthReceived3', safEthReceived3.toString())
-    //   console.log('safEthReceived4', safEthReceived4.toString())
-    //   console.log('ethAmount1', ethAmount1.toString())
-    //   console.log('ethAmount3', ethAmount3.toString())
-    //   console.log('ethAmount4', ethAmount4.toString())
-    //   // // price should be ~1 because safEth just launched
-    //   expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
-    //   expect(withinHalfPercent(safEthReceived3, ethAmount3)).eq(true);
-    //   expect(withinHalfPercent(safEthReceived4, ethAmount4)).eq(true);
-    // });
+      const balance4 = await safEth.balanceOf(adminAccount.address);
+      const safEthReceived4 = balance4.sub(balance3);
+
+      // price should be ~1 because safEth just launched
+      expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
+      expect(withinHalfPercent(safEthReceived2, ethAmount2)).eq(true);
+      expect(withinHalfPercent(safEthReceived3, ethAmount3)).eq(true);
+      expect(withinHalfPercent(safEthReceived4, ethAmount4)).eq(true);
+    });
 
     it("Should not effect the price when staking via premint", async function () {
       // do a large initial stake so all derivatives have some balance like real world
