@@ -107,7 +107,7 @@ contract SafEth is
         if (totalWeight == 0) revert TotalWeightZero();
         if (shouldPremint()) return doPreMintedStake(_minOut);
         depositPrice = approxPrice(true);
-        return doMultiStake(_minOut, depositPrice);
+        return (doMultiStake(_minOut, depositPrice), depositPrice);
     }
 
     /**
@@ -449,7 +449,7 @@ contract SafEth is
     function doMultiStake(
         uint256 _minOut,
         uint256 price
-    ) private returns (uint256 mintedAmount, uint256 depositPrice) {
+    ) private returns (uint256 mintedAmount) {
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
@@ -471,7 +471,6 @@ contract SafEth is
             ) * depositAmount);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
-        depositPrice = price;
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 
