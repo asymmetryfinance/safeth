@@ -183,7 +183,6 @@ contract SafEth is
         floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
             ? depositPrice
             : floorPrice;
-        console.log('premint floorprice set to', depositPrice, floorPrice);
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
@@ -430,7 +429,6 @@ contract SafEth is
     function doPreMintedStake(
         uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
-        console.log('doing preminted stake', floorPrice);
         preMintPrice = floorPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();

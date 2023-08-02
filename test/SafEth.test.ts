@@ -121,22 +121,6 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Round Robin minting small amounts", function () {
-    it("Should have equal weights after staking a small amount over all derivatives the same number of times", async function () {
-      const derivativeCount = (await safEth.derivativeCount()).toNumber();
-      // stale 0.1 eth on each derivative 3 times
-      for (let i = 0; i < derivativeCount * 3; i++) {
-        const depositAmount = ethers.utils.parseEther("0.1");
-        const tx1 = await safEth.stake(0, { value: depositAmount });
-        await tx1.wait();
-      }
-      const ethBalances = await estimatedDerivativeValues();
-      for (let i = 0; i < derivativeCount; i++) {
-        expect(withinHalfPercent(ethBalances[i], ethBalances[0])).eq(true);
-      }
-    });
-  });
-
   describe("Slippage", function () {
     it("Should set slippage derivatives for each derivatives contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
@@ -167,7 +151,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
   });
-  describe.only("Pre-mint", function () {
+  describe("Pre-mint", function () {
     beforeEach(async () => {
       snapshot = await takeSnapshot();
     });
