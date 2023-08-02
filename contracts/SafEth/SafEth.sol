@@ -10,8 +10,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
-import "hardhat/console.sol";
-
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -107,8 +105,7 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-        if (shouldPremint())
-            return doPreMintedStake(_minOut);
+        if (shouldPremint()) return doPreMintedStake(_minOut);
         depositPrice = approxPrice(true);
         return doMultiStake(_minOut, depositPrice);
     }
@@ -415,7 +412,7 @@ contract SafEth is
      * @return - true or false if it can use preminted or not
      */
     function shouldPremint() private view returns (bool) {
-        if(floorPrice == 0) return false;
+        if (floorPrice == 0) return false;
         uint256 preMintPrice = floorPrice;
         uint256 amount = (msg.value * 1e18) / preMintPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
