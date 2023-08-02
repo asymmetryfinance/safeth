@@ -1489,7 +1489,7 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Various Stake Sizes (PremintMulti Derivative)", function () {
+  describe("Various Stake Sizes (Premint, Multi Derivative)", function () {
     beforeEach(async () => {
       let tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("10"),
