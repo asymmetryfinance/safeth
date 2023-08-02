@@ -286,7 +286,7 @@ describe("SafEth", function () {
     it("Should continue to stake with a similar price before and after all pre minted funds are used up", async function () {
       // do a large initial stake so all derivatives have some balance like real world
       let tx = await safEth.stake(0, {
-        value: await safEth.singleDerivativeThreshold(),
+        value: ethers.utils.parseEther("20"),
       });
       await tx.wait();
 
@@ -741,14 +741,6 @@ describe("SafEth", function () {
       await newOwnerSigner.acceptOwnership();
       await newOwnerSigner.setPauseStaking(false);
       expect(await safEth.pauseStaking()).eq(false);
-    });
-    it("Should test setSingleDerivativeThreshold()", async function () {
-      let tx = await safEth.setSingleDerivativeThreshold(parseEther("42.0"));
-      await tx.wait();
-      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("42.0"));
-      tx = await safEth.setSingleDerivativeThreshold(parseEther("4.20"));
-      await tx.wait();
-      expect(await safEth.singleDerivativeThreshold()).eq(parseEther("4.20"));
     });
   });
 
@@ -1510,7 +1502,7 @@ describe("SafEth", function () {
 
       // this should be a multi derive stake
       const safEthBalance1 = await safEth.balanceOf(adminAccount.address);
-      const ethAmount1 = (await safEth.singleDerivativeThreshold()).add(1);
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
       tx = await safEth.stake(0, {
         value: ethAmount1,
       });
@@ -1532,7 +1524,7 @@ describe("SafEth", function () {
       });
       const receipt1 = await tx.wait();
       // this should be a multi derive stake
-      const ethAmount1 = (await safEth.singleDerivativeThreshold()).add(1);
+      const ethAmount1 = (await safEth.maxPreMintAmount()).add(1);
       tx = await safEth.stake(0, {
         value: ethAmount1,
       });
