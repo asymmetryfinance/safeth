@@ -109,7 +109,7 @@ contract SafEth is
         if (totalWeight == 0) revert TotalWeightZero();
         if (shouldPremint())
             return doPreMintedStake(_minOut);
-        return (doMultiStake(_minOut), depositPrice);
+        return doMultiStake(_minOut);
     }
 
     /**
@@ -438,6 +438,7 @@ contract SafEth is
      * @return - true or false if it can use preminted or not
      */
     function shouldPremint() private view returns (bool) {
+        if(floorPrice == 0) return false;
         uint256 preMintPrice = floorPrice;
         uint256 amount = (msg.value * 1e18) / preMintPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
@@ -452,7 +453,6 @@ contract SafEth is
     function doPreMintedStake(
         uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
-        console.log('doing premint stake');
         preMintPrice = floorPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
@@ -508,8 +508,7 @@ contract SafEth is
      */
     function doMultiStake(
         uint256 _minOut
-    ) private returns (uint256 mintedAmount) {
-                console.log('doing doMultiStake stake');
+    ) private returns (uint256 mintedAmount, uint256 depositPrice) {
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
@@ -532,7 +531,7 @@ contract SafEth is
             totalStakeValueEth += derivativeReceivedEthValue;
         }
         uint256 price = approxPrice(true);
-
+        depositPrice = price;
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 
