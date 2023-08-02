@@ -180,7 +180,7 @@ describe("SafEth", function () {
       event = await receipt?.events?.[receipt?.events?.length - 1];
       expect(event?.args?.[4]).eq(true); // uses preminted safeth
     });
-    it("Should shouldn't receive premint if under max premint amount but over premint available", async function () {
+    it("Shouldn not receive premint if under max premint amount but over premint available", async function () {
       let tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("6"),
       });
@@ -197,7 +197,7 @@ describe("SafEth", function () {
 
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
-    it("Shouldn't should receive premint if over max premint amount", async function () {
+    it("Should not receive premint if over max premint amount", async function () {
       let tx = await safEth.preMint(0, false, false, {
         value: ethers.utils.parseEther("6"),
       });
