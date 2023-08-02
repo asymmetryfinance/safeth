@@ -413,8 +413,7 @@ contract SafEth is
      */
     function shouldPremint() private view returns (bool) {
         if (floorPrice == 0) return false;
-        uint256 preMintPrice = floorPrice;
-        uint256 amount = (msg.value * 1e18) / preMintPrice;
+        uint256 amount = (msg.value * 1e18) / floorPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
     }
 
