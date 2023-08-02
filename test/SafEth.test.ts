@@ -26,7 +26,6 @@ import {
   within1Pip,
   withinHalfPercent,
 } from "./helpers/functions";
-import { parseEther } from "ethers/lib/utils";
 
 describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
