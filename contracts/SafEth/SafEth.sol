@@ -10,6 +10,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
+import "hardhat/console.sol";
+
 contract SafEth is
     Initializable,
     ERC20Upgradeable,
@@ -105,12 +107,9 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-        depositPrice = approxPrice(true);
-        if (shouldPremint(depositPrice))
-            return doPreMintedStake(_minOut, depositPrice);
-        if (msg.value < singleDerivativeThreshold)
-            return (doSingleStake(_minOut, depositPrice), depositPrice);
-        return (doMultiStake(_minOut, depositPrice), depositPrice);
+        if (shouldPremint())
+            return doPreMintedStake(_minOut);
+        return (doMultiStake(_minOut), depositPrice);
     }
 
     /**
@@ -436,11 +435,10 @@ contract SafEth is
 
     /**
      * @notice - decides if the contract can send preminted safEth (to save gas) instead of minting new
-     * @param price - price safEth price passed from approxPrice()
      * @return - true or false if it can use preminted or not
      */
-    function shouldPremint(uint256 price) private view returns (bool) {
-        uint256 preMintPrice = price < floorPrice ? floorPrice : price;
+    function shouldPremint() private view returns (bool) {
+        uint256 preMintPrice = floorPrice;
         uint256 amount = (msg.value * 1e18) / preMintPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
     }
@@ -448,15 +446,14 @@ contract SafEth is
     /**
      * @notice - stakes by using preminted supply instead of minting new
      * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
      * @return mintedAmount - amount of safEth token sent from the preminted supply
      * @return preMintPrice - price at which preminted safEth was sold to user upon staking
      */
     function doPreMintedStake(
-        uint256 _minOut,
-        uint256 price
+        uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
-        preMintPrice = price < floorPrice ? floorPrice : price;
+        console.log('doing premint stake');
+        preMintPrice = floorPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
         ethToClaim += msg.value;
@@ -507,13 +504,12 @@ contract SafEth is
     /**
      * @notice - stakes into all derivatives
      * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
      * @return mintedAmount - amount of safEth token minted
      */
     function doMultiStake(
-        uint256 _minOut,
-        uint256 price
+        uint256 _minOut
     ) private returns (uint256 mintedAmount) {
+                console.log('doing doMultiStake stake');
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
@@ -535,6 +531,8 @@ contract SafEth is
             ) * depositAmount);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
+        uint256 price = approxPrice(true);
+
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
 

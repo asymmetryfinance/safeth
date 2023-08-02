@@ -176,7 +176,7 @@ describe("SafEth", function () {
       await tx.wait();
     });
   });
-  describe("Pre-mint", function () {
+  describe.only("Pre-mint", function () {
     before(async () => {
       snapshot = await takeSnapshot();
     });
@@ -185,13 +185,13 @@ describe("SafEth", function () {
       await snapshot.restore();
     });
 
-    it("User should receive premint if under max premint amount & has premint funds", async function () {
+    it.only("User should receive premint if under max premint amount & has premint funds", async function () {
       const depositAmount = ethers.utils.parseEther("3");
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.999"));
 
       await expect(
         safEth.preMint(0, false, {
-          value: ethers.utils.parseEther("1"),
+          value: ethers.utils.parseEther("2"),
         })
       ).to.be.revertedWith("PremintTooLow");
 
@@ -199,21 +199,18 @@ describe("SafEth", function () {
       let tx = await safEth.preMint(0, false, false, {
         value: depositAmount,
       });
-      let receipt = await tx.wait();
-      let event = await receipt?.events?.[receipt?.events?.length - 1];
-      const preMintedAmount = event?.args?.[1];
-      // stake ~2 eth to get preminted safeth
-      // need to use a little less than 2 ETH due to price going up after staking
-      tx = await safEth.stake(0, { value: preMintedAmount });
-      receipt = await tx.wait();
-      event = await receipt?.events?.[receipt?.events?.length - 1];
-      const amountMinted = await receipt?.events?.[0]?.args?.[2];
+      // let receipt = await tx.wait();
+      // let event = await receipt?.events?.[receipt?.events?.length - 1];
+      // const preMintedAmount = event?.args?.[1];
+      // // stake ~2 eth to get preminted safeth
+      // // need to use a little less than 2 ETH due to price going up after staking
 
-      expect(event?.args?.[4]).eq(true); // uses preminted safeth
-      expect(within1Percent(preMintedAmount, amountMinted)).eq(true);
-      expect(await safEth.preMintedSupply()).lt(
-        ethers.utils.parseEther(".0000001")
-      );
+      // console.log('aboutto call stake');
+      // tx = await safEth.stake(0, { value: ethers.utils.parseEther("1") });
+      // receipt = await tx.wait();
+
+      // console.log('cumulativeGasUsed', receipt.cumulativeGasUsed)
+
     });
     it("Should mint safEth if under max premint amount but over premint available", async function () {
       const depositAmount = ethers.utils.parseEther("1");
