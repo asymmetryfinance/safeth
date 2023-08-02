@@ -183,7 +183,7 @@ contract SafEth is
         floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
             ? depositPrice
             : floorPrice;
-        console.log('premint floorprice set to', floorPrice);
+        console.log('premint floorprice set to', depositPrice, floorPrice);
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
@@ -411,30 +411,6 @@ contract SafEth is
     }
 
     /**
-     * @notice - find derivative that is underweight relative to target weights
-     * @return - a derivative index that is underweight relative to target weights
-     */
-    function firstUnderweightDerivativeIndex() private view returns (uint256) {
-        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-
-        uint256 count = derivativeCount;
-        uint256 tvlEth = totalSupply() * approxPrice(false);
-
-        if (tvlEth == 0) return enabledDerivatives[0];
-
-        for (uint256 i = 0; i < count; i++) {
-            if (!derivatives[i].enabled) continue;
-            uint256 trueWeight = (totalWeight *
-                IDerivative(derivatives[i].derivative).balance() *
-                IDerivative(derivatives[i].derivative).ethPerDerivative(
-                    false
-                )) / tvlEth;
-            if (trueWeight < derivatives[i].weight) return i;
-        }
-        return enabledDerivatives[0];
-    }
-
-    /**
      * @notice - decides if the contract can send preminted safEth (to save gas) instead of minting new
      * @return - true or false if it can use preminted or not
      */
@@ -478,10 +454,10 @@ contract SafEth is
     function doMultiStake(
         uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 depositPrice) {
-        console.log('doMultiStake');
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
+        uint256 price = approxPrice(true);
 
         for (uint256 i = 0; i < enabledDerivativeCount; i++) {
             uint256 index = enabledDerivatives[i];
@@ -500,7 +476,6 @@ contract SafEth is
             ) * depositAmount);
             totalStakeValueEth += derivativeReceivedEthValue;
         }
-        uint256 price = approxPrice(true);
         depositPrice = price;
         mintedAmount = (totalStakeValueEth) / price;
         if (mintedAmount < _minOut) revert MintedAmountTooLow();
