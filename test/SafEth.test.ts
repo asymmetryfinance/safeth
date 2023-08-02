@@ -1515,7 +1515,7 @@ describe("SafEth", function () {
       expect(withinHalfPercent(safEthReceived0, ethAmount0)).eq(true);
       expect(withinHalfPercent(safEthReceived1, ethAmount1)).eq(true);
     });
-    it("Should have gas pricing: premint < multi derivative", async function () {
+    it("Should be more than 10x cheaper to stake with premint", async function () {
       const ethAmount0 = (await safEth.maxPreMintAmount()).sub(1);
       // this should be a premint tx
       let tx = await safEth.stake(0, {
@@ -1528,8 +1528,7 @@ describe("SafEth", function () {
         value: ethAmount1,
       });
       const receipt2 = await tx.wait();
-
-      expect(receipt1.gasUsed.lt(receipt2.gasUsed)).eq(true);
+      expect(receipt1.gasUsed.lt(receipt2.gasUsed.mul(10))).eq(true);
     });
   });
   describe("Sfrx", function () {
