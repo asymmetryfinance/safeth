@@ -183,6 +183,7 @@ contract SafEth is
         floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
             ? depositPrice
             : floorPrice;
+        console.log('premint floorprice set to', floorPrice);
         preMintedSupply += mintedAmount;
         emit PreMint(amount, mintedAmount, depositPrice);
         return mintedAmount;
@@ -453,6 +454,7 @@ contract SafEth is
     function doPreMintedStake(
         uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
+        console.log('doing preminted stake', floorPrice);
         preMintPrice = floorPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
@@ -469,39 +471,6 @@ contract SafEth is
     }
 
     /**
-     * @notice - stakes by using a single derivative to save gas
-     * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
-     * @return mintedAmount - amount of safEth token minted
-     */
-    function doSingleStake(
-        uint256 _minOut,
-        uint256 price
-    ) private returns (uint256 mintedAmount) {
-        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-
-        uint256 totalStakeValueEth = 0;
-        IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
-            .derivative;
-        uint256 depositAmount = derivative.deposit{value: msg.value}();
-        uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
-            true
-        ) * depositAmount);
-        totalStakeValueEth += derivativeReceivedEthValue;
-        mintedAmount = (totalStakeValueEth) / price;
-        if (mintedAmount < _minOut) revert MintedAmountTooLow();
-
-        _mint(msg.sender, mintedAmount);
-        emit Staked(
-            msg.sender,
-            msg.value,
-            totalStakeValueEth / 1e18,
-            price,
-            false
-        );
-    }
-
-    /**
      * @notice - stakes into all derivatives
      * @param _minOut - minimum amount of safEth to receive or revert
      * @return mintedAmount - amount of safEth token minted
@@ -509,6 +478,7 @@ contract SafEth is
     function doMultiStake(
         uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 depositPrice) {
+        console.log('doMultiStake');
         if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
         uint256 totalStakeValueEth = 0;
         uint256 amountStaked = 0;
