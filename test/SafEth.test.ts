@@ -73,6 +73,26 @@ describe("SafEth", function () {
     });
   });
 
+  describe("Various Fails", function () {
+    it("Should fail unstake on zero safEthAmount", async function () {
+      await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
+    });
+    it("Should fail unstake on invalid safEthAmount", async function () {
+      await expect(safEth.unstake(10, 0)).revertedWith("InsufficientBalance");
+    });
+    it("Should fail with wrong min/max", async function () {
+      let depositAmount = ethers.utils.parseEther(".002");
+      await expect(
+        safEth.stake(0, { value: depositAmount })
+      ).to.be.revertedWith("AmountTooLow");
+
+      depositAmount = ethers.utils.parseEther("2050");
+      await expect(
+        safEth.stake(0, { value: depositAmount })
+      ).to.be.revertedWith("AmountTooHigh");
+    });
+  });
+
   describe("Slippage", function () {
     it("Should set slippage derivatives for each derivatives contract", async function () {
       const depositAmount = ethers.utils.parseEther("1");
