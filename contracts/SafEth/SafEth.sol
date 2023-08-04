@@ -105,11 +105,8 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
+        if (shouldPremint()) return doPreMintedStake(_minOut);
         depositPrice = approxPrice(true);
-        if (shouldPremint(depositPrice))
-            return doPreMintedStake(_minOut, depositPrice);
-        if (msg.value < singleDerivativeThreshold)
-            return (doSingleStake(_minOut, depositPrice), depositPrice);
         return (doMultiStake(_minOut, depositPrice), depositPrice);
     }
 
@@ -411,52 +408,25 @@ contract SafEth is
     }
 
     /**
-     * @notice - find derivative that is underweight relative to target weights
-     * @return - a derivative index that is underweight relative to target weights
-     */
-    function firstUnderweightDerivativeIndex() private view returns (uint256) {
-        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-
-        uint256 count = derivativeCount;
-        uint256 tvlEth = totalSupply() * approxPrice(false);
-
-        if (tvlEth == 0) return enabledDerivatives[0];
-
-        for (uint256 i = 0; i < count; i++) {
-            if (!derivatives[i].enabled) continue;
-            uint256 trueWeight = (totalWeight *
-                IDerivative(derivatives[i].derivative).balance() *
-                IDerivative(derivatives[i].derivative).ethPerDerivative(
-                    false
-                )) / tvlEth;
-            if (trueWeight < derivatives[i].weight) return i;
-        }
-        return enabledDerivatives[0];
-    }
-
-    /**
      * @notice - decides if the contract can send preminted safEth (to save gas) instead of minting new
-     * @param price - price safEth price passed from approxPrice()
      * @return - true or false if it can use preminted or not
      */
-    function shouldPremint(uint256 price) private view returns (bool) {
-        uint256 preMintPrice = price < floorPrice ? floorPrice : price;
-        uint256 amount = (msg.value * 1e18) / preMintPrice;
+    function shouldPremint() private view returns (bool) {
+        if (floorPrice == 0) return false;
+        uint256 amount = (msg.value * 1e18) / floorPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
     }
 
     /**
      * @notice - stakes by using preminted supply instead of minting new
      * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
      * @return mintedAmount - amount of safEth token sent from the preminted supply
      * @return preMintPrice - price at which preminted safEth was sold to user upon staking
      */
     function doPreMintedStake(
-        uint256 _minOut,
-        uint256 price
+        uint256 _minOut
     ) private returns (uint256 mintedAmount, uint256 preMintPrice) {
-        preMintPrice = price < floorPrice ? floorPrice : price;
+        preMintPrice = floorPrice;
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
         ethToClaim += msg.value;
@@ -468,39 +438,6 @@ contract SafEth is
             (mintedAmount * preMintPrice) / 1e18,
             preMintPrice,
             true
-        );
-    }
-
-    /**
-     * @notice - stakes by using a single derivative to save gas
-     * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
-     * @return mintedAmount - amount of safEth token minted
-     */
-    function doSingleStake(
-        uint256 _minOut,
-        uint256 price
-    ) private returns (uint256 mintedAmount) {
-        if (enabledDerivativeCount == 0) revert NoEnabledDerivatives();
-
-        uint256 totalStakeValueEth = 0;
-        IDerivative derivative = derivatives[firstUnderweightDerivativeIndex()]
-            .derivative;
-        uint256 depositAmount = derivative.deposit{value: msg.value}();
-        uint256 derivativeReceivedEthValue = (derivative.ethPerDerivative(
-            true
-        ) * depositAmount);
-        totalStakeValueEth += derivativeReceivedEthValue;
-        mintedAmount = (totalStakeValueEth) / price;
-        if (mintedAmount < _minOut) revert MintedAmountTooLow();
-
-        _mint(msg.sender, mintedAmount);
-        emit Staked(
-            msg.sender,
-            msg.value,
-            totalStakeValueEth / 1e18,
-            price,
-            false
         );
     }
 
