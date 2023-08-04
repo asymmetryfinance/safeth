@@ -73,34 +73,7 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Large Amounts", function () {
-    it("Should deposit and withdraw a large amount with minimal loss from slippage", async function () {
-      const startingBalance = await adminAccount.getBalance();
-      const depositAmount = ethers.utils.parseEther("200");
-      const tx1 = await safEth.stake(0, { value: depositAmount });
-      const mined1 = await tx1.wait();
-      const networkFee1 = mined1.gasUsed.mul(mined1.effectiveGasPrice);
-
-      const contractEthBalance = await ethers.provider.getBalance(
-        safEth.address
-      );
-      expect(contractEthBalance).eq(0);
-
-      const tx2 = await safEth.unstake(
-        await safEth.balanceOf(adminAccount.address),
-        0
-      );
-      const mined2 = await tx2.wait();
-      const networkFee2 = mined2.gasUsed.mul(mined2.effectiveGasPrice);
-      const finalBalance = await adminAccount.getBalance();
-
-      expect(
-        within1Percent(
-          finalBalance.add(networkFee1).add(networkFee2),
-          startingBalance
-        )
-      ).eq(true);
-    });
+  describe("Various Fails", function () {
     it("Should fail unstake on zero safEthAmount", async function () {
       await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
     });
@@ -1022,6 +995,156 @@ describe("SafEth", function () {
         await tx4.wait();
         const newManager2 = await derivatives[i].manager();
         expect(newManager2).eq(MULTI_SIG);
+      }
+    });
+
+    it("Should deposit huge amounts to each derivative with minimal slippage", async () => {
+      // we assume these small deposits do not have any slippage
+      const postStakeBalancesSmall = [];
+      for (let i = 0; i < derivatives.length; i++) {
+        const tx1 = await derivatives[i].deposit({
+          value: ethers.utils.parseEther("0.3"),
+        });
+        await tx1.wait();
+        const postStakeBalance = await derivatives[i].balance();
+        postStakeBalancesSmall.push(postStakeBalance);
+      }
+
+      for (let i = 0; i < derivatives.length; i++) {
+        const tx1 = await derivatives[i].deposit({
+          value: ethers.utils.parseEther("300"),
+        });
+        await tx1.wait();
+        const postStakeBalance = await derivatives[i].balance();
+
+        expect(
+          withinHalfPercent(
+            postStakeBalance,
+            postStakeBalancesSmall[i].mul(1000)
+          )
+        ).eq(true);
+      }
+    });
+
+    it("Should withdraw 50 eth from each derivative with minimal slippage", async () => {
+      const rethAddress = "0xae78736cd615f374d3085123a210448e74fc6393";
+      const fraxAddress = "0xac3e018457b222d93114458476f3e3416abbe38f";
+      const wstAddress = "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0";
+      const swethAddress = "0xf951E335afb289353dc249e82926178EaC7DEd78";
+      const stafiAddress = "0x9559aaa82d9649c7a7b220e7c461d2e74c9a3593";
+      const ankrAddress = "0xE95A203B1a91a908F9B9CE46459d101078c2c3cb";
+
+      const rethWhale = "0x7d6149ad9a573a6e2ca6ebf7d4897c1b766841b4";
+      const fraxWhale = "0xfe4ad60c8ec639ca7002d7612d5987ddfc16a4fb";
+      const wstWhale = "0xa0456eaae985bdb6381bd7baac0796448933f04f";
+      const swethWhale = "0x0c67f4ffc902140c972ecab356c9993e6ce8caf3";
+      const stafiWhale = "0x61573115459b0e565853112fd0361faa4700183c";
+      const ankrWhale = "0x8cbee4b481112e44b92817b26f96918221489485";
+
+      // order is important here
+      const derivativeWhales = [
+        rethWhale,
+        fraxWhale,
+        wstWhale,
+        swethWhale,
+        stafiWhale,
+        ankrWhale,
+      ];
+      const derivativeAddresses = [
+        rethAddress,
+        fraxAddress,
+        wstAddress,
+        swethAddress,
+        stafiAddress,
+        ankrAddress,
+      ];
+
+      const derivativeUpgrades = [
+        "SlippageReth",
+        "SlippageFrax",
+        "SlippageWst",
+        "SlippageSweth",
+        "SlipageStafi",
+        "SlippageAnkr",
+      ];
+
+      // Staking 50 eth in the above test @ block 17836150 gives the following amounts back:
+      // we now withdraw these amounts from each derivative to see how much eth we get back
+      const withdrawAmounts = [
+        "46297492041285200792", // 46.297492041285200792 reth
+        "47541784416297659563", // 47.541784416297659563 frax
+        "44070109768089069400", // 44.070109768089069400 wst
+        "48826688634955242972", // 48.826688634955242972 swell
+        "47228511358806498771", // 47.228511358806498771stafi
+        "44434957812815529550", // 44.434957812815529550 ankr
+      ];
+      // for block 17836150 50 eth gives back:
+      // 49.96176783034190661 eth from  RocketPool
+      // 49.868340382070075657 eth from  Frax
+      // 49.962390972092423888 eth from  Lido
+      // 49.925107285811638515 eth from  Swell
+      // 49.910949042763672728 eth from  Stafi
+      // 49.628382712896473889 eth from  AnkrEth
+
+      let tx;
+      // fund the derivative contracts with plenty of tokens to sell
+      for (let i = 0; i < derivatives.length; i++) {
+        const whale = derivativeWhales[i];
+
+        tx = await adminAccount.sendTransaction({
+          to: whale,
+          value: "100000000000000000",
+        });
+        await tx.wait();
+
+        const derivativeToken = new ethers.Contract(
+          derivativeAddresses[i],
+          ERC20.abi,
+          adminAccount
+        );
+
+        await network.provider.request({
+          method: "hardhat_impersonateAccount",
+          params: [whale],
+        });
+        const whaleSigner = derivativeToken.connect(
+          await ethers.getSigner(whale)
+        );
+
+        tx = await whaleSigner.transfer(
+          derivatives[i].address,
+          await derivativeToken.balanceOf(whale)
+        );
+        await tx.wait();
+
+        // upgrade derivative so we can call setUnderlying()
+        const upgradedDerivative: any = await upgrade(
+          derivatives[i].address,
+          derivativeUpgrades[i]
+        );
+        await upgradedDerivative.deployed();
+
+        await upgradedDerivative.setUnderlying(
+          await derivativeToken.balanceOf(derivatives[i].address)
+        );
+
+        const ethBal1 = await (adminAccount as any).provider.getBalance(
+          adminAccount.address
+        );
+        const tx2 = await derivatives[i].withdraw(withdrawAmounts[i]);
+        await tx2.wait();
+        const ethBal2 = await (adminAccount as any).provider.getBalance(
+          adminAccount.address
+        );
+
+        const ethReceived = ethBal2.sub(ethBal1);
+
+        expect(
+          within1Percent(
+            ethReceived,
+            BigNumber.from(ethers.utils.parseEther("50"))
+          )
+        ).eq(true);
       }
     });
 
