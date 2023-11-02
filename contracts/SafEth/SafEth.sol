@@ -160,19 +160,19 @@ contract SafEth is
 
     /**
         @notice - Premints safEth for future users
-        @param _minAmount - minimum amount to stake
-        @param _useBalance - should use balance from previous premint's to mint more
-        @param _overWriteFloorPrice - should overwrite floorPrice even if it's 
+        @param _minAmount - Minimum amount to stake
+        @param _balanceAmount - Amount of the current ethToClaim balance to use for premint
+        @param _overWriteFloorPrice - Should overwrite floorPrice even if it's 
      */
-    function preMint(
+    function preMintStake(
         uint256 _minAmount,
-        bool _useBalance,
+        uint256 _balanceAmount,
         bool _overWriteFloorPrice
     ) external payable onlyOwner returns (uint256) {
         uint256 amount = msg.value;
-        if (_useBalance) {
-            amount += ethToClaim;
-            ethToClaim = 0;
+        if (_balanceAmount > 0) {
+            amount += _balanceAmount;
+            ethToClaim -= _balanceAmount;
         }
         if (amount <= maxPreMintAmount) revert PremintTooLow();
 
@@ -183,8 +183,16 @@ contract SafEth is
             ? depositPrice
             : floorPrice;
         preMintedSupply += mintedAmount;
-        emit PreMint(amount, mintedAmount, depositPrice);
+        emit PreMintStake(amount, mintedAmount, depositPrice);
         return mintedAmount;
+    }
+
+    /**
+        @notice - Adds ETH to allow for users to unstake
+     */
+    function preMintUnstake() external payable onlyOwner {
+        ethToClaim += msg.value;
+        emit PreMintUnstake(msg.value);
     }
 
     /**
