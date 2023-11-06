@@ -26,8 +26,8 @@ contract SafEth is
     /**
         @notice - Function to initialize values for the contracts
         @dev - This replaces the constructor for upgradeable contracts
-        @param _tokenName - name of erc20
-        @param _tokenSymbol - symbol of erc20
+        @param _tokenName - Name of erc20
+        @param _tokenSymbol - Symbol of erc20
     */
     function initialize(
         string memory _tokenName,
@@ -54,9 +54,9 @@ contract SafEth is
     }
 
     /**
-     * @notice sets a recipient address as blacklisted to receive tokens
-     * @param _recipient - recipient address to set blacklisted on/off
-     * @param _isBlacklisted - true or false
+     * @notice Sets a recipient address as blacklisted to receive tokens
+     * @param _recipient - Recipient address to set blacklisted on/off
+     * @param _isBlacklisted - True or False
      */
     function setBlacklistedRecipient(
         address _recipient,
@@ -66,9 +66,9 @@ contract SafEth is
     }
 
     /**
-     * @notice sets a sender address as whitelisted to send to blacklisted addressses
-     * @param _sender - sender address to set whitelisted on/off
-     * @param _isWhitelisted - true or false
+     * @notice Sets a sender address as whitelisted to send to blacklisted addressses
+     * @param _sender - Sender address to set whitelisted on/off
+     * @param _isWhitelisted - True or False
      */
     function setWhitelistedSender(
         address _sender,
@@ -78,8 +78,8 @@ contract SafEth is
     }
 
     /**
-     * @notice sets the eth amount at which it will use standard weighting vs buying a single derivative
-     * @param _amount - amount of eth where it will switch to standard weighting
+     * @notice Sets the eth amount at which it will use standard weighting vs buying a single derivative
+     * @param _amount - Amount of eth where it will switch to standard weighting
      */
     function setSingleDerivativeThreshold(uint256 _amount) external onlyOwner {
         singleDerivativeThreshold = _amount;
@@ -105,7 +105,7 @@ contract SafEth is
         if (msg.value < minAmount) revert AmountTooLow();
         if (msg.value > maxAmount) revert AmountTooHigh();
         if (totalWeight == 0) revert TotalWeightZero();
-        if (shouldPremint()) return doPreMintedStake(_minOut);
+        if (shouldPremintStake()) return doPreMintedStake(_minOut);
         depositPrice = approxPrice(true);
         return (doMultiStake(_minOut, depositPrice), depositPrice);
     }
@@ -208,9 +208,9 @@ contract SafEth is
 
     /**
      * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
-     * @param _sellDerivativeIndex - index of the derivative to sell
-     * @param _buyDerivativeIndex - index of the derivative to buy
-     * @param _sellAmount - amount of the derivative to sell
+     * @param _sellDerivativeIndex - Index of the derivative to sell
+     * @param _buyDerivativeIndex - Index of the derivative to buy
+     * @param _sellAmount - Amount of the derivative to sell
      */
     function derivativeRebalance(
         uint256 _sellDerivativeIndex,
@@ -237,8 +237,8 @@ contract SafEth is
         @dev - Weights are only in regards to each other, total weight changes with this function
         @dev - If you want exact weights either do the math off chain or reset all existing derivates to the weights you want
         @dev - Weights are approximate as it will slowly change as people stake
-        @param _derivativeIndex - index of the derivative you want to update the weight
-        @param _weight - new weight for this derivative.
+        @param _derivativeIndex - Index of the derivative you want to update the weight
+        @param _weight - New weight for this derivative.
     */
     function adjustWeight(
         uint256 _derivativeIndex,
@@ -254,7 +254,7 @@ contract SafEth is
 
     /**
         @notice - Disables Derivative based on derivative index
-        @param _derivativeIndex - index of the derivative you want to disable
+        @param _derivativeIndex - Index of the derivative you want to disable
     */
     function disableDerivative(uint256 _derivativeIndex) external onlyOwner {
         if (_derivativeIndex >= derivativeCount) revert IndexOutOfBounds();
@@ -283,7 +283,7 @@ contract SafEth is
 
     /**
         @notice - Enables Derivative based on derivative index
-        @param _derivativeIndex - index of the derivative you want to enable
+        @param _derivativeIndex - Index of the derivative you want to enable
     */
     function enableDerivative(uint256 _derivativeIndex) external onlyOwner {
         if (_derivativeIndex >= derivativeCount) revert IndexOutOfBounds();
@@ -303,7 +303,7 @@ contract SafEth is
     /**
         @notice - Adds new derivative to the index fund
         @param _contractAddress - Address of the derivative contract launched by AF
-        @param _weight - new weight for this derivative. 
+        @param _weight - New weight for this derivative. 
     */
     function addDerivative(
         address _contractAddress,
@@ -349,7 +349,7 @@ contract SafEth is
 
     /**
         @notice - Sets the minimum amount a user is allowed to stake
-        @param _minAmount - amount to set as minimum stake value
+        @param _minAmount - Amount to set as minimum stake value
     */
     function setMinAmount(uint256 _minAmount) external onlyOwner {
         emit ChangeMinAmount(minAmount, _minAmount);
@@ -358,7 +358,7 @@ contract SafEth is
 
     /**
         @notice - Owner only function that sets the maximum amount a user is allowed to stake
-        @param _maxAmount - amount to set as maximum stake value
+        @param _maxAmount - Amount to set as maximum stake value
     */
     function setMaxAmount(uint256 _maxAmount) external onlyOwner {
         emit ChangeMaxAmount(maxAmount, _maxAmount);
@@ -367,7 +367,7 @@ contract SafEth is
 
     /**
         @notice - Owner only function that Enables/Disables the stake function
-        @param _pause - true disables staking / false enables staking
+        @param _pause - True disables staking / False enables staking
     */
     function setPauseStaking(bool _pause) external onlyOwner {
         if (pauseStaking == _pause) revert AlreadySet();
@@ -377,7 +377,7 @@ contract SafEth is
 
     /**
         @notice - Sets the maximum amount a user can premint in one transaction
-        @param _amount - amount to set as maximum premint value
+        @param _amount - Amount to set as maximum premint value
         @dev - This is to prevent a whale from coming in and taking all the preminted funds
         @dev - A user can stake multiple times and still receive the preminted funds
     */
@@ -388,7 +388,7 @@ contract SafEth is
 
     /**
         @notice - Owner only function that enables/disables the unstake function
-        @param _pause - true disables unstaking / false enables unstaking
+        @param _pause - True disables unstaking / False enables unstaking
     */
     function setPauseUnstaking(bool _pause) external onlyOwner {
         if (pauseUnstaking == _pause) revert AlreadySet();
@@ -417,20 +417,31 @@ contract SafEth is
     }
 
     /**
-     * @notice - decides if the contract can send preminted safEth (to save gas) instead of minting new
-     * @return - true or false if it can use preminted or not
+     * @notice - Decides if the contract can send preminted safEth (to save gas) instead of minting new
+     * @return - True or False if it can use preminted or not
      */
-    function shouldPremint() private view returns (bool) {
+    function shouldPremintStake() private view returns (bool) {
         if (floorPrice == 0) return false;
         uint256 amount = (msg.value * 1e18) / floorPrice;
         return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
     }
 
     /**
-     * @notice - stakes by using preminted supply instead of minting new
-     * @param _minOut - minimum amount of safEth to receive or revert
-     * @return mintedAmount - amount of safEth token sent from the preminted supply
-     * @return preMintPrice - price at which preminted safEth was sold to user upon staking
+     * @notice - Decides if the contract can handle passing in ETH instead of fully unstaking
+     * @param _amount - Amount of SafEth to unstake
+     * @return - True or False if it can use unstaked with premint or not
+     */
+    function shouldPremintUnstake(uint256 _amount) private view returns (bool) {
+        if (floorPrice == 0) return false;
+        uint256 amount = (_amount * floorPrice) / 1e18;
+        return amount <= ethToClaim && amount <= maxPreMintAmount;
+    }
+
+    /**
+     * @notice - Stakes by using preminted supply instead of minting new
+     * @param _minOut - Minimum amount of safEth to receive or revert
+     * @return mintedAmount - Amount of safEth token sent from the preminted supply
+     * @return preMintPrice - Price at which preminted safEth was sold to user upon staking
      */
     function doPreMintedStake(
         uint256 _minOut
@@ -479,10 +490,10 @@ contract SafEth is
     }
 
     /**
-     * @notice - stakes into all derivatives
-     * @param _minOut - minimum amount of safEth to receive or revert
-     * @param price - price safEth price passed from approxPrice()
-     * @return mintedAmount - amount of safEth token minted
+     * @notice - Stakes into all derivatives
+     * @param _minOut - Minimum amount of safEth to receive or revert
+     * @param price - Price safEth price passed from approxPrice()
+     * @return mintedAmount - Amount of safEth token minted
      */
     function doMultiStake(
         uint256 _minOut,
