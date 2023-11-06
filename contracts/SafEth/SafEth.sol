@@ -206,6 +206,15 @@ contract SafEth is
         if (!sent) revert FailedToSend();
     }
 
+        /**
+        @notice - Claims SafEth that was used to acquire preminted ETH
+     */
+    function withdrawSafEth() external onlyOwner {
+        uint256 _safEthToClaim = safEthToClaim;
+        safEthToClaim = 0;
+        IERC20(address(this)).transfer(msg.sender, _safEthToClaim);
+    }
+
     /**
      * @notice - Allows owner to rebalance between 2 derivatives, selling 1 for the other
      * @param _sellDerivativeIndex - Index of the derivative to sell
