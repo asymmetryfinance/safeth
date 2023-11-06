@@ -451,20 +451,26 @@ contract SafEth is
     }
 
     /**
-     * @notice - Unstakes by using internal eth instead of unstaking the derivatives
-     * @param _minOut - minimum amount of safEth to receive or revert
-     * @return mintedAmount - amount of safEth token sent from the preminted supply
-     * @return preMintPrice - price at which preminted safEth was sold to user upon staking
+     * @notice - Unstakes by using internal ETH instead of unstaking the derivatives
+     * @param _amount - Amount of safEth to unstake
+     * @param _minOut - Minimum amount of ETH to receive or revert
+     * @return ethToRedeem - Amount of ETH sent from the preminted supply
+     * @return unstakePrice - Price at which ETH was sold to user upon unstaking
      */
-    function doPreMintedUnstake(uint256 _amount, uint256 _minOut) private returns (uint256 ethToRedeem, uint256 unstakePrice) {
+    function doPreMintedUnstake(
+        uint256 _amount,
+        uint256 _minOut
+    ) private returns (uint256 ethToRedeem, uint256 unstakePrice) {
         unstakePrice = approxPrice(true);
         IERC20(address(this)).transferFrom(msg.sender, address(this), _amount);
         floorPrice = unstakePrice;
         safEthToClaim += _amount;
         preMintedSupply += _amount;
         ethToRedeem = (_amount * unstakePrice) / 1e18;
+        if (ethToRedeem < _minOut) revert PremintTooLow();
+
         ethToClaim -= ethToRedeem;
-        
+
         // solhint-disable-next-line
         (bool sent, ) = address(msg.sender).call{value: ethToRedeem}("");
         if (!sent) revert FailedToSend();
