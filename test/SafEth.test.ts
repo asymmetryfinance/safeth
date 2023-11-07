@@ -73,56 +73,6 @@ describe("SafEth", function () {
     });
   });
 
-  describe("Various Fails", function () {
-    it("Should fail unstake on zero safEthAmount", async function () {
-      await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
-    });
-    it("Should fail unstake on invalid safEthAmount", async function () {
-      await expect(safEth.unstake(10, 0)).revertedWith("InsufficientBalance");
-    });
-    it("Should fail with wrong min/max", async function () {
-      let depositAmount = ethers.utils.parseEther(".002");
-      await expect(
-        safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("AmountTooLow");
-
-      depositAmount = ethers.utils.parseEther("2050");
-      await expect(
-        safEth.stake(0, { value: depositAmount })
-      ).to.be.revertedWith("AmountTooHigh");
-    });
-  });
-
-  describe("Slippage", function () {
-    it("Should set slippage derivatives for each derivatives contract", async function () {
-      const depositAmount = ethers.utils.parseEther("1");
-      const derivativeCount = (await safEth.derivativeCount()).toNumber();
-
-      for (let i = 0; i < derivativeCount; i++) {
-        const derivativeAddress = (await safEth.derivatives(i)).derivative;
-        const derivative = new ethers.Contract(
-          derivativeAddress,
-          derivativeAbi,
-          adminAccount
-        );
-        await setMaxSlippage(derivative, ethers.utils.parseEther("0.01"));
-      }
-      let tx;
-      tx = await safEth.stake(0, { value: depositAmount });
-      await tx.wait();
-      for (let i = 0; i < derivativeCount; i++) {
-        const derivativeAddress = (await safEth.derivatives(i)).derivative;
-        const derivative = new ethers.Contract(
-          derivativeAddress,
-          derivativeAbi,
-          adminAccount
-        );
-        await setMaxSlippage(derivative, ethers.utils.parseEther("0.02"));
-      }
-      tx = await safEth.stake(0, { value: depositAmount });
-      await tx.wait();
-    });
-  });
   describe("Pre-mint", function () {
     beforeEach(async () => {
       snapshot = await takeSnapshot();
@@ -132,6 +82,9 @@ describe("SafEth", function () {
       await snapshot.restore();
     });
     it("Should unstake through preminted ETH from staking", async function () {
+      expect(await safEth.safEthToClaim()).eq(0);
+      expect(await safEth.ethToClaim()).eq(0);
+
       await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("10"),
       });
@@ -139,9 +92,9 @@ describe("SafEth", function () {
       expect(await safEth.ethToClaim()).eq(0);
       expect(
         within1Percent(
-          await safEth.safEthToClaim(),
+          await safEth.safEthToClaim(), // 10.000985
           ethers.utils.parseEther("10")
-        ) // 4.999998
+        )
       ).eq(true);
       const premintedSupply = await safEth.safEthToClaim();
       expect(within1Percent(premintedSupply, ethers.utils.parseEther("10"))).eq(
@@ -459,6 +412,57 @@ describe("SafEth", function () {
       await tx.wait();
       const price1 = await safEth.approxPrice(true);
       expect(within1Pip(price0, price1)).eq(true);
+    });
+  });
+
+  describe("Various Fails", function () {
+    it("Should fail unstake on zero safEthAmount", async function () {
+      await expect(safEth.unstake(0, 0)).revertedWith("AmountTooLow");
+    });
+    it("Should fail unstake on invalid safEthAmount", async function () {
+      await expect(safEth.unstake(10, 0)).revertedWith("InsufficientBalance");
+    });
+    it("Should fail with wrong min/max", async function () {
+      let depositAmount = ethers.utils.parseEther(".002");
+      await expect(
+        safEth.stake(0, { value: depositAmount })
+      ).to.be.revertedWith("AmountTooLow");
+
+      depositAmount = ethers.utils.parseEther("2050");
+      await expect(
+        safEth.stake(0, { value: depositAmount })
+      ).to.be.revertedWith("AmountTooHigh");
+    });
+  });
+
+  describe("Slippage", function () {
+    it("Should set slippage derivatives for each derivatives contract", async function () {
+      const depositAmount = ethers.utils.parseEther("1");
+      const derivativeCount = (await safEth.derivativeCount()).toNumber();
+
+      for (let i = 0; i < derivativeCount; i++) {
+        const derivativeAddress = (await safEth.derivatives(i)).derivative;
+        const derivative = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          adminAccount
+        );
+        await setMaxSlippage(derivative, ethers.utils.parseEther("0.01"));
+      }
+      let tx;
+      tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
+      for (let i = 0; i < derivativeCount; i++) {
+        const derivativeAddress = (await safEth.derivatives(i)).derivative;
+        const derivative = new ethers.Contract(
+          derivativeAddress,
+          derivativeAbi,
+          adminAccount
+        );
+        await setMaxSlippage(derivative, ethers.utils.parseEther("0.02"));
+      }
+      tx = await safEth.stake(0, { value: depositAmount });
+      await tx.wait();
     });
   });
   describe("Receive Eth", function () {
