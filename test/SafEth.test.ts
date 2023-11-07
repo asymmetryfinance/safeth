@@ -132,13 +132,18 @@ describe("SafEth", function () {
       await snapshot.restore();
     });
     it("Should unstake through preminted ETH from staking", async function () {
-      await safEth.preMintStake(0, 0, false, {
+      await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("10"),
       });
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("10"));
       expect(await safEth.ethToClaim()).eq(0);
-      expect(await safEth.safEthToClaim()).eq(0);
-      const premintedSupply = await safEth.preMintedSupply();
+      expect(
+        within1Percent(
+          await safEth.safEthToClaim(),
+          ethers.utils.parseEther("10")
+        ) // 4.999998
+      ).eq(true);
+      const premintedSupply = await safEth.safEthToClaim();
       expect(within1Percent(premintedSupply, ethers.utils.parseEther("10"))).eq(
         true
       );
@@ -147,38 +152,109 @@ describe("SafEth", function () {
         value: ethers.utils.parseEther("10"),
       });
       expect(await safEth.ethToClaim()).eq(ethers.utils.parseEther("10"));
-      expect(await safEth.safEthToClaim()).eq(0);
       expect(
-        BigNumber.from(premintedSupply).sub(ethers.utils.parseEther("10"))
-      ).eq(await safEth.preMintedSupply());
+        BigNumber.from(premintedSupply).sub(ethers.utils.parseEther("10")) // almost zero
+      ).eq(await safEth.safEthToClaim());
 
       await safEth.unstake(ethers.utils.parseEther("5"), 0);
-      expect(
-        within1Percent(await safEth.ethToClaim(), ethers.utils.parseEther("5"))
-      ).eq(true);
-      expect(await safEth.safEthToClaim()).eq(ethers.utils.parseEther("5"));
+      expect(await safEth.ethToClaim()).eq(ethers.utils.parseEther("5"));
       expect(
         within1Percent(
-          await safEth.preMintedSupply(),
+          await safEth.safEthToClaim(), // 5.009
           ethers.utils.parseEther("5")
         )
       ).eq(true);
     });
-    it.only("Should unstake through deposited ETH", async function () {});
-    it.only("Should premint ethToClaim balance", async function () {});
-    it.only("Should premint half ethToClaim balance", async function () {});
-    it.only("Should premint on top of ethToClaim balance", async function () {});
+    it("Should unstake the correct amount based on price", async function () {
+      await safEth.fundPreMintStake(0, 0, false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("10"));
+      await safEth.stake(0, {
+        value: ethers.utils.parseEther("5"),
+      });
+      const safEthBalance = await safEth.balanceOf(adminAccount.address);
+      const price = await safEth.floorPrice();
+      const amountToUnstake = price
+        .mul(safEthBalance)
+        .div(ethers.utils.parseEther("1"));
+      const ethBalanceBeforeUnstake = await adminAccount.getBalance();
+
+      const tx = await safEth.unstake(safEthBalance, 0);
+      const ethBalanceAfterUnstake = await adminAccount.getBalance();
+
+      const mined = await tx.wait();
+      const networkFee = mined.gasUsed.mul(mined.effectiveGasPrice);
+      expect(amountToUnstake).eq(
+        ethBalanceAfterUnstake.sub(ethBalanceBeforeUnstake).add(networkFee)
+      );
+    });
+    it("Should premint unstake", async function () {
+      expect(await safEth.ethToClaim()).eq(0);
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      expect(await safEth.ethToClaim()).eq(ethers.utils.parseEther("10"));
+    });
+    it("Should premint ethToClaim balance", async function () {
+      expect(await safEth.safEthToClaim()).eq(0);
+
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.fundPreMintStake(0, await safEth.ethToClaim(), false);
+      expect(
+        within1Percent(
+          await safEth.safEthToClaim(), // 10.000985
+          ethers.utils.parseEther("10")
+        )
+      ).eq(true);
+    });
+    it("Should premint half ethToClaim balance", async function () {
+      expect(await safEth.safEthToClaim()).eq(0);
+
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.fundPreMintStake(
+        0,
+        (await safEth.ethToClaim()).div(2),
+        false
+      );
+      expect(
+        within1Percent(
+          await safEth.safEthToClaim(), // 5.0049
+          ethers.utils.parseEther("5")
+        )
+      ).eq(true);
+    });
+    it("Should premint both ethToClaim balance and msg.value", async function () {
+      expect(await safEth.safEthToClaim()).eq(0);
+
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.fundPreMintStake(0, await safEth.ethToClaim(), false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      expect(
+        within1Percent(
+          await safEth.safEthToClaim(), // 20.0019
+          ethers.utils.parseEther("20")
+        )
+      ).eq(true);
+    });
     it("User should receive premint if under max premint amount & has premint funds", async function () {
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2.999"));
 
       await expect(
-        safEth.preMintStake(0, 0, false, {
+        safEth.fundPreMintStake(0, 0, false, {
           value: ethers.utils.parseEther("1"),
         })
       ).to.be.revertedWith("PremintTooLow");
 
       // premint eth
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("6"),
       });
       let receipt = await tx.wait();
@@ -190,12 +266,12 @@ describe("SafEth", function () {
       expect(event?.args?.[4]).eq(true); // uses preminted safeth
     });
     it("Should not receive premint if under max premint amount but over premint available", async function () {
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("6"),
       });
       await tx.wait();
       const depositAmount = ethers.utils.parseEther("8");
-      const preMintSupply = await safEth.preMintedSupply();
+      const preMintSupply = await safEth.safEthToClaim();
 
       expect(depositAmount).gt(preMintSupply);
       expect(preMintSupply).gt(0);
@@ -207,13 +283,13 @@ describe("SafEth", function () {
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
     it("Should not receive premint if over max premint amount", async function () {
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("6"),
       });
       await tx.wait();
 
       const depositAmount = (await safEth.maxPreMintAmount()).add(1);
-      const preMintSupply = await safEth.preMintedSupply();
+      const preMintSupply = await safEth.safEthToClaim();
 
       expect(depositAmount).gt(await safEth.maxPreMintAmount());
       expect(preMintSupply).gt(0);
@@ -225,7 +301,7 @@ describe("SafEth", function () {
       expect(event?.args?.[4]).eq(false); // mints safeth
     });
     it("Owner can withdraw ETH from their preMinted funds", async function () {
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("6"),
       });
       await tx.wait();
@@ -262,7 +338,7 @@ describe("SafEth", function () {
       const accounts = await ethers.getSigners();
       const nonOwnerSigner = safEth.connect(accounts[2]);
       await expect(
-        nonOwnerSigner.preMintStake(0, 0, false, {
+        nonOwnerSigner.fundPreMintStake(0, 0, false, {
           value: preMintAmount,
         })
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -280,8 +356,8 @@ describe("SafEth", function () {
         ethers.utils.parseEther("2.5")
       );
     });
-    it("Should fail staking through preMintStake with minOut higher than expected safEth output", async function () {
-      const tx = await safEth.preMintStake(0, 0, false, {
+    it("Should fail staking through fundPreMintStake with minOut higher than expected safEth output", async function () {
+      const tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("6"),
       });
       await tx.wait();
@@ -300,7 +376,7 @@ describe("SafEth", function () {
 
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
       let maxPremintAmount = await safEth.maxPreMintAmount();
-      tx = await safEth.preMintStake(0, 0, false, {
+      tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("2.5"),
       });
       await tx.wait();
@@ -339,7 +415,7 @@ describe("SafEth", function () {
 
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("11"));
       maxPremintAmount = (await safEth.maxPreMintAmount()).add(1);
-      tx = await safEth.preMintStake(0, 0, false, {
+      tx = await safEth.fundPreMintStake(0, 0, false, {
         value: maxPremintAmount,
       });
       await tx.wait();
@@ -371,7 +447,7 @@ describe("SafEth", function () {
       tx = await safEth.setMaxPreMintAmount(ethers.utils.parseEther("2"));
       await tx.wait();
       const maxPremintAmount = await safEth.maxPreMintAmount();
-      tx = await safEth.preMintStake(0, 0, false, {
+      tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("3"),
       });
       await tx.wait();
@@ -1641,7 +1717,7 @@ describe("SafEth", function () {
 
   describe("Various Stake Sizes (Premint, Multi Derivative)", function () {
     beforeEach(async () => {
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("10"),
       });
       await tx.wait();
@@ -1747,13 +1823,13 @@ describe("SafEth", function () {
       const preMintAmount = ethers.utils.parseEther("2");
 
       // premint eth until the approx price is lower than floor price
-      let tx = await safEth.preMintStake(0, 0, false, {
+      let tx = await safEth.fundPreMintStake(0, 0, false, {
         value: preMintAmount,
       });
-      tx = await safEth.preMintStake(0, 0, false, {
+      tx = await safEth.fundPreMintStake(0, 0, false, {
         value: preMintAmount,
       });
-      tx = await safEth.preMintStake(0, 0, false, {
+      tx = await safEth.fundPreMintStake(0, 0, false, {
         value: preMintAmount,
       });
       await tx.wait();
@@ -1772,13 +1848,13 @@ describe("SafEth", function () {
       const preMintAmount = ethers.utils.parseEther("2");
 
       // premint eth until the approx price is lower than floor price
-      let tx = await safEth.preMintStake(0, 0, true, {
+      let tx = await safEth.fundPreMintStake(0, 0, true, {
         value: preMintAmount,
       });
-      tx = await safEth.preMintStake(0, 0, true, {
+      tx = await safEth.fundPreMintStake(0, 0, true, {
         value: preMintAmount,
       });
-      tx = await safEth.preMintStake(0, 0, true, {
+      tx = await safEth.fundPreMintStake(0, 0, true, {
         value: preMintAmount,
       });
       await tx.wait();

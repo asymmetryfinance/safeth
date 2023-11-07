@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
 /// @title Contract that mints/burns and provides owner functions for safETH
 /// @author Asymmetry Finance
@@ -134,9 +135,9 @@ contract SafEth is
         @notice - Premints safEth for future users
         @param _minAmount - Minimum amount to stake
         @param _balanceAmount - Amount of the current ethToClaim balance to use for premint
-        @param _overWriteFloorPrice - Should overwrite floorPrice even if it's 
+        @param _overWriteFloorPrice - Should overwrite floorPrice even if it's higher than depositPrice
      */
-    function preMintStake(
+    function fundPreMintStake(
         uint256 _minAmount,
         uint256 _balanceAmount,
         bool _overWriteFloorPrice
@@ -154,16 +155,26 @@ contract SafEth is
         floorPrice = (floorPrice < depositPrice || _overWriteFloorPrice)
             ? depositPrice
             : floorPrice;
-        preMintedSupply += mintedAmount;
+        unchecked {
+            safEthToClaim += mintedAmount;
+        }
         emit PreMintStake(amount, mintedAmount, depositPrice);
         return mintedAmount;
     }
 
     /**
         @notice - Adds ETH to allow for users to unstake
+        @param _updateFloorPrice - Should update floorPrice to the current price
      */
-    function preMintUnstake() external payable onlyOwner {
-        ethToClaim += msg.value;
+    function fundPreMintUnstake(
+        bool _updateFloorPrice
+    ) external payable onlyOwner {
+        unchecked {
+            ethToClaim += msg.value;
+        }
+        if (_updateFloorPrice) {
+            floorPrice = approxPrice(true);
+        }
         emit PreMintUnstake(msg.value);
     }
 
@@ -404,7 +415,7 @@ contract SafEth is
     function shouldPremintStake() private view returns (bool) {
         if (floorPrice == 0) return false;
         uint256 amount = (msg.value * 1e18) / floorPrice;
-        return amount <= preMintedSupply && msg.value <= maxPreMintAmount;
+        return amount <= safEthToClaim && msg.value <= maxPreMintAmount;
     }
 
     /**
@@ -431,7 +442,7 @@ contract SafEth is
         mintedAmount = (msg.value * 1e18) / preMintPrice;
         if (mintedAmount < _minOut) revert PremintTooLow();
         ethToClaim += msg.value;
-        preMintedSupply -= mintedAmount;
+        safEthToClaim -= mintedAmount;
         IERC20(address(this)).transfer(msg.sender, mintedAmount);
         emit Staked(
             msg.sender,
@@ -453,14 +464,11 @@ contract SafEth is
         uint256 _amount,
         uint256 _minOut
     ) private returns (uint256 ethToRedeem, uint256 unstakePrice) {
-        unstakePrice = approxPrice(true);
         _transfer(msg.sender, address(this), _amount);
-        floorPrice = unstakePrice;
+        unstakePrice = floorPrice;
         safEthToClaim += _amount;
-        preMintedSupply += _amount;
         ethToRedeem = (_amount * unstakePrice) / 1e18;
         if (ethToRedeem < _minOut) revert PremintTooLow();
-
         ethToClaim -= ethToRedeem;
 
         // solhint-disable-next-line

@@ -93,7 +93,7 @@ contract SafEthStorage {
     mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
     uint256 public floorPrice; // lowest price to sell preminted SafEth
     uint256 public maxPreMintAmount; // maximum amount of ETH that can be used for preminted safETH
-    uint256 public preMintedSupply; // supply of preminted safEth that is available
+    uint256 public safEthToClaim; // supply of preminted safEth that is available
     uint256 public ethToClaim; // amount of ETH that was used to premint stake
     mapping(address => bool) public blacklistedRecipients; // addresses not allowed to send to unless from whitelisted address
     mapping(address => bool) public whitelistedSenders; // addresses allowed to send to blacklisted addresses
@@ -101,12 +101,11 @@ contract SafEthStorage {
     uint256[] public enabledDerivatives; // array of indexes of enabled derivatives in the system
     uint256 public enabledDerivativeCount; // amount of enabled derivatives in the system
     bool public hasInitializedV2; // initializeV2 has been called
-    uint256 public safEthToClaim; // amount of SafEth that was used to premint unstake
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[39] private __gap;
+    uint256[40] private __gap;
 }
