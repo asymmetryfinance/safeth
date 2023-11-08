@@ -27,7 +27,7 @@ import {
   withinHalfPercent,
 } from "./helpers/functions";
 
-describe.only("SafEth", function () {
+describe("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
