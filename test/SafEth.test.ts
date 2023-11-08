@@ -27,7 +27,7 @@ import {
   withinHalfPercent,
 } from "./helpers/functions";
 
-describe("SafEth", function () {
+describe.only("SafEth", function () {
   let adminAccount: SignerWithAddress;
   let safEth: SafEth;
   let safEthReentrancyTest: SafEthReentrancyTest;
@@ -109,8 +109,10 @@ describe("SafEth", function () {
         BigNumber.from(premintedSupply).sub(ethers.utils.parseEther("10")) // almost zero
       ).eq(await safEth.safEthToClaim());
 
-      await safEth.unstake(ethers.utils.parseEther("5"), 0);
-      expect(await safEth.ethToClaim()).eq(ethers.utils.parseEther("5"));
+      await safEth.preMintUnstake(ethers.utils.parseEther("5"), 0);
+      expect(
+        within1Percent(await safEth.ethToClaim(), ethers.utils.parseEther("5"))
+      ).eq(true);
       expect(
         within1Percent(
           await safEth.safEthToClaim(), // 5.009
@@ -122,18 +124,22 @@ describe("SafEth", function () {
       await safEth.fundPreMintStake(0, 0, false, {
         value: ethers.utils.parseEther("10"),
       });
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
       await safEth.setMaxPreMintAmount(ethers.utils.parseEther("10"));
       await safEth.stake(0, {
         value: ethers.utils.parseEther("5"),
       });
       const safEthBalance = await safEth.balanceOf(adminAccount.address);
-      const price = await safEth.floorPrice();
+
+      const ethBalanceBeforeUnstake = await adminAccount.getBalance();
+      const tx = await safEth.preMintUnstake(safEthBalance, 0);
+      const price = await safEth.approxPrice(true);
+
       const amountToUnstake = price
         .mul(safEthBalance)
         .div(ethers.utils.parseEther("1"));
-      const ethBalanceBeforeUnstake = await adminAccount.getBalance();
-
-      const tx = await safEth.unstake(safEthBalance, 0);
       const ethBalanceAfterUnstake = await adminAccount.getBalance();
 
       const mined = await tx.wait();
@@ -142,14 +148,33 @@ describe("SafEth", function () {
         ethBalanceAfterUnstake.sub(ethBalanceBeforeUnstake).add(networkFee)
       );
     });
-    it("Should premint unstake", async function () {
+    it("Should fail preMintUnstake if ethToClaim is under amount", async function () {
+      await safEth.fundPreMintStake(0, 0, false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("10"));
+      await safEth.stake(0, {
+        value: ethers.utils.parseEther("1"),
+      });
+      const ethToClaim = await safEth.ethToClaim();
+      const safEthBalance = await safEth.balanceOf(adminAccount.address);
+      const price = await safEth.approxPrice(true);
+
+      expect(safEthBalance.mul(price).div(ethers.utils.parseEther("1"))).gt(
+        ethToClaim
+      );
+      await expect(safEth.preMintUnstake(safEthBalance, 0)).to.be.revertedWith(
+        "AmountTooLow"
+      );
+    });
+    it("Should fund premint unstake", async function () {
       expect(await safEth.ethToClaim()).eq(0);
       await safEth.fundPreMintUnstake(false, {
         value: ethers.utils.parseEther("10"),
       });
       expect(await safEth.ethToClaim()).eq(ethers.utils.parseEther("10"));
     });
-    it("Should premint ethToClaim balance", async function () {
+    it("Should fund premint ethToClaim balance", async function () {
       expect(await safEth.safEthToClaim()).eq(0);
 
       await safEth.fundPreMintUnstake(false, {
@@ -163,7 +188,7 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
-    it("Should premint half ethToClaim balance", async function () {
+    it("Should fund premint half ethToClaim balance", async function () {
       expect(await safEth.safEthToClaim()).eq(0);
 
       await safEth.fundPreMintUnstake(false, {
@@ -181,7 +206,7 @@ describe("SafEth", function () {
         )
       ).eq(true);
     });
-    it("Should premint both ethToClaim balance and msg.value", async function () {
+    it("Should fund premint both ethToClaim balance and msg.value", async function () {
       expect(await safEth.safEthToClaim()).eq(0);
 
       await safEth.fundPreMintUnstake(false, {

@@ -123,11 +123,41 @@ contract SafEth is
         if (pauseUnstaking) revert UnstakingPausedError();
         if (_safEthAmount == 0) revert AmountTooLow();
         if (_safEthAmount > balanceOf(msg.sender)) revert InsufficientBalance();
-        if (shouldPremintUnstake(_safEthAmount))
-            doPreMintedUnstake(_safEthAmount, _minOut);
-        else {
-            doMultiUnstake(_safEthAmount, _minOut);
+        uint256 safEthTotalSupply = totalSupply();
+        uint256 ethAmountBefore = address(this).balance;
+        uint256 count = derivativeCount;
+
+        for (uint256 i = 0; i < count; i++) {
+            if (!derivatives[i].enabled) continue;
+            // withdraw a percentage of each asset based on the amount of safETH
+            uint256 derivativeAmount = (derivatives[i].derivative.balance() *
+                _safEthAmount) / safEthTotalSupply;
+            if (derivativeAmount == 0) continue; // if derivative empty ignore
+            // Add check for a zero Ether received
+            uint256 ethBefore = address(this).balance;
+            derivatives[i].derivative.withdraw(derivativeAmount);
+            if (address(this).balance - ethBefore == 0)
+                revert ReceivedZeroAmount();
         }
+        _burn(msg.sender, _safEthAmount);
+        uint256 ethAmountAfter = address(this).balance;
+        uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
+        if (ethAmountToWithdraw < _minOut) revert AmountTooLow();
+
+        // solhint-disable-next-line
+        (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
+            ""
+        );
+        if (!sent) revert FailedToSend();
+
+        uint256 unstakePrice = (_safEthAmount * 1e18) / ethAmountToWithdraw;
+        emit Unstaked(
+            msg.sender,
+            ethAmountToWithdraw,
+            _safEthAmount,
+            unstakePrice,
+            false
+        );
     }
 
     /**
@@ -422,10 +452,15 @@ contract SafEth is
      * @param _amount - Amount of SafEth to unstake
      * @return - True or False if it can use unstaked with premint or not
      */
-    function shouldPremintUnstake(uint256 _amount) private view returns (bool) {
-        if (floorPrice == 0) return false;
-        uint256 amount = (_amount * floorPrice) / 1e18;
-        return amount <= ethToClaim && amount <= maxPreMintAmount;
+    function shouldPremintUnstake(
+        uint256 _amount
+    ) private view returns (bool, uint256) {
+        uint256 priceToClaim = approxPrice(true);
+        uint256 amount = (_amount * priceToClaim) / 1e18;
+        return (
+            amount <= ethToClaim && amount <= maxPreMintAmount,
+            priceToClaim
+        );
     }
 
     /**
@@ -457,16 +492,16 @@ contract SafEth is
      * @param _amount - Amount of safEth to unstake
      * @param _minOut - Minimum amount of ETH to receive or revert
      * @return ethToRedeem - Amount of ETH sent from the preminted supply
-     * @return unstakePrice - Price at which ETH was sold to user upon unstaking
      */
-    function doPreMintedUnstake(
+    function preMintUnstake(
         uint256 _amount,
         uint256 _minOut
-    ) private returns (uint256 ethToRedeem, uint256 unstakePrice) {
+    ) public returns (uint256 ethToRedeem) {
+        (bool shouldPremint, uint256 price) = shouldPremintUnstake(_amount);
+        if (!shouldPremint) revert AmountTooLow();
         _transfer(msg.sender, address(this), _amount);
-        unstakePrice = floorPrice;
         safEthToClaim += _amount;
-        ethToRedeem = (_amount * unstakePrice) / 1e18;
+        ethToRedeem = (_amount * price) / 1e18;
         if (ethToRedeem < _minOut) revert PremintTooLow();
         ethToClaim -= ethToRedeem;
 
@@ -474,7 +509,7 @@ contract SafEth is
         (bool sent, ) = address(msg.sender).call{value: ethToRedeem}("");
         if (!sent) revert FailedToSend();
 
-        emit Unstaked(msg.sender, ethToRedeem, _amount, unstakePrice);
+        emit Unstaked(msg.sender, ethToRedeem, _amount, price, true);
     }
 
     /**
@@ -518,46 +553,6 @@ contract SafEth is
             totalStakeValueEth / 1e18,
             price,
             false
-        );
-    }
-
-    /**
-     * @notice - Unstakes from all derivatives
-     * @param _safEthAmount - Amount of SafEth to unstake
-     * @param _minOut - Minimum amount of safEth to receive or revert
-     */
-    function doMultiUnstake(uint256 _safEthAmount, uint256 _minOut) private {
-        uint256 safEthTotalSupply = totalSupply();
-        uint256 ethAmountBefore = address(this).balance;
-        uint256 count = derivativeCount;
-
-        for (uint256 i = 0; i < count; i++) {
-            if (!derivatives[i].enabled) continue;
-            // withdraw a percentage of each asset based on the amount of safETH
-            uint256 derivativeAmount = (derivatives[i].derivative.balance() *
-                _safEthAmount) / safEthTotalSupply;
-            if (derivativeAmount == 0) continue; // if derivative empty ignore
-            // Add check for a zero Ether received
-            uint256 ethBefore = address(this).balance;
-            derivatives[i].derivative.withdraw(derivativeAmount);
-            if (address(this).balance - ethBefore == 0)
-                revert ReceivedZeroAmount();
-        }
-        _burn(msg.sender, _safEthAmount);
-        uint256 ethAmountAfter = address(this).balance;
-        uint256 ethAmountToWithdraw = ethAmountAfter - ethAmountBefore;
-        if (ethAmountToWithdraw < _minOut) revert AmountTooLow();
-
-        // solhint-disable-next-line
-        (bool sent, ) = address(msg.sender).call{value: ethAmountToWithdraw}(
-            ""
-        );
-        if (!sent) revert FailedToSend();
-        emit Unstaked(
-            msg.sender,
-            ethAmountToWithdraw,
-            _safEthAmount,
-            approxPrice(true)
         );
     }
 
