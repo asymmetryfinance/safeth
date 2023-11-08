@@ -2,12 +2,12 @@
 
 ## About
 
-SafEth is a smart contract suite that enables a user to diversify their ETH into staked derivatives.
-Currently the supported staked derivatives are [wstETH](https://lido.fi/), [rETH](https://rocketpool.net/), and [sfrxETH](https://docs.frax.finance/frax-ether/frxeth-and-sfrxeth).
+safEth is a smart contract suite that enables a user to diversify their ETH into staked derivatives.
+Currently the supported staked derivatives are [wstETH](https://lido.fi/), [Rocketpool rETH](https://rocketpool.net/), [sfrxETH](https://docs.frax.finance/frax-ether/frxeth-and-sfrxeth), [swETH](https://www.swellnetwork.io/), [StaFi rETH](https://www.stafi.io/), and [AnkrETH](https://www.ankr.com/staking-crypto/ethereum-eth/).
 
-The goal of SafEth is to help decentralize the liquid staked derivatives on the Ethereum blockchain. This is done by enabling and easy access to diversification of derivatives.
+The goal of safEth is to help decentralize the liquid staked derivatives on the Ethereum blockchain. This is done by enabling and easy access to diversification of derivatives.
 
-In the future, SafEth will be used in conjunction with other smart contracts to allow the staking of SafEth to gain higher yield.
+In the future, safEth will be used in conjunction with other smart contracts to allow the staking of safEth to gain higher yield.
 
 ## Contracts
 
