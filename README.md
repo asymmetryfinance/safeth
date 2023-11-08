@@ -15,6 +15,9 @@ In the future, SafEth will be used in conjunction with other smart contracts to 
 - RocketPool - 0x7B6633c0cD81dC338688A528c0A3f346561F5cA3
 - Frax - 0x36Ce17a5c81E74dC111547f5DFFbf40b8BF6B20A
 - Lido - 0x972A53e3A9114f61b98921Fb5B86C517e8F23Fad
+- Swell - 0xFB8725366b3e3011Ff7445106f40fab97a8371B1
+- StaFi - 0xc9bbccaf813B3329586A2479ff04F1FC794822DA
+- Ankr - 0xfA2D4c03b9b48918f37C926f2DD08dca70D7082F
 
 ## Architecture
 
