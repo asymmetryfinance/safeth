@@ -23,6 +23,7 @@ import { getUserAccounts } from "./helpers/integrationHelpers";
 import {
   setMaxSlippage,
   within1Percent,
+  within3Percent,
   within1Pip,
   withinHalfPercent,
 } from "./helpers/functions";
@@ -165,6 +166,53 @@ describe("SafEth", function () {
       );
       await expect(safEth.preMintUnstake(safEthBalance, 0)).to.be.revertedWith(
         "AmountTooLow"
+      );
+    });
+    it("Should unstake around the same amount through premint and multi", async function () {
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("1"));
+
+      await safEth.stake(0, {
+        value: ethers.utils.parseEther("5"),
+      });
+      let safEthBalance = await safEth.balanceOf(adminAccount.address);
+
+      const ethBalanceBeforeUnstake = await adminAccount.getBalance();
+      let tx = await safEth.unstake(safEthBalance, 0);
+      let mined = await tx.wait();
+      const gasUsedUnstake = mined.gasUsed.mul(mined.effectiveGasPrice);
+
+      const ethBalanceAfterUnstake = await adminAccount.getBalance();
+      const ethReceivedUnstake = ethBalanceAfterUnstake.sub(
+        ethBalanceBeforeUnstake
+      );
+
+      await safEth.fundPreMintStake(0, 0, false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.fundPreMintUnstake(false, {
+        value: ethers.utils.parseEther("10"),
+      });
+      await safEth.setMaxPreMintAmount(ethers.utils.parseEther("10"));
+
+      await safEth.stake(0, {
+        value: ethers.utils.parseEther("5"),
+      });
+      safEthBalance = await safEth.balanceOf(adminAccount.address);
+
+      const ethBalanceBeforeUnstakePremint = await adminAccount.getBalance();
+      tx = await safEth.preMintUnstake(safEthBalance, 0);
+      mined = await tx.wait();
+      const gasUsedUnstakePremint = mined.gasUsed.mul(mined.effectiveGasPrice);
+
+      const ethBalanceAfterUnstakePremint = await adminAccount.getBalance();
+      const ethReceivedUnstakePremint = ethBalanceAfterUnstakePremint.sub(
+        ethBalanceBeforeUnstakePremint
+      );
+      expect(
+        withinHalfPercent(ethReceivedUnstake, ethReceivedUnstakePremint)
+      ).eq(true);
+      expect(within3Percent(gasUsedUnstake, gasUsedUnstakePremint.mul(4))).eq(
+        true
       );
     });
     it("Should fund premint unstake", async function () {

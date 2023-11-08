@@ -2,6 +2,10 @@ import { BigNumber, Contract } from "ethers";
 import { ethers, network } from "hardhat";
 import { MULTI_SIG } from "./constants";
 
+export const within3Percent = (amount1: BigNumber, amount2: BigNumber) => {
+  if (amount1.eq(amount2)) return true;
+  return getDifferenceRatio(amount1, amount2).gt("25");
+};
 export const within1Percent = (amount1: BigNumber, amount2: BigNumber) => {
   if (amount1.eq(amount2)) return true;
   return getDifferenceRatio(amount1, amount2).gt("100");
