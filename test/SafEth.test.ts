@@ -23,7 +23,6 @@ import { getUserAccounts } from "./helpers/integrationHelpers";
 import {
   setMaxSlippage,
   within1Percent,
-  within5Percent,
   within1Pip,
   withinHalfPercent,
 } from "./helpers/functions";
