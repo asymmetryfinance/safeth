@@ -35,14 +35,16 @@ contract SafEthStorage {
     event Unstaked(
         address indexed recipient,
         uint256 indexed ethOut,
-        uint256 indexed safEthIn,
-        uint256 price
+        uint256 safEthIn,
+        uint256 price,
+        bool indexed usedPremint
     );
-    event PreMint(
+    event PreMintStake(
         uint256 indexed ethIn,
         uint256 indexed mintAmount,
         uint256 newFloorPrice
     );
+    event PreMintUnstake(uint256 indexed ethIn);
     event WeightChange(
         uint256 indexed index,
         uint256 indexed weight,
@@ -92,8 +94,8 @@ contract SafEthStorage {
     mapping(uint256 => Derivatives) public derivatives; // derivatives in the system
     uint256 public floorPrice; // lowest price to sell preminted SafEth
     uint256 public maxPreMintAmount; // maximum amount of ETH that can be used for preminted safETH
-    uint256 public preMintedSupply; // supply of preminted safEth that is available
-    uint256 public ethToClaim; // amount of ETH that was used to claim preminted safEth
+    uint256 public safEthToClaim; // supply of preminted safEth that is available
+    uint256 public ethToClaim; // amount of ETH that was used to premint stake
     mapping(address => bool) public blacklistedRecipients; // addresses not allowed to send to unless from whitelisted address
     mapping(address => bool) public whitelistedSenders; // addresses allowed to send to blacklisted addresses
     uint256 public singleDerivativeThreshold; // threshold for when to buy single derivative vs standard weighting
