@@ -499,6 +499,7 @@ contract SafEth is
     ) public returns (uint256 ethToRedeem) {
         (bool shouldPremint, uint256 price) = shouldPremintUnstake(_amount);
         if (!shouldPremint) revert AmountTooLow();
+        floorPrice = price;
         _transfer(msg.sender, address(this), _amount);
         safEthToClaim += _amount;
         ethToRedeem = (_amount * price) / 1e18;
