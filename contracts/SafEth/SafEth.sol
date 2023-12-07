@@ -224,7 +224,7 @@ contract SafEth is
     function withdrawPremintedSafEth() external onlyOwner {
         uint256 _safEthToClaim = safEthToClaim;
         safEthToClaim = 0;
-        IERC20(address(this)).transfer(msg.sender, _safEthToClaim);
+        transfer(msg.sender, _safEthToClaim);
     }
 
     /**
