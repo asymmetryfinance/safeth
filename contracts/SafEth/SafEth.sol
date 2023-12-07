@@ -454,12 +454,13 @@ contract SafEth is
      */
     function shouldPremintUnstake(
         uint256 _amount
-    ) private view returns (bool, uint256) {
+    ) private view returns (bool, uint256, uint256) {
         uint256 priceToClaim = approxPrice(true);
-        uint256 amount = (_amount * priceToClaim) / 1e18;
+        uint256 amountOut = (_amount * priceToClaim) / 1e18;
         return (
-            amount <= ethToClaim && amount <= maxPreMintAmount,
-            priceToClaim
+            amountOut <= ethToClaim && amountOut <= maxPreMintAmount,
+            priceToClaim,
+            amountOut
         );
     }
 
@@ -497,11 +498,10 @@ contract SafEth is
         uint256 _amount,
         uint256 _minOut
     ) public returns (uint256 ethToRedeem) {
-        (bool shouldPremint, uint256 price) = shouldPremintUnstake(_amount);
+        (bool shouldPremint, uint256 price, uint256 ethToRedeem) = shouldPremintUnstake(_amount);
         if (!shouldPremint) revert AmountTooLow();
         _transfer(msg.sender, address(this), _amount);
         safEthToClaim += _amount;
-        ethToRedeem = (_amount * price) / 1e18;
         if (ethToRedeem < _minOut) revert PremintTooLow();
         ethToClaim -= ethToRedeem;
 
