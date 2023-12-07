@@ -497,6 +497,8 @@ contract SafEth is
         uint256 _amount,
         uint256 _minOut
     ) public returns (uint256 ethToRedeem) {
+        if (pauseUnstaking) revert UnstakingPausedError();
+
         (bool shouldPremint, uint256 price) = shouldPremintUnstake(_amount);
         if (!shouldPremint) revert AmountTooLow();
         _transfer(msg.sender, address(this), _amount);
