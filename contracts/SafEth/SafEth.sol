@@ -224,7 +224,7 @@ contract SafEth is
     function withdrawPremintedSafEth() external onlyOwner {
         uint256 _safEthToClaim = safEthToClaim;
         safEthToClaim = 0;
-        IERC20(address(this)).transfer(msg.sender, _safEthToClaim);
+        transfer(msg.sender, _safEthToClaim);
     }
 
     /**
@@ -454,12 +454,13 @@ contract SafEth is
      */
     function shouldPremintUnstake(
         uint256 _amount
-    ) private view returns (bool, uint256) {
+    ) private view returns (bool, uint256, uint256) {
         uint256 priceToClaim = approxPrice(true);
-        uint256 amount = (_amount * priceToClaim) / 1e18;
+        uint256 amountOut = (_amount * priceToClaim) / 1e18;
         return (
-            amount <= ethToClaim && amount <= maxPreMintAmount,
-            priceToClaim
+            amountOut <= ethToClaim && amountOut <= maxPreMintAmount,
+            priceToClaim,
+            amountOut
         );
     }
 
@@ -498,13 +499,16 @@ contract SafEth is
         uint256 _minOut
     ) public returns (uint256 ethToRedeem) {
         if (pauseUnstaking) revert UnstakingPausedError();
+        (
+            bool shouldPremint,
+            uint256 price,
+            uint256 ethToRedeem
+        ) = shouldPremintUnstake(_amount);
 
-        (bool shouldPremint, uint256 price) = shouldPremintUnstake(_amount);
         if (!shouldPremint) revert AmountTooLow();
         floorPrice = price;
         _transfer(msg.sender, address(this), _amount);
         safEthToClaim += _amount;
-        ethToRedeem = (_amount * price) / 1e18;
         if (ethToRedeem < _minOut) revert PremintTooLow();
         ethToClaim -= ethToRedeem;
 
